@@ -15,17 +15,33 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ObrasService } from './obras.service';
 import { CreateObraDto } from './dto/create-obra.dto';
 import { Obra } from './obra.entity';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import * as fs from 'fs';
+import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 
-const API_URL =
-  process.env.API_PUBLIC_URL || 'https://crisalida-market.onrender.com';
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-const uploadPath = join(process.cwd(), 'uploads');
+function uploadToCloudinary(
+  file: Express.Multer.File,
+): Promise<UploadApiResponse> {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'crisalida-market/obras',
+        resource_type: 'image',
+      },
+      (error, result) => {
+        if (error)
+          return reject(new Error(error.message || 'Error uploading image'));
+        if (!result) return reject(new Error('No se pudo subir la imagen'));
+        resolve(result);
+      },
+    );
 
-if (!fs.existsSync(uploadPath)) {
-  fs.mkdirSync(uploadPath, { recursive: true });
+    uploadStream.end(file.buffer);
+  });
 }
 
 @Controller('obras')
@@ -38,44 +54,27 @@ export class ObrasController {
   }
 
   @Post('upload-image')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: uploadPath,
-        filename: (req, file, cb) => {
-          const nombre = Date.now() + extname(file.originalname);
-          cb(null, nombre);
-        },
-      }),
-    }),
-  )
-  uploadImage(@UploadedFile() file: Express.Multer.File) {
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadImage(@UploadedFile() file: Express.Multer.File) {
+    const result = await uploadToCloudinary(file);
+
     return {
-      url: `${API_URL}/uploads/${file.filename}`,
-      filename: file.filename,
+      url: result.secure_url,
+      filename: result.secure_url,
     };
   }
 
   @Post()
-  @UseInterceptors(
-    FileInterceptor('imagen', {
-      storage: diskStorage({
-        destination: uploadPath,
-        filename: (req, file, callback) => {
-          const nombre = Date.now() + extname(file.originalname);
-          callback(null, nombre);
-        },
-      }),
-    }),
-  )
-  crear(
+  @UseInterceptors(FileInterceptor('imagen'))
+  async crear(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() body: CreateObraDto,
   ): Promise<Obra> {
     if (file) {
-      body.imagen = file.filename;
+      const result = await uploadToCloudinary(file);
+      body.imagen = result.secure_url;
     } else {
-      body.imagen = 'default.jpg';
+      body.imagen = '';
     }
 
     return this.obrasService.crear(body);
@@ -92,24 +91,15 @@ export class ObrasController {
   }
 
   @Patch(':id')
-  @UseInterceptors(
-    FileInterceptor('imagen', {
-      storage: diskStorage({
-        destination: uploadPath,
-        filename: (req, file, callback) => {
-          const nombre = Date.now() + extname(file.originalname);
-          callback(null, nombre);
-        },
-      }),
-    }),
-  )
-  actualizar(
+  @UseInterceptors(FileInterceptor('imagen'))
+  async actualizar(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() body: CreateObraDto,
   ) {
     if (file) {
-      body.imagen = file.filename;
+      const result = await uploadToCloudinary(file);
+      body.imagen = result.secure_url;
     }
 
     return this.obrasService.actualizar(id, body);
