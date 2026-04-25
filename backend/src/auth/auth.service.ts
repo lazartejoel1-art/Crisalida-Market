@@ -11,18 +11,22 @@ export class AuthService {
   ) {}
 
   async register(username: string, password: string) {
+    const cleanUsername = username.trim().toLowerCase();
     const hashedPassword: string = await bcrypt.hash(password, 10);
 
     const nuevoUsuario = await this.usuariosService.create({
-      username,
+      username: cleanUsername,
       password: hashedPassword,
+      rol: 'admin',
     });
 
     return nuevoUsuario;
   }
 
   async validateUser(username: string, password: string) {
-    const user = await this.usuariosService.findByUsername(username);
+    const cleanUsername = username.trim().toLowerCase();
+
+    const user = await this.usuariosService.findByUsername(cleanUsername);
 
     if (!user) {
       throw new UnauthorizedException('Usuario no encontrado');
@@ -45,6 +49,8 @@ export class AuthService {
 
     const payload = {
       sub: user.id,
+      username: user.username,
+      rol: user.rol,
     };
 
     return {
