@@ -7,23 +7,30 @@ import * as fs from 'fs';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // 🔥 ASEGURAR QUE EXISTA LA CARPETA UPLOADS
   const uploadsPath = join(process.cwd(), 'uploads');
+
   if (!fs.existsSync(uploadsPath)) {
-    fs.mkdirSync(uploadsPath);
+    fs.mkdirSync(uploadsPath, { recursive: true });
   }
 
-  // 🔥 SOLUCIÓN CORS
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://crisalida-market.vercel.app',
+    ],
     credentials: true,
   });
 
-  // 🔥 SERVIR IMÁGENES (ruta absoluta segura)
   app.useStaticAssets(uploadsPath, {
     prefix: '/uploads/',
   });
 
-  await app.listen(3000);
+  const port = process.env.PORT || 3000;
+
+  await app.listen(port, '0.0.0.0');
+
+  console.log(`Servidor corriendo en puerto ${port}`);
 }
+
 void bootstrap();
