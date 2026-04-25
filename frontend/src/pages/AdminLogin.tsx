@@ -1,9 +1,11 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 export default function AdminLogin() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("joel");
+  const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -14,12 +16,15 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:3000/auth/login", {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({
+          username: username.trim().toLowerCase(),
+          password,
+        }),
       });
 
       if (!response.ok) {
@@ -27,12 +32,13 @@ export default function AdminLogin() {
         return;
       }
 
-      const data = (await response.json()) as { access_token: string };
+      const data = (await response.json()) as {
+        access_token: string;
+        user?: unknown;
+      };
 
-      // Guardamos token
       localStorage.setItem("crisalida_token", data.access_token);
 
-      // Vamos al panel admin
       navigate("/admin");
     } catch (err) {
       console.error(err);
@@ -48,6 +54,7 @@ export default function AdminLogin() {
         <h1 className="text-2xl font-bold mb-2 text-center text-negroSuave">
           Panel administrativo
         </h1>
+
         <p className="text-sm text-gray-600 mb-6 text-center">
           Solo acceso para Crisálida
         </p>
@@ -57,12 +64,14 @@ export default function AdminLogin() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Usuario
             </label>
+
             <input
               type="text"
               className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-verdeEsmeralda"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="joel"
+              placeholder="admin"
+              autoComplete="username"
             />
           </div>
 
@@ -70,12 +79,14 @@ export default function AdminLogin() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Contraseña
             </label>
+
             <input
               type="password"
               className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-verdeEsmeralda"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
+              autoComplete="current-password"
             />
           </div>
 
