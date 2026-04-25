@@ -1,0 +1,11 @@
+# Query: /public/
+# ContextLines: 1
+
+2 resultados - 1 archivo
+
+frontend\src\App.tsx:
+  38      >
+  39:       {/* ✅ Logo desde /public/uploads → se usa como /uploads/... */}
+  40        <Navbar
+  41:         logoSrc="/public/crisalida.png"/
+  42          title="Crisálida"
