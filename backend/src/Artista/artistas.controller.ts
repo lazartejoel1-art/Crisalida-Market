@@ -20,11 +20,13 @@ import * as fs from 'fs';
 import { ArtistasService } from './artistas.service';
 import { CrearArtistaDto } from './dto/create-artista.dto';
 
-// 🔥 asegurar que exista la carpeta uploads
+const API_URL =
+  process.env.API_PUBLIC_URL || 'https://crisalida-market.onrender.com';
+
 const uploadPath = join(process.cwd(), 'uploads');
 
 if (!fs.existsSync(uploadPath)) {
-  fs.mkdirSync(uploadPath);
+  fs.mkdirSync(uploadPath, { recursive: true });
 }
 
 @Controller('artistas')
@@ -41,7 +43,6 @@ export class ArtistasController {
     return this.artistasService.obtenerUno(id);
   }
 
-  // 🔥 NUEVO ENDPOINT PARA SUBIR IMAGEN
   @Post('upload-image')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -56,7 +57,8 @@ export class ArtistasController {
   )
   uploadImage(@UploadedFile() file: Express.Multer.File) {
     return {
-      url: `http://localhost:3000/uploads/${file.filename}`,
+      url: `${API_URL}/uploads/${file.filename}`,
+      filename: file.filename,
     };
   }
 
@@ -81,7 +83,6 @@ export class ArtistasController {
     return this.artistasService.crear(dto, foto);
   }
 
-  // 🔥 NUEVO ENDPOINT PARA ACTUALIZAR
   @Patch(':id')
   @UseInterceptors(
     FileInterceptor('foto', {

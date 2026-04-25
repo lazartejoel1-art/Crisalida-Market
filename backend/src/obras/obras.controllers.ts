@@ -17,15 +17,15 @@ import { CreateObraDto } from './dto/create-obra.dto';
 import { Obra } from './obra.entity';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
-
-// 🔥 AGREGADO
 import * as fs from 'fs';
 
-// 🔥 AGREGADO: asegurar que exista la carpeta uploads
+const API_URL =
+  process.env.API_PUBLIC_URL || 'https://crisalida-market.onrender.com';
+
 const uploadPath = join(process.cwd(), 'uploads');
 
 if (!fs.existsSync(uploadPath)) {
-  fs.mkdirSync(uploadPath);
+  fs.mkdirSync(uploadPath, { recursive: true });
 }
 
 @Controller('obras')
@@ -41,7 +41,6 @@ export class ObrasController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        // 🔥 ahora usa uploadPath seguro
         destination: uploadPath,
         filename: (req, file, cb) => {
           const nombre = Date.now() + extname(file.originalname);
@@ -52,7 +51,8 @@ export class ObrasController {
   )
   uploadImage(@UploadedFile() file: Express.Multer.File) {
     return {
-      url: `http://localhost:3000/uploads/${file.filename}`,
+      url: `${API_URL}/uploads/${file.filename}`,
+      filename: file.filename,
     };
   }
 
@@ -60,7 +60,6 @@ export class ObrasController {
   @UseInterceptors(
     FileInterceptor('imagen', {
       storage: diskStorage({
-        // 🔥 ahora usa uploadPath seguro
         destination: uploadPath,
         filename: (req, file, callback) => {
           const nombre = Date.now() + extname(file.originalname);
@@ -96,7 +95,6 @@ export class ObrasController {
   @UseInterceptors(
     FileInterceptor('imagen', {
       storage: diskStorage({
-        // 🔥 ahora usa uploadPath seguro
         destination: uploadPath,
         filename: (req, file, callback) => {
           const nombre = Date.now() + extname(file.originalname);

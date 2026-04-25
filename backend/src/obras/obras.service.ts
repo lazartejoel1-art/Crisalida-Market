@@ -4,6 +4,9 @@ import { Repository } from 'typeorm';
 import { Obra } from './obra.entity';
 import { CreateObraDto } from './dto/create-obra.dto';
 
+const API_URL =
+  process.env.API_PUBLIC_URL || 'https://crisalida-market.onrender.com';
+
 @Injectable()
 export class ObrasService {
   constructor(
@@ -18,13 +21,8 @@ export class ObrasService {
 
     return obras.map((obra) => ({
       ...obra,
-
-      // 🔥 AGREGADO para que el frontend pueda cargar la imagen
       imagen: obra.imagen ? `uploads/${obra.imagen}` : null,
-
-      imagenUrl: obra.imagen
-        ? `http://localhost:3000/uploads/${obra.imagen}`
-        : null,
+      imagenUrl: obra.imagen ? `${API_URL}/uploads/${obra.imagen}` : null,
     }));
   }
 
@@ -40,21 +38,15 @@ export class ObrasService {
 
     return {
       ...obra,
-
-      // 🔥 AGREGADO para que el frontend pueda cargar la imagen
       imagen: obra.imagen ? `uploads/${obra.imagen}` : null,
-
-      imagenUrl: obra.imagen
-        ? `http://localhost:3000/uploads/${obra.imagen}`
-        : null,
+      imagenUrl: obra.imagen ? `${API_URL}/uploads/${obra.imagen}` : null,
     };
   }
 
   async crear(dto: CreateObraDto) {
     const obra = this.obraRepository.create({
       ...dto,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      artista: { id: dto.artistaId } as any,
+      artista: { id: dto.artistaId },
     });
 
     return this.obraRepository.save(obra);
@@ -64,7 +56,6 @@ export class ObrasService {
     return this.obraRepository.delete(id);
   }
 
-  // 🔥 MÉTODO NUEVO PARA ACTUALIZAR
   async actualizar(id: number, dto: CreateObraDto) {
     const obra = await this.obraRepository.findOne({
       where: { id },
