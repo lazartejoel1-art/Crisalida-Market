@@ -6,11 +6,26 @@ export const API_URL =
 export function buildImageUrl(image?: string | null): string | null {
   if (!image) return null;
 
-  if (image.startsWith("http://") || image.startsWith("https://")) {
-    return image;
+  const value = String(image).trim();
+  if (!value) return null;
+
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    return value;
   }
 
-  return `${API_URL}${image.startsWith("/") ? image : `/${image}`}`;
+  if (value.startsWith("/uploads/")) {
+    return `${API_URL}${value}`;
+  }
+
+  if (value.startsWith("uploads/")) {
+    return `${API_URL}/${value}`;
+  }
+
+  if (value.startsWith("/")) {
+    return `${API_URL}${value}`;
+  }
+
+  return `${API_URL}/uploads/${value}`;
 }
 
 async function fetchData<T>(endpoint: string): Promise<T> {
