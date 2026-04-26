@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { API_URL, buildImageUrl } from "../services/api";
+import { buildImageUrl, fetchObras } from "../services/api";
 
 type Work = {
   id: number;
@@ -21,30 +21,19 @@ export default function MuseoPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const controller = new AbortController();
-
     const loadWorks = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(`${API_URL}/obras`, {
-          signal: controller.signal,
-        });
+        const data = await fetchObras();
 
-        if (!res.ok) {
-          throw new Error("No se pudieron cargar las obras");
-        }
-
-        const data = (await res.json()) as Work[];
-
-        setWorks(
-          (Array.isArray(data) ? data : []).filter((w) =>
-            Boolean(buildImageUrl(w.imagenUrl || w.imagen))
-          )
+        const clean = (Array.isArray(data) ? data : []).filter((w) =>
+          Boolean(w.imagenUrl || w.imagen)
         );
+
+        setWorks(clean);
       } catch (err) {
-        if ((err as Error).name === "AbortError") return;
         console.error(err);
         setError("No se pudieron cargar las obras del museo.");
       } finally {
@@ -53,8 +42,6 @@ export default function MuseoPage() {
     };
 
     void loadWorks();
-
-    return () => controller.abort();
   }, []);
 
   return (
@@ -75,6 +62,7 @@ export default function MuseoPage() {
           <h1 className="text-3xl sm:text-4xl font-extrabold">
             Museo Crisálida
           </h1>
+
           <p className="mt-2 max-w-3xl" style={{ color: "var(--c-muted)" }}>
             Galería virtual. Cada obra respira, ocupa su espacio y dialoga con
             las demás.
@@ -82,7 +70,10 @@ export default function MuseoPage() {
         </motion.div>
 
         {loading && (
-          <p className="text-sm animate-pulse" style={{ color: "var(--c-muted)" }}>
+          <p
+            className="text-sm animate-pulse"
+            style={{ color: "var(--c-muted)" }}
+          >
             Cargando obras...
           </p>
         )}
@@ -103,16 +94,7 @@ export default function MuseoPage() {
           </div>
         )}
 
-        <div
-          className="
-            grid
-            gap-6
-            grid-cols-1
-            sm:grid-cols-2
-            lg:grid-cols-3
-            xl:grid-cols-4
-          "
-        >
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {works.map((w) => {
             const imageUrl = buildImageUrl(w.imagenUrl || w.imagen);
 
@@ -153,6 +135,7 @@ export default function MuseoPage() {
                   >
                     {w.artista?.nombre ?? "Crisálida"}
                   </p>
+
                   <h3 className="text-lg font-bold leading-tight text-white">
                     {w.titulo}
                   </h3>

@@ -1,20 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-
-/**
- * HOME PAGE - Crisálida
- * ✅ Ahora usa CSS Variables:
- *  --c-bg, --c-panel, --c-border, --c-text, --c-muted, --c-soft, --c-accent
- * 👉 Eso permite que el ThemeMiniPanel cambie colores en TODA la web.
- */
+import { buildImageUrl, fetchObras } from "../services/api";
 
 type Work = {
   id: number;
   titulo: string;
   descripcion?: string | null;
   precio: number | string;
-  imagenUrl: string;
+  imagen?: string | null;
+  imagenUrl?: string | null;
   stock: number;
   artista?: {
     id: number;
@@ -22,13 +17,13 @@ type Work = {
   };
 };
 
-type WorkWithLegacyImage = Work & {
-  imagen?: string;
-};
-
 function toNumber(v: number | string) {
   const n = typeof v === "number" ? v : Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
+}
+
+function getWorkImage(work: Work): string | null {
+  return buildImageUrl(work.imagenUrl || work.imagen);
 }
 
 function Shell({
@@ -48,11 +43,9 @@ function Shell({
 function WorksGrid({
   works,
   onOpen,
-  api,
 }: {
   works: Work[];
   onOpen: (id: number) => void;
-  api: string;
 }) {
   const metaById = useMemo(() => {
     const m = new Map<
@@ -94,6 +87,10 @@ function WorksGrid({
             t: 7,
           };
 
+          const imageUrl = getWorkImage(w);
+
+          if (!imageUrl) return null;
+
           return (
             <motion.button
               key={w.id}
@@ -128,20 +125,14 @@ function WorksGrid({
                 }}
               >
                 <img
-  src={
-    w.imagenUrl ||
-    (((w as WorkWithLegacyImage).imagen?.startsWith("http"))
-      ? (w as WorkWithLegacyImage).imagen
-      : `${api}/${(w as WorkWithLegacyImage).imagen}`)
-  }
-  alt={w.titulo}
-  className="w-full h-full object-cover"
-  loading="lazy"
-/>
+                  src={imageUrl}
+                  alt={w.titulo}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
 
-                {/* brillo sutil (neutral) */}
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="absolute -inset-1 opacity-[0.10] blur-2xl bg-white/10" />
                   <div className="absolute inset-0 border border-white/10 rounded-[28px]" />
@@ -192,24 +183,15 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
 
-  const API = import.meta.env.VITE_API_URL || "https://crisalida-market.onrender.com";
-
-useEffect(() => {
-  const fetchWorks = async () => {
+  const loadWorks = async () => {
     setLoading(true);
-    try {
-      const res = await fetch(`${API}/obras`);
-      const data = (await res.json()) as Work[];
 
-    const clean = (Array.isArray(data) ? data : []).filter(
-  (w) => {
-    const imagen = (w as WorkWithLegacyImage).imagen;
-    return (
-      (typeof w.imagenUrl === "string" && w.imagenUrl.trim().length > 0) ||
-      (typeof imagen === "string" && imagen.trim().length > 0)
-    );
-  }
-);
+    try {
+      const data = await fetchObras();
+
+      const clean = (Array.isArray(data) ? data : []).filter((w) =>
+        Boolean(w.imagenUrl || w.imagen)
+      );
 
       setWorks(clean);
       setIndex(0);
@@ -220,8 +202,10 @@ useEffect(() => {
       setLoading(false);
     }
   };
-  void fetchWorks();
-}, []);
+
+  useEffect(() => {
+    void loadWorks();
+  }, []);
 
   useEffect(() => {
     if (!works.length) return;
@@ -237,6 +221,8 @@ useEffect(() => {
     if (!works.length) return null;
     return works[Math.min(index, works.length - 1)];
   }, [works, index]);
+
+  const activeImage = active ? getWorkImage(active) : null;
 
   const cascadeWorks = useMemo(() => {
     if (!works.length) return [];
@@ -272,7 +258,7 @@ useEffect(() => {
                   >
                     Cargando obras...
                   </div>
-                ) : !active ? (
+                ) : !active || !activeImage ? (
                   <div
                     className="h-full flex items-center justify-center text-sm"
                     style={{ color: "var(--c-muted)" }}
@@ -293,7 +279,7 @@ useEffect(() => {
                       transition={{ duration: 0.45 }}
                     >
                       <motion.img
-                        src={active.imagenUrl}
+                        src={activeImage}
                         alt={active.titulo}
                         className="w-full h-full object-cover"
                         loading="lazy"
@@ -441,7 +427,9 @@ useEffect(() => {
                     <p className="text-xs" style={{ color: "var(--c-accent)" }}>
                       Artistas
                     </p>
-                    <p className="text-sm font-bold text-white">Conoce la colectiva</p>
+                    <p className="text-sm font-bold text-white">
+                      Conoce la colectiva
+                    </p>
                     <p className="text-xs mt-1" style={{ color: "var(--c-muted)" }}>
                       Biografías y estilo.
                     </p>
@@ -451,29 +439,7 @@ useEffect(() => {
                 <div className="mt-6 flex gap-3">
                   <button
                     type="button"
-                    onClick={() => {
-                      setLoading(true);
-                      fetch(`${API}/obras`)
-                        .then((res) => res.json())
-                        .then((data) => {
-                          const clean = (Array.isArray(data) ? data : []).filter(
-                            (w: WorkWithLegacyImage) => {
-                              const imagen = w.imagen;
-                              return (
-                                (typeof w.imagenUrl === "string" && w.imagenUrl.trim().length > 0) ||
-                                (typeof imagen === "string" && imagen.trim().length > 0)
-                              );
-                            }
-                          );
-                          setWorks(clean);
-                          setIndex(0);
-                        })
-                        .catch((e) => {
-                          console.error(e);
-                          setWorks([]);
-                        })
-                        .finally(() => setLoading(false));
-                    }}
+                    onClick={() => void loadWorks()}
                     className="px-4 py-2 rounded-lg font-semibold"
                     style={{ background: "var(--c-accent)", color: "#07110a" }}
                   >
@@ -507,8 +473,7 @@ useEffect(() => {
                   Encuentra tu obra ideal
                 </h2>
                 <p className="mt-1 text-sm" style={{ color: "var(--c-muted)" }}>
-                  Busca por título o artista (esto es visual — si quieres, luego lo
-                  conectamos con filtros reales).
+                  Busca por título o artista.
                 </p>
               </div>
 
@@ -578,7 +543,7 @@ useEffect(() => {
               No hay obras con imagen todavía. Sube obras desde Admin.
             </div>
           ) : (
-            <WorksGrid works={cascadeWorks} onOpen={goToWork} api={API} />
+            <WorksGrid works={cascadeWorks} onOpen={goToWork} />
           )}
         </Shell>
 
