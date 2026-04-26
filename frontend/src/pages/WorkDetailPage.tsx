@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { MouseEvent, TouchEvent, useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { fetchObraById } from "../services/api";
+import { buildImageUrl, fetchObraById } from "../services/api";
 
 type WorkDetail = {
   id: number;
@@ -28,9 +28,7 @@ type CartItem = {
 const CART_KEY = "crisalida_cart";
 
 function getImageUrl(imagePath: string | null | undefined): string | null {
-  if (!imagePath) return null;
-  if (imagePath.startsWith("http")) return imagePath;
-  return `${import.meta.env.VITE_API_URL || "http://localhost:3000"}${imagePath}`;
+  return buildImageUrl(imagePath);
 }
 
 function readCart(): CartItem[] {
@@ -56,6 +54,9 @@ export default function WorkDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
+
+  const [zoomActive, setZoomActive] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
 
   useEffect(() => {
     if (!id) {
@@ -95,6 +96,41 @@ export default function WorkDetailPage() {
       isMounted = false;
     };
   }, [id]);
+
+  const updateZoomPosition = (
+    clientX: number,
+    clientY: number,
+    element: HTMLDivElement,
+  ) => {
+    const rect = element.getBoundingClientRect();
+
+    const x = ((clientX - rect.left) / rect.width) * 100;
+    const y = ((clientY - rect.top) / rect.height) * 100;
+
+    setZoomPosition({
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y)),
+    });
+  };
+
+  const handleMouseMove = (event: MouseEvent<HTMLDivElement>) => {
+    updateZoomPosition(event.clientX, event.clientY, event.currentTarget);
+  };
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+
+    setZoomActive(true);
+    updateZoomPosition(touch.clientX, touch.clientY, event.currentTarget);
+  };
+
+  const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+
+    updateZoomPosition(touch.clientX, touch.clientY, event.currentTarget);
+  };
 
   const handleAddToCart = () => {
     if (!obra) return;
@@ -176,17 +212,52 @@ export default function WorkDetailPage() {
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
         <div
-          className="relative bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden select-none min-h-[320px]"
+          className="relative bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden select-none min-h-[320px] cursor-zoom-in group touch-none"
           onContextMenu={(e) => e.preventDefault()}
           onDragStart={(e) => e.preventDefault()}
+          onMouseEnter={() => setZoomActive(true)}
+          onMouseLeave={() => setZoomActive(false)}
+          onMouseMove={handleMouseMove}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={() => setZoomActive(false)}
+          onClick={() => setZoomActive((prev) => !prev)}
         >
           {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={obra.titulo}
-              className="w-full h-full object-cover pointer-events-none"
-              draggable={false}
-            />
+            <>
+              <img
+                src={imageUrl}
+                alt={obra.titulo}
+                className={`w-full h-full object-cover pointer-events-none transition-transform duration-300 ${
+                  zoomActive ? "scale-[1.8]" : "scale-100"
+                }`}
+                style={{
+                  transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                }}
+                draggable={false}
+              />
+
+              {zoomActive && (
+                <div
+                  className="hidden md:block absolute w-36 h-36 rounded-full border border-white/40 shadow-2xl pointer-events-none z-20 bg-no-repeat"
+                  style={{
+                    left: `calc(${zoomPosition.x}% - 72px)`,
+                    top: `calc(${zoomPosition.y}% - 72px)`,
+                    backgroundImage: `url(${imageUrl})`,
+                    backgroundSize: "220% 220%",
+                    backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                    boxShadow:
+                      "0 0 0 9999px rgba(0,0,0,0.12), 0 12px 30px rgba(0,0,0,0.45)",
+                  }}
+                />
+              )}
+
+              <div className="absolute top-3 left-3 z-30 text-[10px] text-white/70 bg-black/40 border border-white/10 rounded-full px-3 py-1 backdrop-blur-sm">
+                {zoomActive
+                  ? "Zoom activo"
+                  : "Pasa el mouse o toca para ampliar"}
+              </div>
+            </>
           ) : (
             <div className="min-h-[320px] flex items-center justify-center text-gray-500 text-sm">
               Sin imagen
