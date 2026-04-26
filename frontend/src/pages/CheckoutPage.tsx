@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { API_URL } from "../services/api";
 
 type CartItem = {
   id: number;
@@ -19,7 +20,7 @@ type FormState = {
   notas: string;
 };
 
-const API = "http://localhost:3000";
+const CART_KEY = "crisalida_cart";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -37,35 +38,52 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // ✅ NUEVO: controla si el pedido QR ya fue confirmado
   const [pedidoQrConfirmado, setPedidoQrConfirmado] = useState(false);
-
-  // ✅ NUEVO: evita volver a mandar el pedido dos veces
   const [pedidoRegistrado, setPedidoRegistrado] = useState(false);
 
   useEffect(() => {
-    const raw = localStorage.getItem("crisalida_cart");
-    const items: CartItem[] = raw ? JSON.parse(raw) : [];
-    setCart(items);
+    try {
+      const raw = localStorage.getItem(CART_KEY);
+      const items: CartItem[] = raw ? JSON.parse(raw) : [];
+      setCart(Array.isArray(items) ? items : []);
 
-    if (!items.length) {
-      setErrorMsg("Tu carrito está vacío. Agrega alguna obra antes de continuar.");
+      if (!items.length) {
+        setErrorMsg("Tu carrito está vacío. Agrega alguna obra antes de continuar.");
+      }
+    } catch {
+      setCart([]);
+      setErrorMsg("No se pudo leer tu carrito. Vuelve a intentarlo.");
     }
   }, []);
 
   const total = useMemo(() => {
-    return cart.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
+    return cart.reduce(
+      (acc, item) => acc + Number(item.precio) * Number(item.cantidad),
+      0
+    );
   }, [cart]);
 
   const totalItems = useMemo(() => {
-    return cart.reduce((acc, item) => acc + item.cantidad, 0);
+    return cart.reduce((acc, item) => acc + Number(item.cantidad), 0);
   }, [cart]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+
+    if (name === "nombre") {
+      const soloLetras = value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+      setForm((prev) => ({ ...prev, nombre: soloLetras }));
+      return;
+    }
+
+    if (name === "telefono") {
+      const soloNumeros = value.replace(/[^0-9]/g, "");
+      setForm((prev) => ({ ...prev, telefono: soloNumeros }));
+      return;
+    }
+
     setForm((prev) => ({
       ...prev,
       [name]: value,
@@ -73,7 +91,8 @@ export default function CheckoutPage() {
   };
 
   const limpiarPedidoYSalir = () => {
-    localStorage.removeItem("crisalida_cart");
+    localStorage.removeItem(CART_KEY);
+    window.dispatchEvent(new Event("crisalida_cart_updated"));
     setCart([]);
     navigate("/tienda");
   };
@@ -91,8 +110,18 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (form.nombre.trim().length < 3) {
+      setErrorMsg("El nombre debe tener al menos 3 letras.");
+      return;
+    }
+
     if (!form.telefono.trim()) {
       setErrorMsg("Por favor, completa tu teléfono o WhatsApp.");
+      return;
+    }
+
+    if (form.telefono.trim().length < 7) {
+      setErrorMsg("El teléfono debe tener al menos 7 números.");
       return;
     }
 
@@ -104,6 +133,7 @@ export default function CheckoutPage() {
       const payload = {
         buyerName: form.nombre.trim(),
         buyerEmail: form.email.trim() || "sin-correo@crisalida.local",
+        buyerPhone: form.telefono.trim(),
         buyerNote:
           `Teléfono: ${form.telefono.trim()}\n` +
           `Método de entrega: ${form.metodoEntrega}\n` +
@@ -111,13 +141,15 @@ export default function CheckoutPage() {
         metodoPago: form.metodoPago === "transferencia" ? "QR" : "EFECTIVO",
         usuarioId: null,
         total,
+        yaPago: false,
+        comprobante: "",
         items: cart.map((item) => ({
           obraId: item.id,
           cantidad: item.cantidad,
         })),
       };
 
-      const response = await fetch(`${API}/pedidos`, {
+      const response = await fetch(`${API_URL}/pedidos`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -133,22 +165,20 @@ export default function CheckoutPage() {
 
       setPedidoRegistrado(true);
 
-      // ✅ SI ES QR: se queda en la página y muestra el QR después de confirmar
       if (form.metodoPago === "transferencia") {
         setPedidoQrConfirmado(true);
         setSuccessMsg(
-          "✨ Tu pedido fue registrado con éxito. Ahora realiza el pago escaneando el QR y nos pondremos en contacto contigo dentro de las próximas 24 horas.",
+          "✨ Tu pedido fue registrado con éxito. Ahora realiza el pago escaneando el QR y nos pondremos en contacto contigo dentro de las próximas 24 horas."
         );
       } else {
-        // ✅ SI ES EFECTIVO: muestra mensaje y deja botón para finalizar
         setSuccessMsg(
-          "✨ Tu pedido fue registrado con éxito. Nos pondremos en contacto contigo dentro de las próximas 24 horas para coordinar la entrega.",
+          "✨ Tu pedido fue registrado con éxito. Nos pondremos en contacto contigo dentro de las próximas 24 horas para coordinar la entrega."
         );
       }
     } catch (error) {
       console.error(error);
       setErrorMsg(
-        "Ocurrió un error al enviar tu pedido. Verifica que el backend esté encendido e inténtalo de nuevo.",
+        "Ocurrió un error al enviar tu pedido. Verifica que el backend esté funcionando e inténtalo de nuevo."
       );
     } finally {
       setSubmitting(false);
@@ -184,7 +214,6 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      {/* ✅ QR POSTERIOR A LA CONFIRMACIÓN */}
       {pedidoQrConfirmado && (
         <div className="mb-6 rounded-2xl border border-verdeEsmeralda/40 bg-[#07111f] p-6 shadow-2xl">
           <h2 className="text-xl font-bold text-verdeEsmeralda text-center mb-3">
@@ -198,7 +227,7 @@ export default function CheckoutPage() {
           <img
             src="/qr-pago.png"
             alt="Código QR de pago"
-            className="w-72 max-w-full mx-auto rounded-2xl border border-gray-700 object-contain"
+            className="w-72 max-w-full mx-auto rounded-2xl border border-gray-700 object-contain bg-white p-2"
           />
 
           <p className="text-xs text-gray-400 text-center mt-4">
@@ -227,7 +256,6 @@ export default function CheckoutPage() {
       )}
 
       <div className="grid md:grid-cols-2 gap-8">
-        {/* RESUMEN */}
         <div className="bg-[#050816] border border-gray-800 rounded-2xl p-5 shadow-lg">
           <h2 className="text-lg font-semibold text-gray-100 mb-4">
             Resumen del pedido
@@ -275,7 +303,7 @@ export default function CheckoutPage() {
 
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-100">
-                        {(item.precio * item.cantidad).toFixed(2)} Bs
+                        {(Number(item.precio) * Number(item.cantidad)).toFixed(2)} Bs
                       </p>
                     </div>
                   </div>
@@ -301,7 +329,6 @@ export default function CheckoutPage() {
           )}
         </div>
 
-        {/* FORM */}
         <form
           onSubmit={handleSubmit}
           className="bg-[#050816] border border-gray-800 rounded-2xl p-5 space-y-4 shadow-lg"
@@ -317,12 +344,17 @@ export default function CheckoutPage() {
             <input
               id="nombre"
               name="nombre"
+              type="text"
+              inputMode="text"
               value={form.nombre}
               onChange={handleChange}
               disabled={pedidoRegistrado}
-              className="w-full rounded-lg bg-[#020617] border border-gray-700 px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-verdeEsmeralda disabled:opacity-60"
+              className="w-full rounded-lg bg-[#020617] border border-gray-700 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:border-verdeEsmeralda disabled:opacity-60"
               placeholder="Ej. Joel Lazarte"
             />
+            <p className="text-[11px] text-gray-500">
+              Solo letras, sin números.
+            </p>
           </div>
 
           <div className="space-y-1">
@@ -336,7 +368,7 @@ export default function CheckoutPage() {
               value={form.email}
               onChange={handleChange}
               disabled={pedidoRegistrado}
-              className="w-full rounded-lg bg-[#020617] border border-gray-700 px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-verdeEsmeralda disabled:opacity-60"
+              className="w-full rounded-lg bg-[#020617] border border-gray-700 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:border-verdeEsmeralda disabled:opacity-60"
               placeholder="Opcional"
             />
           </div>
@@ -348,12 +380,19 @@ export default function CheckoutPage() {
             <input
               id="telefono"
               name="telefono"
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={12}
               value={form.telefono}
               onChange={handleChange}
               disabled={pedidoRegistrado}
-              className="w-full rounded-lg bg-[#020617] border border-gray-700 px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-verdeEsmeralda disabled:opacity-60"
-              placeholder="+591 ..."
+              className="w-full rounded-lg bg-[#020617] border border-gray-700 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:border-verdeEsmeralda disabled:opacity-60"
+              placeholder="Ej. 72494995"
             />
+            <p className="text-[11px] text-gray-500">
+              Solo números, sin letras.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -370,7 +409,7 @@ export default function CheckoutPage() {
                 className="w-full rounded-lg bg-[#020617] border border-gray-700 px-3 py-2 text-xs text-gray-100 focus:outline-none focus:border-verdeEsmeralda disabled:opacity-60"
               >
                 <option value="retiro">Retiro en Crisálida / Taller</option>
-                <option value="envio">Envío (a coordinar)</option>
+                <option value="envio">Envío a coordinar</option>
               </select>
             </div>
 
@@ -392,23 +431,21 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* ✅ QR PREVIO A CONFIRMAR */}
           {form.metodoPago === "transferencia" && !pedidoQrConfirmado && (
             <div className="rounded-2xl border border-verdeEsmeralda/30 bg-[#020617] p-4">
               <p className="text-sm text-gray-300 mb-3">
-                Si deseas, puedes escanear este código QR antes de confirmar tu pedido.
+                Puedes escanear este QR antes de confirmar tu pedido.
               </p>
 
               <img
                 src="/qr-pago.png"
                 alt="Código QR de pago"
-                className="w-64 max-w-full mx-auto rounded-xl border border-gray-700 object-contain"
+                className="w-64 max-w-full mx-auto rounded-xl border border-gray-700 object-contain bg-white p-2"
               />
 
               <div className="mt-3 rounded-xl bg-emerald-900/10 border border-emerald-800/40 px-3 py-2">
                 <p className="text-xs text-gray-300 text-center">
-                  Después de confirmar el pedido, el QR volverá a mostrarse para que
-                  puedas realizar el pago con tranquilidad.
+                  Después de confirmar el pedido, el QR volverá a mostrarse.
                 </p>
               </div>
             </div>
@@ -425,8 +462,8 @@ export default function CheckoutPage() {
               onChange={handleChange}
               disabled={pedidoRegistrado}
               rows={3}
-              className="w-full rounded-lg bg-[#020617] border border-gray-700 px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-verdeEsmeralda disabled:opacity-60"
-              placeholder="Ej: horarios, referencias, detalles de entrega, etc."
+              className="w-full rounded-lg bg-[#020617] border border-gray-700 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:border-verdeEsmeralda disabled:opacity-60"
+              placeholder="Ej: horarios, referencias, detalles de entrega..."
             />
           </div>
 
@@ -450,8 +487,7 @@ export default function CheckoutPage() {
 
           <p className="text-[11px] text-gray-500">
             Al confirmar tu pedido, nos pondremos en contacto por WhatsApp o
-            correo dentro de las próximas 24 horas para coordinar el pago y la
-            entrega de tu obra ✨.
+            correo dentro de las próximas 24 horas.
           </p>
         </form>
       </div>
