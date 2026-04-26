@@ -1446,7 +1446,7 @@ function ReportsPanel() {
                         src={
                           obra.imagenUrl.startsWith("http")
                             ? obra.imagenUrl
-                            : `${API}${obra.imagenUrl}`
+                            : `http://localhost:3000${obra.imagenUrl}`
                         }
                         alt={obra.titulo}
                         className="w-20 h-20 rounded-lg object-cover"
