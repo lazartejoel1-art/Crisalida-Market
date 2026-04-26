@@ -5,7 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("admin");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -65,10 +65,10 @@ export default function AdminLogin() {
 
             <input
               type="text"
-              className="w-full border rounded-lg px-3 py-2 text-sm text-negroSuave bg-white placeholder-gray-400 outline-none focus:ring-2 focus:ring-verdeEsmeralda"
+              className="w-full border rounded-lg px-3 py-2 text-sm font-semibold text-black bg-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-verdeEsmeralda"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Introduzca su usuario"
+              placeholder="Digite su usuario"
               autoComplete="username"
             />
           </div>
@@ -81,10 +81,10 @@ export default function AdminLogin() {
 
             <input
               type="password"
-              className="w-full border rounded-lg px-3 py-2 text-sm text-negroSuave bg-white placeholder-gray-400 outline-none focus:ring-2 focus:ring-verdeEsmeralda"
+              className="w-full border rounded-lg px-3 py-2 text-sm font-semibold text-black bg-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-verdeEsmeralda"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Digite su contraseña"
+              placeholder="Digite su password"
               autoComplete="current-password"
             />
           </div>
