@@ -70,6 +70,8 @@ export class ObrasController {
     return {
       url: result.secure_url,
       filename: result.secure_url,
+      imagen: result.secure_url,
+      imagenUrl: result.secure_url,
     };
   }
 
@@ -81,8 +83,17 @@ export class ObrasController {
   ): Promise<Obra> {
     if (file) {
       const result = await uploadToCloudinary(file);
+
       body.imagen = result.secure_url;
       body.imagenUrl = result.secure_url;
+    }
+
+    if (!body.imagen && body.imagenUrl) {
+      body.imagen = body.imagenUrl;
+    }
+
+    if (!body.imagenUrl && body.imagen) {
+      body.imagenUrl = body.imagen;
     }
 
     return this.obrasService.crear(body);
@@ -107,8 +118,17 @@ export class ObrasController {
   ) {
     if (file) {
       const result = await uploadToCloudinary(file);
+
       body.imagen = result.secure_url;
       body.imagenUrl = result.secure_url;
+    }
+
+    if (!body.imagen && body.imagenUrl) {
+      body.imagen = body.imagenUrl;
+    }
+
+    if (!body.imagenUrl && body.imagen) {
+      body.imagenUrl = body.imagen;
     }
 
     return this.obrasService.actualizar(id, body);

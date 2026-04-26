@@ -1,28 +1,35 @@
-import { IsString, IsNumber, IsOptional } from 'class-validator';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateObraDto {
   @IsString()
-  titulo: string;
+  titulo!: string;
 
   @IsOptional()
   @IsString()
   descripcion?: string;
 
+  @IsOptional()
   @IsString()
-  tecnica: string;
+  tecnica?: string;
 
+  @Type(() => Number)
   @IsNumber()
-  precio: number;
+  precio!: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  stock!: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  artistaId!: number;
 
   @IsOptional()
   @IsString()
   imagen?: string;
 
-  // 🔥 opcional para evitar errores si no se envía imagen
   @IsOptional()
   @IsString()
   imagenUrl?: string;
-
-  @IsNumber()
-  artistaId: number;
 }

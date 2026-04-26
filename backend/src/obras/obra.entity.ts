@@ -4,23 +4,29 @@ import { Artista } from '../Artista/artista.entity';
 @Entity()
 export class Obra {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  titulo: string;
+  titulo!: string;
 
   @Column('text')
-  descripcion: string;
-
-  @Column('decimal')
-  precio: number;
+  descripcion!: string;
 
   @Column({ nullable: true })
-  imagen: string;
+  tecnica!: string;
+
+  @Column('decimal')
+  precio!: number;
+
+  @Column({ nullable: true })
+  imagen!: string;
+
+  @Column({ nullable: true })
+  imagenUrl!: string;
 
   @Column()
-  stock: number;
+  stock!: number;
 
   @ManyToOne(() => Artista, (artista) => artista.obras)
-  artista: Artista;
+  artista!: Artista;
 }
