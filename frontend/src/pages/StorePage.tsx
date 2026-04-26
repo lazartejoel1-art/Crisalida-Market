@@ -159,7 +159,7 @@ export default function StorePage() {
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: "var(--c-text)" }}>
-            🦋 Tienda Crisálida
+            Tienda Crisálida
           </h1>
           <p className="text-sm" style={{ color: "var(--c-muted)" }}>
             Explora las obras disponibles y arma tu colección.
