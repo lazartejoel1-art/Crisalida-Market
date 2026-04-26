@@ -58,9 +58,13 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-negroSuave flex items-center justify-center px-4 py-10">
       <div className="bg-blancoPuro rounded-3xl shadow-2xl max-w-md w-full p-8 border border-gray-200">
         <div className="text-center mb-7">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-negroSuave flex items-center justify-center text-2xl">
-            🦋
-          </div>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full overflow-hidden border border-gray-200 shadow-sm">
+  <img
+    src="/uploads/crisalida.png"
+    alt="Logo Crisálida"
+    className="w-full h-full object-cover"
+  />
+</div>
 
           <h1 className="text-3xl font-extrabold text-negroSuave">
             Panel administrativo
