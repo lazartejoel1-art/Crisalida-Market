@@ -57,33 +57,37 @@ export default function AdminLogin() {
   return (
     <div className="min-h-screen bg-negroSuave flex items-center justify-center px-4 py-10">
       <div className="bg-blancoPuro rounded-3xl shadow-2xl max-w-md w-full p-8 border border-gray-200">
+        
+        {/* LOGO */}
         <div className="text-center mb-7">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full overflow-hidden border border-gray-200 shadow-sm">
-  <img
-    src="/uploads/crisalida.png"
-    alt="Logo Crisálida"
-    className="w-full h-full object-cover"
-  />
-</div>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full overflow-hidden border shadow-sm">
+            <img
+              src="/uploads/crisalida.png"
+              alt="Crisálida"
+              className="w-full h-full object-cover"
+            />
+          </div>
 
           <h1 className="text-3xl font-extrabold text-negroSuave">
             Panel administrativo
           </h1>
 
-          <p className="text-sm text-gray-600 mt-2">
+          <p className="text-sm text-gray-500 mt-2">
             Solo acceso para Crisálida
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          
+          {/* USUARIO */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Usuario
             </label>
 
             <input
               type="text"
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base font-semibold text-black bg-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-verdeEsmeralda focus:border-verdeEsmeralda transition"
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base text-black bg-white placeholder-gray-400 outline-none focus:ring-2 focus:ring-verdeEsmeralda focus:border-verdeEsmeralda transition"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Digite su usuario"
@@ -91,47 +95,51 @@ export default function AdminLogin() {
             />
           </div>
 
+          {/* PASSWORD */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Password
             </label>
 
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 pr-14 text-base font-semibold text-black bg-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-verdeEsmeralda focus:border-verdeEsmeralda transition"
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 pr-12 text-base text-black bg-white placeholder-gray-400 outline-none focus:ring-2 focus:ring-verdeEsmeralda focus:border-verdeEsmeralda transition"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Digite su password"
                 autoComplete="current-password"
               />
 
+              {/* 👁 ICONO */}
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-500 hover:text-verdeEsmeralda transition"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-lg text-gray-500 hover:text-verdeEsmeralda transition"
               >
-                {showPassword ? "Ocultar" : "Ver"}
+                {showPassword ? "🙈" : "👁"}
               </button>
             </div>
           </div>
 
+          {/* ERROR */}
           {error && (
-            <p className="text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
               {error}
             </p>
           )}
 
+          {/* BOTÓN */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-verdeEsmeralda text-black font-extrabold py-3 rounded-xl hover:opacity-90 active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full bg-verdeEsmeralda text-black font-bold py-3 rounded-xl hover:opacity-90 active:scale-[0.98] transition disabled:opacity-60"
           >
             {loading ? "Ingresando..." : "Iniciar sesión"}
           </button>
         </form>
 
-        <p className="text-xs text-gray-400 mt-5 text-center leading-relaxed">
+        <p className="text-xs text-gray-400 mt-5 text-center">
           Si no eres parte del equipo Crisálida, no deberías estar aquí 👀
         </p>
       </div>
