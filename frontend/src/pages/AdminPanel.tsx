@@ -172,7 +172,57 @@ function getAdminImageUrl(
 
   return buildImageUrl(cleanImage || cleanFallback);
 }
+function enrichPedidoItemsWithImages(
+  pedidos: Pedido[],
+  obras: Work[]
+): Pedido[] {
+  return pedidos.map((pedido) => ({
+    ...pedido,
+    items: Array.isArray(pedido.items)
+      ? pedido.items.map((item) => {
+          const obra = obras.find((w) => Number(w.id) === Number(item.obraId));
 
+          return {
+            ...item,
+            imagenUrl: item.imagenUrl || item.imagen || obra?.imagenUrl || obra?.imagen || null,
+            imagen: item.imagen || item.imagenUrl || obra?.imagen || obra?.imagenUrl || null,
+            titulo: item.titulo || obra?.titulo || `Obra #${item.obraId}`,
+            artistaNombre: item.artistaNombre || obra?.artista?.nombre || "",
+          };
+        })
+      : [],
+  }));
+}
+
+function enrichObrasVendidasWithImages(
+  obrasVendidas: ObraVendida[] | undefined,
+  obras: Work[]
+): ObraVendida[] {
+  if (!Array.isArray(obrasVendidas)) return [];
+
+  return obrasVendidas.map((obraVendida) => {
+    const obra = obras.find((w) => Number(w.id) === Number(obraVendida.obraId));
+
+    return {
+      ...obraVendida,
+      imagenUrl:
+        obraVendida.imagenUrl ||
+        obraVendida.imagen ||
+        obra?.imagenUrl ||
+        obra?.imagen ||
+        null,
+      imagen:
+        obraVendida.imagen ||
+        obraVendida.imagenUrl ||
+        obra?.imagen ||
+        obra?.imagenUrl ||
+        null,
+      titulo: obraVendida.titulo || obra?.titulo || `Obra #${obraVendida.obraId}`,
+      artistaNombre:
+        obraVendida.artistaNombre || obra?.artista?.nombre || "Crisálida",
+    };
+  });
+}
 function getEstadoBadgeClass(estado?: string) {
   switch ((estado ?? "pendiente").toLowerCase()) {
     case "pagado":
@@ -640,10 +690,19 @@ function OrdersManager() {
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   const loadOrders = async (): Promise<Pedido[]> => {
-    const res = await fetch(`${API}/pedidos`);
-    const data = (await res.json()) as Pedido[];
-    return Array.isArray(data) ? data : [];
-  };
+  const [pedidosRes, obrasRes] = await Promise.all([
+    fetch(`${API}/pedidos`),
+    fetch(`${API}/obras`),
+  ]);
+
+  const pedidosData = (await pedidosRes.json()) as Pedido[];
+  const obrasData = (await obrasRes.json()) as Work[];
+
+  const pedidos = Array.isArray(pedidosData) ? pedidosData : [];
+  const obras = Array.isArray(obrasData) ? obrasData : [];
+
+  return enrichPedidoItemsWithImages(pedidos, obras);
+};
 
   useEffect(() => {
     let alive = true;
@@ -995,18 +1054,49 @@ function ReportsPanel() {
   };
 
   const loadReports = async (): Promise<{
-    resumen: ResumenReporte;
-    analytics: AnalyticsSummary | null;
-    analyticsAvailable: boolean;
-  }> => {
-    const resumenRes = await fetch(getReportUrl());
-    const resumenData = (await resumenRes.json()) as ResumenReporte;
+  resumen: ResumenReporte;
+  analytics: AnalyticsSummary | null;
+  analyticsAvailable: boolean;
+}> => {
+  const [resumenRes, obrasRes] = await Promise.all([
+    fetch(getReportUrl()),
+    fetch(`${API}/obras`),
+  ]);
+
+  const resumenData = (await resumenRes.json()) as ResumenReporte;
+  const obrasData = (await obrasRes.json()) as Work[];
+  const obras = Array.isArray(obrasData) ? obrasData : [];
+
+  const resumenConImagenes: ResumenReporte = {
+    ...resumenData,
+    pedidos: enrichPedidoItemsWithImages(resumenData.pedidos ?? [], obras),
+    pedidosRecientes: enrichPedidoItemsWithImages(
+      resumenData.pedidosRecientes ?? [],
+      obras
+    ),
+    pedidosFiltrados: enrichPedidoItemsWithImages(
+      resumenData.pedidosFiltrados ?? [],
+      obras
+    ),
+    obrasVendidas: enrichObrasVendidasWithImages(
+      resumenData.obrasVendidas,
+      obras
+    ),
+    artistasMasVendidos: enrichObrasVendidasWithImages(
+      resumenData.artistasMasVendidos,
+      obras
+    ),
+    artistasMenosVendidos: enrichObrasVendidasWithImages(
+      resumenData.artistasMenosVendidos,
+      obras
+    ),
+  };
 
     try {
       const aRes = await fetch(`${API}/analytics/summary`);
       if (!aRes.ok) {
         return {
-          resumen: resumenData,
+          resumen: resumenConImagenes,
           analytics: null,
           analyticsAvailable: false,
         };
@@ -1015,13 +1105,13 @@ function ReportsPanel() {
       const aData = (await aRes.json()) as AnalyticsSummary;
 
       return {
-        resumen: resumenData,
+        resumen: resumenConImagenes,
         analytics: aData,
         analyticsAvailable: true,
       };
     } catch {
       return {
-        resumen: resumenData,
+        resumen: resumenConImagenes,
         analytics: null,
         analyticsAvailable: false,
       };
