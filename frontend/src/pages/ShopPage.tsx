@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { fetchObras } from "../services/api";
 
 type ObraPublic = {
   id: number;
@@ -15,20 +16,6 @@ type ObraPublic = {
   };
 };
 
-const API = import.meta.env.VITE_API_URL || "https://crisalida-market.onrender.com";
-
-function getImageUrl(obra: ObraPublic): string | null {
-  const image = obra.imagenUrl || obra.imagen;
-
-  if (!image) return null;
-
-  if (image.startsWith("http://") || image.startsWith("https://")) {
-    return image;
-  }
-
-  return `${API}${image.startsWith("/") ? image : `/${image}`}`;
-}
-
 export default function ShopPage() {
   const [obras, setObras] = useState<ObraPublic[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,13 +26,7 @@ export default function ShopPage() {
       setLoading(true);
       setError(null);
 
-      const res = await fetch(`${API}/obras`);
-
-      if (!res.ok) {
-        throw new Error("Error al cargar obras");
-      }
-
-      const data = (await res.json()) as ObraPublic[];
+      const data = await fetchObras();
       setObras(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
@@ -85,7 +66,8 @@ export default function ShopPage() {
 
       {!loading && !error && obras.length === 0 && (
         <div className="border border-dashed border-gray-700 rounded-xl p-6 text-center text-gray-400 text-sm">
-          Todavía no hay obras publicadas. Pídele al admin que cree algunas desde el panel.
+          Todavía no hay obras publicadas. Pídele al admin que cree algunas
+          desde el panel.
         </div>
       )}
 
@@ -95,7 +77,7 @@ export default function ShopPage() {
           const price =
             typeof rawPrice === "number" ? rawPrice : Number(rawPrice ?? 0);
 
-          const imageUrl = getImageUrl(obra);
+          const imageUrl = obra.imagenUrl || obra.imagen;
 
           return (
             <Link

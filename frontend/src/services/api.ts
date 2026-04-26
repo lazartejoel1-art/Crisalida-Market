@@ -1,12 +1,27 @@
 import type { Obra, Artista } from "./types";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+export const API_URL =
+  import.meta.env.VITE_API_URL || "https://crisalida-market.onrender.com";
+
+export function buildImageUrl(image?: string | null): string | null {
+  if (!image) return null;
+
+  if (image.startsWith("http://") || image.startsWith("https://")) {
+    return image;
+  }
+
+  return `${API_URL}${image.startsWith("/") ? image : `/${image}`}`;
+}
 
 async function fetchData<T>(endpoint: string): Promise<T> {
-  const response = await fetch(`${API_URL}/${endpoint}`);
+  const cleanEndpoint = endpoint.startsWith("/")
+    ? endpoint.slice(1)
+    : endpoint;
+
+  const response = await fetch(`${API_URL}/${cleanEndpoint}`);
 
   if (!response.ok) {
-    throw new Error(`Error al obtener ${endpoint}`);
+    throw new Error(`Error al obtener ${cleanEndpoint}`);
   }
 
   return response.json();
@@ -14,6 +29,10 @@ async function fetchData<T>(endpoint: string): Promise<T> {
 
 export function fetchObras(): Promise<Obra[]> {
   return fetchData<Obra[]>("obras");
+}
+
+export function fetchObraById(id: string | number): Promise<Obra> {
+  return fetchData<Obra>(`obras/${id}`);
 }
 
 export function fetchArtistas(): Promise<Artista[]> {

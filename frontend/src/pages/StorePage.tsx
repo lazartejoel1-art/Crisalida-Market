@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { fetchObras } from "../services/api"; // Update path if needed: e.g., "./api" or "../../api"
+
+function getImageUrl(imagePath: string | null | undefined): string | null {
+  if (!imagePath) return null;
+  return imagePath.startsWith("http") ? imagePath : `/images/${imagePath}`;
+}
 
 type Work = {
   id: number;
   titulo: string;
   descripcion: string;
   precio: number | string;
-  imagenUrl: string;
+  imagen?: string | null;
+  imagenUrl?: string | null;
   stock: number;
   artista?: {
     id: number;
@@ -19,19 +26,30 @@ type CartItem = {
   titulo: string;
   precio: number;
   cantidad: number;
-  imagenUrl: string;
+  imagenUrl: string | null;
   artistaNombre?: string;
 };
 
-function readCartCount() {
-  const raw = localStorage.getItem("crisalida_cart");
-  if (!raw) return 0;
+const CART_KEY = "crisalida_cart";
+
+function readCart(): CartItem[] {
   try {
-    const items = JSON.parse(raw) as CartItem[];
-    return items.reduce((acc, it) => acc + (it.cantidad ?? 0), 0);
+    const raw = localStorage.getItem(CART_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return 0;
+    return [];
   }
+}
+
+function readCartCount() {
+  const items = readCart();
+  return items.reduce((acc, it) => acc + (it.cantidad ?? 0), 0);
+}
+
+function saveCart(cart: CartItem[]) {
+  localStorage.setItem(CART_KEY, JSON.stringify(cart));
+  window.dispatchEvent(new Event("crisalida_cart_updated"));
 }
 
 export default function StorePage() {
@@ -47,10 +65,7 @@ export default function StorePage() {
     setError(null);
 
     try {
-      const res = await fetch("http://localhost:3000/obras");
-      if (!res.ok) throw new Error("No se pudo cargar la tienda");
-
-      const data = (await res.json()) as Work[];
+      const data = await fetchObras();
       setWorks(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
@@ -64,29 +79,47 @@ export default function StorePage() {
     void loadWorks();
   }, []);
 
+  useEffect(() => {
+    const updateCount = () => setCartCount(readCartCount());
+
+    window.addEventListener("storage", updateCount);
+    window.addEventListener("crisalida_cart_updated", updateCount);
+
+    return () => {
+      window.removeEventListener("storage", updateCount);
+      window.removeEventListener("crisalida_cart_updated", updateCount);
+    };
+  }, []);
+
   const addToCart = (w: Work) => {
     const rawPrice = w.precio;
     const precioNum =
       typeof rawPrice === "number" ? rawPrice : Number(rawPrice ?? 0);
 
-    const cartRaw = localStorage.getItem("crisalida_cart");
-    const cart: CartItem[] = cartRaw ? (JSON.parse(cartRaw) as CartItem[]) : [];
+    const safePrice = Number.isFinite(precioNum) ? precioNum : 0;
+    const imageUrl = getImageUrl(w.imagenUrl || w.imagen);
+
+    const cart = readCart();
 
     const idx = cart.findIndex((x) => x.id === w.id);
+
     if (idx >= 0) {
-      cart[idx].cantidad += 1;
+      cart[idx] = {
+        ...cart[idx],
+        cantidad: cart[idx].cantidad + 1,
+      };
     } else {
       cart.push({
         id: w.id,
         titulo: w.titulo,
-        precio: precioNum,
+        precio: safePrice,
         cantidad: 1,
-        imagenUrl: w.imagenUrl,
+        imagenUrl: imageUrl,
         artistaNombre: w.artista?.nombre,
       });
     }
 
-    localStorage.setItem("crisalida_cart", JSON.stringify(cart));
+    saveCart(cart);
     setCartCount(readCartCount());
 
     setToast("Agregado al carrito 🛒");
@@ -110,6 +143,7 @@ export default function StorePage() {
           {error}
         </p>
         <button
+          type="button"
           onClick={() => void loadWorks()}
           className="text-sm hover:underline"
           style={{ color: "var(--c-accent)" }}
@@ -122,7 +156,6 @@ export default function StorePage() {
 
   return (
     <section className="max-w-6xl mx-auto px-4 py-10">
-      {/* HEADER */}
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: "var(--c-text)" }}>
@@ -135,7 +168,7 @@ export default function StorePage() {
 
         <Link
           to="/carrito"
-          className="text-sm px-4 py-2 rounded-lg border hover:opacity-95 transition"
+          className="text-sm px-4 py-2 rounded-lg border hover:opacity-95 transition whitespace-nowrap"
           style={{
             borderColor: "var(--c-border)",
             color: "var(--c-text)",
@@ -145,13 +178,25 @@ export default function StorePage() {
         </Link>
       </div>
 
-      {/* GRID */}
+      {works.length === 0 && (
+        <div
+          className="rounded-2xl p-6 text-center text-sm"
+          style={{
+            border: "1px dashed var(--c-border)",
+            color: "var(--c-muted)",
+          }}
+        >
+          Todavía no hay obras disponibles en la tienda.
+        </div>
+      )}
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {works.map((w) => {
           const price =
-            typeof w.precio === "number"
-              ? w.precio
-              : Number(w.precio ?? 0);
+            typeof w.precio === "number" ? w.precio : Number(w.precio ?? 0);
+
+          const safePrice = Number.isFinite(price) ? price : 0;
+          const imageUrl = getImageUrl(w.imagenUrl || w.imagen);
 
           return (
             <article
@@ -163,22 +208,19 @@ export default function StorePage() {
               }}
               onContextMenu={(e) => e.preventDefault()}
             >
-              {/* IMAGEN PROTEGIDA */}
               <div className="relative h-44">
-                {w.imagenUrl ? (
+                {imageUrl ? (
                   <>
                     <img
-                      src={w.imagenUrl}
+                      src={imageUrl}
                       alt={w.titulo}
                       className="w-full h-full object-cover pointer-events-none"
                       draggable={false}
                     />
 
-                    {/* Overlay protector */}
-                    <div className="absolute inset-0 z-10 pointer-events-auto" />
+                    <div className="absolute inset-0 z-10 pointer-events-none" />
 
-                    {/* Marca de agua */}
-                    <div className="absolute bottom-2 right-2 text-[10px] text-white/40 uppercase tracking-widest">
+                    <div className="absolute bottom-2 right-2 text-[10px] text-white/40 uppercase tracking-widest pointer-events-none">
                       Crisálida
                     </div>
                   </>
@@ -192,7 +234,6 @@ export default function StorePage() {
                 )}
               </div>
 
-              {/* INFO */}
               <div className="p-4 flex-1 flex flex-col gap-2">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -205,7 +246,7 @@ export default function StorePage() {
                   </div>
 
                   <p className="text-sm font-bold" style={{ color: "var(--c-text)" }}>
-                    {price.toFixed(2)} Bs
+                    {safePrice.toFixed(2)} Bs
                   </p>
                 </div>
 
@@ -226,9 +267,10 @@ export default function StorePage() {
                   </Link>
 
                   <button
+                    type="button"
                     onClick={() => addToCart(w)}
                     disabled={w.stock <= 0}
-                    className="flex-1 text-xs px-3 py-2 rounded-lg font-semibold hover:opacity-95 transition disabled:opacity-50"
+                    className="flex-1 text-xs px-3 py-2 rounded-lg font-semibold hover:opacity-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                       background: "var(--c-accent)",
                       color: "#07110a",
@@ -247,10 +289,9 @@ export default function StorePage() {
         })}
       </div>
 
-      {/* TOAST */}
       {toast && (
         <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs px-4 py-2 rounded-full shadow-lg"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs px-4 py-2 rounded-full shadow-lg z-50"
           style={{
             background: "var(--c-panel)",
             border: "1px solid var(--c-border)",

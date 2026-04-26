@@ -5,7 +5,6 @@ import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import ThemeMiniPanel from "./components/ThemeMiniPanel";
 
-// ✅ Deben existir en: src/theme/theme.ts
 import { applyThemeToCssVars, loadTheme } from "./theme/theme";
 
 // Páginas
@@ -22,7 +21,6 @@ import ArtistDetailPage from "./pages/ArtistDetailPage";
 import MuseosPage from "./pages/MuseosPage";
 
 export default function App() {
-  // ✅ Al iniciar: cargar tema guardado y aplicarlo a CSS variables
   useEffect(() => {
     const t = loadTheme();
     applyThemeToCssVars(t);
@@ -36,7 +34,6 @@ export default function App() {
         color: "var(--c-text)",
       }}
     >
-      {/* ✅ Logo desde /public/uploads → se usa como /uploads/... */}
       <Navbar
         logoSrc="/uploads/crisalida.png"
         title="Crisálida"
@@ -63,7 +60,6 @@ export default function App() {
         </Routes>
       </main>
 
-      {/* 🎨 Mini panel de colores */}
       <ThemeMiniPanel />
     </div>
   );

@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { fetchObraById } from "../services/api";
 
 type WorkDetail = {
   id: number;
   titulo: string;
   descripcion: string;
   precio: number | string;
-  imagenUrl: string;
+  imagen?: string | null;
+  imagenUrl?: string | null;
   stock: number;
   artista?: {
     id: number;
@@ -19,9 +21,32 @@ type CartItem = {
   titulo: string;
   precio: number;
   cantidad: number;
-  imagenUrl: string;
+  imagenUrl: string | null;
   artistaNombre?: string;
 };
+
+const CART_KEY = "crisalida_cart";
+
+function getImageUrl(imagePath: string | null | undefined): string | null {
+  if (!imagePath) return null;
+  if (imagePath.startsWith("http")) return imagePath;
+  return `${import.meta.env.VITE_API_URL || "http://localhost:3000"}${imagePath}`;
+}
+
+function readCart(): CartItem[] {
+  try {
+    const cartRaw = localStorage.getItem(CART_KEY);
+    const parsed = cartRaw ? JSON.parse(cartRaw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCart(cart: CartItem[]) {
+  localStorage.setItem(CART_KEY, JSON.stringify(cart));
+  window.dispatchEvent(new Event("crisalida_cart_updated"));
+}
 
 export default function WorkDetailPage() {
   const { id } = useParams();
@@ -39,40 +64,36 @@ export default function WorkDetailPage() {
       return;
     }
 
-    const controller = new AbortController();
+    let isMounted = true;
 
     const load = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(`http://localhost:3000/obras/${id}`, {
-          signal: controller.signal,
-        });
+        const data = await fetchObraById(id);
 
-        if (res.status === 404) {
-          setObra(null);
-          setError("Esta obra ya no existe o fue retirada 🫧");
-          return;
-        }
+        if (!isMounted) return;
 
-        if (!res.ok) {
-          throw new Error("No se pudo cargar la obra");
-        }
-
-        const data = (await res.json()) as WorkDetail;
         setObra(data);
       } catch (err) {
-        if ((err as Error).name === "AbortError") return;
         console.error(err);
+
+        if (!isMounted) return;
+
         setError("No se pudo cargar la obra. Inténtalo más tarde.");
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     void load();
-    return () => controller.abort();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   const handleAddToCart = () => {
@@ -83,25 +104,30 @@ export default function WorkDetailPage() {
         ? obra.precio
         : Number(obra.precio ?? 0);
 
-    const cartRaw = localStorage.getItem("crisalida_cart");
-    const cart: CartItem[] = cartRaw ? JSON.parse(cartRaw) : [];
+    const safePrice = Number.isFinite(precioNum) ? precioNum : 0;
+    const imageUrl = getImageUrl(obra.imagenUrl || obra.imagen);
 
+    const cart = readCart();
     const existingIndex = cart.findIndex((item) => item.id === obra.id);
 
     if (existingIndex >= 0) {
-      cart[existingIndex].cantidad += 1;
+      cart[existingIndex] = {
+        ...cart[existingIndex],
+        cantidad: cart[existingIndex].cantidad + 1,
+      };
     } else {
       cart.push({
         id: obra.id,
         titulo: obra.titulo,
-        precio: precioNum,
+        precio: safePrice,
         cantidad: 1,
-        imagenUrl: obra.imagenUrl,
+        imagenUrl: imageUrl,
         artistaNombre: obra.artista?.nombre,
       });
     }
 
-    localStorage.setItem("crisalida_cart", JSON.stringify(cart));
+    saveCart(cart);
+
     setAddedMessage("Obra agregada al carrito 🛒");
     setTimeout(() => setAddedMessage(null), 2000);
   };
@@ -120,7 +146,10 @@ export default function WorkDetailPage() {
         <p className="text-sm text-red-400 mb-4">
           {error ?? "Obra no encontrada."}
         </p>
-        <Link to="/tienda" className="text-sm text-verdeEsmeralda hover:underline">
+        <Link
+          to="/tienda"
+          className="text-sm text-verdeEsmeralda hover:underline"
+        >
           ← Volver a la tienda
         </Link>
       </section>
@@ -132,9 +161,13 @@ export default function WorkDetailPage() {
       ? obra.precio
       : Number(obra.precio ?? 0);
 
+  const safePrice = Number.isFinite(price) ? price : 0;
+  const imageUrl = getImageUrl(obra.imagenUrl || obra.imagen);
+
   return (
     <section className="max-w-5xl mx-auto px-4 py-10">
       <button
+        type="button"
         onClick={() => navigate(-1)}
         className="text-xs text-gray-400 hover:text-verdeEsmeralda mb-4"
       >
@@ -142,30 +175,31 @@ export default function WorkDetailPage() {
       </button>
 
       <div className="grid md:grid-cols-2 gap-8 items-start">
-        {/* ===================== IMAGEN PROTEGIDA ===================== */}
         <div
-          className="relative bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden select-none"
-          onContextMenu={(e) => e.preventDefault()} // ❌ clic derecho
-          onDragStart={(e) => e.preventDefault()} // ❌ arrastrar
+          className="relative bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden select-none min-h-[320px]"
+          onContextMenu={(e) => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
         >
-          {/* Imagen */}
-          <img
-            src={obra.imagenUrl}
-            alt={obra.titulo}
-            className="w-full h-full object-cover pointer-events-none"
-            draggable={false}
-          />
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={obra.titulo}
+              className="w-full h-full object-cover pointer-events-none"
+              draggable={false}
+            />
+          ) : (
+            <div className="min-h-[320px] flex items-center justify-center text-gray-500 text-sm">
+              Sin imagen
+            </div>
+          )}
 
-          {/* Overlay protector invisible */}
-          <div className="absolute inset-0 z-10" />
+          <div className="absolute inset-0 z-10 pointer-events-none" />
 
-          {/* Watermark académico */}
           <div className="absolute bottom-3 right-3 text-[10px] text-white/40 uppercase tracking-widest pointer-events-none">
             Crisálida · Arte
           </div>
         </div>
 
-        {/* ===================== INFO ===================== */}
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-verdeEsmeralda mb-2">
             Obra de arte · Crisálida
@@ -189,7 +223,7 @@ export default function WorkDetailPage() {
           </p>
 
           <p className="text-3xl font-bold text-verdeEsmeralda mb-3">
-            {price.toFixed(2)} Bs
+            {safePrice.toFixed(2)} Bs
           </p>
 
           <p className="text-sm text-gray-300 mb-4">{obra.descripcion}</p>
@@ -199,12 +233,14 @@ export default function WorkDetailPage() {
             <span className="text-gray-200 font-medium">{obra.stock}</span>
           </p>
 
-          <div className="flex gap-3 items-center mb-4">
+          <div className="flex flex-wrap gap-3 items-center mb-4">
             <button
+              type="button"
               onClick={handleAddToCart}
-              className="px-4 py-2 rounded-lg bg-verdeEsmeralda text-black text-sm font-semibold hover:opacity-90"
+              disabled={obra.stock <= 0}
+              className="px-4 py-2 rounded-lg bg-verdeEsmeralda text-black text-sm font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Agregar al carrito
+              {obra.stock > 0 ? "Agregar al carrito" : "Sin stock"}
             </button>
 
             <Link

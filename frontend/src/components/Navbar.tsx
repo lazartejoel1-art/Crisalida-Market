@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 type NavItem = { label: string; to: string };
+
+type CartItem = {
+  id: number;
+  cantidad: number;
+};
 
 const NAV: NavItem[] = [
   { label: "Inicio", to: "/" },
@@ -13,6 +18,24 @@ const NAV: NavItem[] = [
   { label: "Admin", to: "/admin/login" },
 ];
 
+const CART_KEY = "crisalida_cart";
+
+function readCartCount() {
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    const parsed = raw ? (JSON.parse(raw) as CartItem[]) : [];
+
+    if (!Array.isArray(parsed)) return 0;
+
+    return parsed.reduce(
+      (acc, item) => acc + Number(item.cantidad ?? 0),
+      0
+    );
+  } catch {
+    return 0;
+  }
+}
+
 export default function Navbar({
   title = "Crisálida",
   logoSrc = "/uploads/crisalida.png",
@@ -23,21 +46,31 @@ export default function Navbar({
   cartTo?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const location = useLocation();
+  const [cartCount, setCartCount] = useState(() => readCartCount());
 
-  // ✅ cerrar al cambiar de ruta (evita warning de eslint: lo hacemos solo si está abierto)
-  useEffect(() => {
-    if (open) setOpen(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
-
-  // ✅ cerrar con ESC
+  // ESC para cerrar menú
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Actualizar carrito
+  useEffect(() => {
+    const updateCart = () => {
+      setCartCount(readCartCount());
+    };
+
+    window.addEventListener("storage", updateCart);
+    window.addEventListener("crisalida_cart_updated", updateCart);
+
+    return () => {
+      window.removeEventListener("storage", updateCart);
+      window.removeEventListener("crisalida_cart_updated", updateCart);
+    };
   }, []);
 
   return (
@@ -51,64 +84,51 @@ export default function Navbar({
         }}
       >
         <div className="h-14 px-4 flex items-center justify-between relative">
+          {/* Botón menú */}
           <button
             type="button"
             onClick={() => setOpen(true)}
             className="w-10 h-10 flex items-center justify-center rounded-md"
-            style={{ background: "transparent" }}
             aria-label="Abrir menú"
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background =
-                "var(--c-topbar-hover)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background =
-                "transparent";
-            }}
           >
-            <span className="text-2xl leading-none">☰</span>
+            <span className="text-2xl">☰</span>
           </button>
 
+          {/* Logo */}
           <Link
             to="/"
             className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2"
-            aria-label="Ir a inicio"
           >
             <img
               src={logoSrc}
-              alt="Logo Crisálida"
+              alt="Logo"
               className="w-8 h-8 rounded-full object-cover"
             />
             <span className="font-extrabold">{title}</span>
           </Link>
 
+          {/* Carrito */}
           <Link
             to={cartTo}
-            className="w-10 h-10 flex items-center justify-center rounded-md"
-            aria-label="Ver carrito"
-            title="Carrito"
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background =
-                "var(--c-topbar-hover)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background =
-                "transparent";
-            }}
+            className="relative w-10 h-10 flex items-center justify-center"
           >
             <span className="text-xl">🛒</span>
+
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-verdeEsmeralda text-black text-[11px] font-bold flex items-center justify-center">
+                {cartCount}
+              </span>
+            )}
           </Link>
         </div>
       </header>
 
+      {/* Menú lateral */}
       {open && (
         <div className="fixed inset-0 z-[60]">
-          <button
-            type="button"
-            className="absolute inset-0"
-            style={{ background: "rgba(0,0,0,0.5)" }}
+          <div
+            className="absolute inset-0 bg-black/50"
             onClick={() => setOpen(false)}
-            aria-label="Cerrar menú"
           />
 
           <aside
@@ -116,33 +136,12 @@ export default function Navbar({
             style={{
               background: "var(--c-panel)",
               borderColor: "var(--c-border)",
-              color: "var(--c-text)",
             }}
           >
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <img
-                  src={logoSrc}
-                  alt="Logo Crisálida"
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-                <div>
-                  <p className="font-bold leading-tight">{title}</p>
-                  <p className="text-xs" style={{ color: "var(--c-muted)" }}>
-                    Menú
-                  </p>
-                </div>
-              </div>
+            <div className="flex justify-between items-center mb-5">
+              <span className="font-bold">{title}</span>
 
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="text-xl"
-                style={{ color: "var(--c-muted)" }}
-                aria-label="Cerrar"
-              >
-                ✕
-              </button>
+              <button onClick={() => setOpen(false)}>✕</button>
             </div>
 
             <nav className="space-y-2">
@@ -150,16 +149,8 @@ export default function Navbar({
                 <Link
                   key={it.to}
                   to={it.to}
+                  onClick={() => setOpen(false)}
                   className="block px-3 py-2 rounded-lg"
-                  style={{ color: "var(--c-text)" }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLAnchorElement).style.background =
-                      "rgba(255,255,255,0.08)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLAnchorElement).style.background =
-                      "transparent";
-                  }}
                 >
                   {it.label}
                 </Link>
@@ -171,4 +162,3 @@ export default function Navbar({
     </>
   );
 }
-              
