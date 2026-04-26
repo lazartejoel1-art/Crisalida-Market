@@ -12,21 +12,42 @@ import {
 } from '@nestjs/common';
 
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { v4 as uuid } from 'uuid';
-import { join } from 'path';
-import * as fs from 'fs';
+import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 
 import { ArtistasService } from './artistas.service';
 import { CrearArtistaDto } from './dto/create-artista.dto';
 
-const API_URL =
-  process.env.API_PUBLIC_URL || 'https://crisalida-market.onrender.com';
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-const uploadPath = join(process.cwd(), 'uploads');
+function uploadToCloudinary(
+  file: Express.Multer.File,
+  folder: string,
+): Promise<UploadApiResponse> {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: 'image',
+      },
+      (error, result) => {
+        if (error) {
+          return reject(new Error(error.message || 'Error al subir imagen'));
+        }
 
-if (!fs.existsSync(uploadPath)) {
-  fs.mkdirSync(uploadPath, { recursive: true });
+        if (!result) {
+          return reject(new Error('No se pudo subir la imagen'));
+        }
+
+        resolve(result);
+      },
+    );
+
+    uploadStream.end(file.buffer);
+  });
 }
 
 @Controller('artistas')
@@ -44,63 +65,51 @@ export class ArtistasController {
   }
 
   @Post('upload-image')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: uploadPath,
-        filename: (req, file, cb) => {
-          const filename = uuid() + '-' + file.originalname;
-          cb(null, filename);
-        },
-      }),
-    }),
-  )
-  uploadImage(@UploadedFile() file: Express.Multer.File) {
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadImage(@UploadedFile() file: Express.Multer.File) {
+    const result = await uploadToCloudinary(file, 'crisalida-market/artistas');
+
     return {
-      url: `${API_URL}/uploads/${file.filename}`,
-      filename: file.filename,
+      url: result.secure_url,
+      filename: result.secure_url,
     };
   }
 
   @Post()
-  @UseInterceptors(
-    FileInterceptor('foto', {
-      storage: diskStorage({
-        destination: uploadPath,
-        filename: (req, file, cb) => {
-          const filename = uuid() + '-' + file.originalname;
-          cb(null, filename);
-        },
-      }),
-    }),
-  )
-  crear(
+  @UseInterceptors(FileInterceptor('foto'))
+  async crear(
     @Body() dto: CrearArtistaDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    const foto: string | undefined = file?.filename;
+    let foto: string | undefined;
+
+    if (file) {
+      const result = await uploadToCloudinary(
+        file,
+        'crisalida-market/artistas',
+      );
+      foto = result.secure_url;
+    }
 
     return this.artistasService.crear(dto, foto);
   }
 
   @Patch(':id')
-  @UseInterceptors(
-    FileInterceptor('foto', {
-      storage: diskStorage({
-        destination: uploadPath,
-        filename: (req, file, cb) => {
-          const filename = uuid() + '-' + file.originalname;
-          cb(null, filename);
-        },
-      }),
-    }),
-  )
-  actualizar(
+  @UseInterceptors(FileInterceptor('foto'))
+  async actualizar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CrearArtistaDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    const foto: string | undefined = file?.filename;
+    let foto: string | undefined;
+
+    if (file) {
+      const result = await uploadToCloudinary(
+        file,
+        'crisalida-market/artistas',
+      );
+      foto = result.secure_url;
+    }
 
     return this.artistasService.actualizar(id, dto, foto);
   }

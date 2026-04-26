@@ -7,6 +7,16 @@ import { CreateObraDto } from './dto/create-obra.dto';
 const API_URL =
   process.env.API_PUBLIC_URL || 'https://crisalida-market.onrender.com';
 
+function buildImageUrl(imagen?: string | null): string | null {
+  if (!imagen) return null;
+
+  if (imagen.startsWith('http://') || imagen.startsWith('https://')) {
+    return imagen;
+  }
+
+  return `${API_URL}/uploads/${imagen}`;
+}
+
 @Injectable()
 export class ObrasService {
   constructor(
@@ -21,8 +31,8 @@ export class ObrasService {
 
     return obras.map((obra) => ({
       ...obra,
-      imagen: obra.imagen ? `uploads/${obra.imagen}` : null,
-      imagenUrl: obra.imagen ? `${API_URL}/uploads/${obra.imagen}` : null,
+      imagen: obra.imagen || null,
+      imagenUrl: buildImageUrl(obra.imagen),
     }));
   }
 
@@ -38,14 +48,15 @@ export class ObrasService {
 
     return {
       ...obra,
-      imagen: obra.imagen ? `uploads/${obra.imagen}` : null,
-      imagenUrl: obra.imagen ? `${API_URL}/uploads/${obra.imagen}` : null,
+      imagen: obra.imagen || null,
+      imagenUrl: buildImageUrl(obra.imagen),
     };
   }
 
   async crear(dto: CreateObraDto) {
     const obra = this.obraRepository.create({
       ...dto,
+      imagen: dto.imagen || dto.imagenUrl || '',
       artista: { id: dto.artistaId },
     });
 
@@ -65,7 +76,10 @@ export class ObrasService {
       throw new NotFoundException('Obra no encontrada');
     }
 
-    Object.assign(obra, dto);
+    Object.assign(obra, {
+      ...dto,
+      imagen: dto.imagen || dto.imagenUrl || obra.imagen,
+    });
 
     return this.obraRepository.save(obra);
   }

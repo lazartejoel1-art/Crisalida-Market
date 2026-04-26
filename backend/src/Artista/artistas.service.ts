@@ -7,6 +7,16 @@ import { CrearArtistaDto } from './dto/create-artista.dto';
 const API_URL =
   process.env.API_PUBLIC_URL || 'https://crisalida-market.onrender.com';
 
+function buildImageUrl(image?: string | null): string | null {
+  if (!image) return null;
+
+  if (image.startsWith('http://') || image.startsWith('https://')) {
+    return image;
+  }
+
+  return `${API_URL}/uploads/${image}`;
+}
+
 @Injectable()
 export class ArtistasService {
   constructor(
@@ -19,7 +29,7 @@ export class ArtistasService {
 
     return artistas.map((a) => ({
       ...a,
-      fotoUrl: a.foto ? `${API_URL}/uploads/${a.foto}` : null,
+      fotoUrl: buildImageUrl(a.foto),
     }));
   }
 
@@ -35,10 +45,10 @@ export class ArtistasService {
 
     return {
       ...artista,
-      fotoUrl: artista.foto ? `${API_URL}/uploads/${artista.foto}` : null,
+      fotoUrl: buildImageUrl(artista.foto),
       obras: artista.obras?.map((o) => ({
         ...o,
-        imagenUrl: o.imagen ? `${API_URL}/uploads/${o.imagen}` : null,
+        imagenUrl: buildImageUrl(o.imagen),
       })),
     };
   }
