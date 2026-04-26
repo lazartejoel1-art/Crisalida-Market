@@ -1,17 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ArtistForm, { NewArtist } from "../components/ArtistForm";
 import WorkForm, { NewWork } from "../components/WorkForm";
 import { buildImageUrl } from "../services/api";
+
 /**
  * =========================================================
  * ✅ ADMIN PANEL - CRISÁLIDA
- * Este archivo controla TODO el panel admin:
- * - Dashboard (resumen)
- * - Gestión de Artistas (CRUD)
- * - Gestión de Obras (CRUD)
- * - Gestión de Pedidos
- * - Reportes (Pedidos + Analytics + PDF si existe endpoint)
+ * Panel admin:
+ * - Dashboard
+ * - Artistas
+ * - Obras
+ * - Pedidos
+ * - Reportes
  * =========================================================
  */
 
@@ -19,7 +20,8 @@ type Artist = {
   id: number;
   nombre: string;
   descripcion: string;
-  fotoUrl: string;
+  fotoUrl?: string | null;
+  foto?: string | null;
 };
 
 type Work = {
@@ -30,7 +32,7 @@ type Work = {
   imagen?: string | null;
   imagenUrl?: string | null;
   stock: number;
-  artista: {
+  artista?: {
     id: number;
     nombre: string;
   };
@@ -115,45 +117,59 @@ type ResumenReporte = {
   artistasMenosVendidos?: ObraVendida[];
 };
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API =
+  import.meta.env.VITE_API_URL || "https://crisalida-market.onrender.com";
 
-const formatPrecio = (precio: number | string | null | undefined): string => {
+const EMPTY_REPORT: ResumenReporte = {
+  totalPedidos: 0,
+  totalIngresos: 0,
+  totalPedidosHoy: 0,
+  totalIngresosHoy: 0,
+  totalPedidosFiltrados: 0,
+  totalIngresosFiltrados: 0,
+  porMetodo: {},
+  pedidosRecientes: [],
+  pedidos: [],
+  pedidosFiltrados: [],
+  clientes: [],
+  obrasVendidas: [],
+  artistasMasVendidos: [],
+  artistasMenosVendidos: [],
+};
+
+function formatPrecio(precio: number | string | null | undefined): string {
   if (precio === null || precio === undefined || precio === "") return "0.00";
 
   if (typeof precio === "number") {
     return Number.isFinite(precio) ? precio.toFixed(2) : "0.00";
   }
 
-  let s = String(precio).trim();
-  s = s.replace(/[^\d.,-]/g, "");
+  let value = String(precio).trim();
+  value = value.replace(/[^\d.,-]/g, "");
 
-  if (s.includes(",") && s.includes(".")) {
-    const lastComma = s.lastIndexOf(",");
-    const lastDot = s.lastIndexOf(".");
+  if (value.includes(",") && value.includes(".")) {
+    const lastComma = value.lastIndexOf(",");
+    const lastDot = value.lastIndexOf(".");
     const decimalIsComma = lastComma > lastDot;
 
-    if (decimalIsComma) {
-      s = s.replace(/\./g, "").replace(",", ".");
-    } else {
-      s = s.replace(/,/g, "");
-    }
-  } else if (s.includes(",")) {
-    s = s.replace(",", ".");
+    value = decimalIsComma
+      ? value.replace(/\./g, "").replace(",", ".")
+      : value.replace(/,/g, "");
+  } else if (value.includes(",")) {
+    value = value.replace(",", ".");
   }
 
-  const num = Number(s);
-  if (Number.isNaN(num) || !Number.isFinite(num)) return "0.00";
-  return num.toFixed(2);
-};
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue.toFixed(2) : "0.00";
+}
 
-function formatFecha(iso?: string) {
+function formatFecha(iso?: string): string {
   if (!iso) return "Sin fecha";
 
-  const d = new Date(iso);
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Sin fecha";
 
-  if (Number.isNaN(d.getTime())) return "Sin fecha";
-
-  return d.toLocaleString("es-BO", {
+  return date.toLocaleString("es-BO", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -162,9 +178,13 @@ function formatFecha(iso?: string) {
   });
 }
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Ocurrió un error inesperado.";
+}
+
 function getAdminImageUrl(
   image?: string | null,
-  fallbackImage?: string | null
+  fallbackImage?: string | null,
 ): string | null {
   const cleanImage = image && String(image).trim() !== "" ? image : null;
   const cleanFallback =
@@ -172,20 +192,27 @@ function getAdminImageUrl(
 
   return buildImageUrl(cleanImage || cleanFallback);
 }
+
+function normalizeArtistImage(artist: Artist): string | null {
+  return getAdminImageUrl(artist.fotoUrl, artist.foto);
+}
+
 function enrichPedidoItemsWithImages(
   pedidos: Pedido[],
-  obras: Work[]
+  obras: Work[],
 ): Pedido[] {
   return pedidos.map((pedido) => ({
     ...pedido,
     items: Array.isArray(pedido.items)
       ? pedido.items.map((item) => {
-          const obra = obras.find((w) => Number(w.id) === Number(item.obraId));
+          const obra = obras.find((work) => Number(work.id) === Number(item.obraId));
 
           return {
             ...item,
-            imagenUrl: item.imagenUrl || item.imagen || obra?.imagenUrl || obra?.imagen || null,
-            imagen: item.imagen || item.imagenUrl || obra?.imagen || obra?.imagenUrl || null,
+            imagenUrl:
+              item.imagenUrl || item.imagen || obra?.imagenUrl || obra?.imagen || null,
+            imagen:
+              item.imagen || item.imagenUrl || obra?.imagen || obra?.imagenUrl || null,
             titulo: item.titulo || obra?.titulo || `Obra #${item.obraId}`,
             artistaNombre: item.artistaNombre || obra?.artista?.nombre || "",
           };
@@ -196,12 +223,12 @@ function enrichPedidoItemsWithImages(
 
 function enrichObrasVendidasWithImages(
   obrasVendidas: ObraVendida[] | undefined,
-  obras: Work[]
+  obras: Work[],
 ): ObraVendida[] {
   if (!Array.isArray(obrasVendidas)) return [];
 
   return obrasVendidas.map((obraVendida) => {
-    const obra = obras.find((w) => Number(w.id) === Number(obraVendida.obraId));
+    const obra = obras.find((work) => Number(work.id) === Number(obraVendida.obraId));
 
     return {
       ...obraVendida,
@@ -223,7 +250,8 @@ function enrichObrasVendidasWithImages(
     };
   });
 }
-function getEstadoBadgeClass(estado?: string) {
+
+function getEstadoBadgeClass(estado?: string): string {
   switch ((estado ?? "pendiente").toLowerCase()) {
     case "pagado":
       return "bg-blue-900/30 text-blue-300 border border-blue-800/40";
@@ -234,6 +262,24 @@ function getEstadoBadgeClass(estado?: string) {
     default:
       return "bg-yellow-900/30 text-yellow-300 border border-yellow-800/40";
   }
+}
+
+async function parseResponseError(res: Response): Promise<string> {
+  const text = await res.text();
+
+  if (!text) {
+    return `Error HTTP ${res.status}.`;
+  }
+
+  try {
+    const parsed = JSON.parse(text) as { message?: string | string[] };
+    if (Array.isArray(parsed.message)) return parsed.message.join(" ");
+    if (typeof parsed.message === "string") return parsed.message;
+  } catch {
+    return text;
+  }
+
+  return text;
 }
 
 function DashboardHome({
@@ -255,7 +301,7 @@ function DashboardHome({
   onGoArtists: () => void;
   onGoWorks: () => void;
   onGoOrders: () => void;
-  onEditWork: (w: Work) => void;
+  onEditWork: (work: Work) => void;
 }) {
   return (
     <div className="space-y-6">
@@ -263,10 +309,8 @@ function DashboardHome({
         <h1 className="text-2xl font-bold text-verdeEsmeralda mb-2">
           Bienvenido a Crisálida Admin
         </h1>
-        <p>
-          <span className="text-gray-300 text-sm">
-            Desde aquí puedes administrar artistas, obras, pedidos y ver reportes.
-          </span>
+        <p className="text-gray-300 text-sm">
+          Desde aquí puedes administrar artistas, obras, pedidos y ver reportes.
         </p>
       </div>
 
@@ -327,43 +371,47 @@ function DashboardHome({
           </p>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {latestWorks.map((w) => (
-              <button
-                key={w.id}
-                type="button"
-                onClick={() => onEditWork(w)}
-                className="text-left rounded-xl overflow-hidden border border-gray-800 bg-[#0b1220] hover:border-verdeEsmeralda/40 transition"
-              >
-                {getAdminImageUrl(w.imagenUrl, w.imagen) ? (
-  <img
-    src={getAdminImageUrl(w.imagenUrl, w.imagen) ?? ""}
-    alt={w.titulo}
-    className="w-full h-32 object-cover"
-    loading="lazy"
-  />
-) : (
-                  <div className="w-full h-32 flex items-center justify-center text-xs text-gray-500">
-                    Sin imagen
-                  </div>
-                )}
+            {latestWorks.map((work) => {
+              const imageUrl = getAdminImageUrl(work.imagenUrl, work.imagen);
 
-                <div className="p-3">
-                  <p className="text-sm font-bold text-gray-100 line-clamp-1">
-                    {w.titulo}
-                  </p>
-                  <p className="text-xs text-verdeEsmeralda line-clamp-1">
-                    {w.artista?.nombre ?? "Crisálida"}
-                  </p>
+              return (
+                <button
+                  key={work.id}
+                  type="button"
+                  onClick={() => onEditWork(work)}
+                  className="text-left rounded-xl overflow-hidden border border-gray-800 bg-[#0b1220] hover:border-verdeEsmeralda/40 transition"
+                >
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={work.titulo}
+                      className="w-full h-32 object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-32 flex items-center justify-center text-xs text-gray-500">
+                      Sin imagen
+                    </div>
+                  )}
 
-                  <div className="mt-2 flex items-center justify-between text-xs">
-                    <span className="text-gray-300">
-                      {formatPrecio(w.precio)} Bs
-                    </span>
-                    <span className="text-gray-400">Stock: {w.stock}</span>
+                  <div className="p-3">
+                    <p className="text-sm font-bold text-gray-100 line-clamp-1">
+                      {work.titulo}
+                    </p>
+                    <p className="text-xs text-verdeEsmeralda line-clamp-1">
+                      {work.artista?.nombre ?? "Crisálida"}
+                    </p>
+
+                    <div className="mt-2 flex items-center justify-between text-xs">
+                      <span className="text-gray-300">
+                        {formatPrecio(work.precio)} Bs
+                      </span>
+                      <span className="text-gray-400">Stock: {work.stock}</span>
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -374,22 +422,23 @@ function DashboardHome({
 function ArtistsManager() {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [editingArtist, setEditingArtist] = useState<Artist | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  const loadArtists = async (): Promise<Artist[]> => {
+  const loadArtists = useCallback(async (): Promise<Artist[]> => {
     const res = await fetch(`${API}/artistas`);
     const data = (await res.json()) as Artist[];
     return Array.isArray(data) ? data : [];
-  };
+  }, []);
 
   useEffect(() => {
     let alive = true;
 
-    (async () => {
+    void (async () => {
       try {
         const data = await loadArtists();
         if (alive) setArtists(data);
-      } catch (err) {
-        console.error("Error al cargar artistas", err);
+      } catch (error) {
+        console.error("Error al cargar artistas", error);
         if (alive) setArtists([]);
       }
     })();
@@ -397,46 +446,58 @@ function ArtistsManager() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [loadArtists]);
 
   const handleSave = async (formData: NewArtist) => {
-    const data = new FormData();
+    setMessage(null);
 
-    data.append("nombre", formData.nombre);
-    data.append("descripcion", formData.descripcion);
+    try {
+      const data = new FormData();
+      data.append("nombre", formData.nombre);
+      data.append("descripcion", formData.descripcion);
 
-    if (formData.foto) {
-      data.append("foto", formData.foto);
-    }
+      if (formData.foto instanceof File) {
+        data.append("foto", formData.foto, formData.foto.name);
+      }
 
-    if (editingArtist) {
-      await fetch(`${API}/artistas/${editingArtist.id}`, {
-        method: "PATCH",
+      const url = editingArtist
+        ? `${API}/artistas/${editingArtist.id}`
+        : `${API}/artistas`;
+
+      const res = await fetch(url, {
+        method: editingArtist ? "PATCH" : "POST",
         body: data,
       });
+
+      if (!res.ok) {
+        throw new Error(await parseResponseError(res));
+      }
+
       setEditingArtist(null);
-    } else {
-      await fetch(`${API}/artistas`, {
-        method: "POST",
-        body: data,
-      });
+      setArtists(await loadArtists());
+      setMessage("Artista guardado correctamente ✅");
+    } catch (error) {
+      console.error(error);
+      setMessage(getErrorMessage(error));
     }
-
-    const updated = await loadArtists();
-    setArtists(updated);
   };
 
   const handleDelete = async (id: number) => {
-    await fetch(`${API}/artistas/${id}`, { method: "DELETE" });
-    const data = await loadArtists();
-    setArtists(data);
+    const res = await fetch(`${API}/artistas/${id}`, { method: "DELETE" });
+
+    if (!res.ok) {
+      setMessage("No se pudo eliminar el artista.");
+      return;
+    }
+
+    setArtists(await loadArtists());
   };
 
   const initialValues: NewArtist | undefined = editingArtist
     ? {
         nombre: editingArtist.nombre,
         descripcion: editingArtist.descripcion,
-        fotoUrl: editingArtist.fotoUrl,
+        fotoUrl: editingArtist.fotoUrl ?? editingArtist.foto ?? undefined,
       }
     : undefined;
 
@@ -449,6 +510,12 @@ function ArtistsManager() {
         onCancel={editingArtist ? () => setEditingArtist(null) : undefined}
       />
 
+      {message && (
+        <div className="mt-3 mb-4 rounded-lg border border-gray-800 bg-[#0e1624] p-3 text-sm text-gray-200">
+          {message}
+        </div>
+      )}
+
       <h2 className="text-xl font-bold text-verdeEsmeralda mb-4">
         🎨 Lista de artistas
       </h2>
@@ -460,42 +527,47 @@ function ArtistsManager() {
       )}
 
       <div className="space-y-3 mt-2">
-        {artists.map((a) => (
-          <div
-            key={a.id}
-            className="bg-[#0e1624] border border-gray-800 p-4 rounded-lg flex items-center justify-between gap-4"
-          >
-            <div className="flex items-center gap-4">
-              {a.fotoUrl && (
-                <img
-                  src={a.fotoUrl}
-                  alt={a.nombre}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              )}
-              <div>
-                <p className="font-semibold text-gray-200">{a.nombre}</p>
-                <p className="text-sm text-gray-400">{a.descripcion}</p>
+        {artists.map((artist) => {
+          const imageUrl = normalizeArtistImage(artist);
+
+          return (
+            <div
+              key={artist.id}
+              className="bg-[#0e1624] border border-gray-800 p-4 rounded-lg flex items-center justify-between gap-4"
+            >
+              <div className="flex items-center gap-4">
+                {imageUrl && (
+                  <img
+                    src={imageUrl}
+                    alt={artist.nombre}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                )}
+
+                <div>
+                  <p className="font-semibold text-gray-200">{artist.nombre}</p>
+                  <p className="text-sm text-gray-400">{artist.descripcion}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditingArtist(artist)}
+                  className="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-500"
+                >
+                  Editar
+                </button>
+
+                <button
+                  onClick={() => void handleDelete(artist.id)}
+                  className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
+                >
+                  Eliminar
+                </button>
               </div>
             </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setEditingArtist(a)}
-                className="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-500"
-              >
-                Editar
-              </button>
-
-              <button
-                onClick={() => void handleDelete(a.id)}
-                className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -511,33 +583,42 @@ function ObrasManager({
   const [artists, setArtists] = useState<Artist[]>([]);
   const [works, setWorks] = useState<Work[]>([]);
   const [localEditingWork, setLocalEditingWork] = useState<Work | null>(null);
+  const [savingWork, setSavingWork] = useState(false);
+  const [workMessage, setWorkMessage] = useState<string | null>(null);
 
   const effectiveEditingWork = editingWork ?? localEditingWork;
 
-  const fetchArtists = async (): Promise<Artist[]> => {
+  const fetchArtists = useCallback(async (): Promise<Artist[]> => {
     const res = await fetch(`${API}/artistas`);
     const data = (await res.json()) as Artist[];
     return Array.isArray(data) ? data : [];
-  };
+  }, []);
 
-  const fetchWorks = async (): Promise<Work[]> => {
+  const fetchWorks = useCallback(async (): Promise<Work[]> => {
     const res = await fetch(`${API}/obras`);
     const data = (await res.json()) as Work[];
     return Array.isArray(data) ? data : [];
-  };
+  }, []);
 
   useEffect(() => {
     let alive = true;
 
-    (async () => {
+    void (async () => {
       try {
-        const [a, w] = await Promise.all([fetchArtists(), fetchWorks()]);
+        const [loadedArtists, loadedWorks] = await Promise.all([
+          fetchArtists(),
+          fetchWorks(),
+        ]);
+
         if (!alive) return;
-        setArtists(a);
-        setWorks(w);
-      } catch (e) {
-        console.error(e);
+
+        setArtists(loadedArtists);
+        setWorks(loadedWorks);
+      } catch (error) {
+        console.error(error);
+
         if (!alive) return;
+
         setArtists([]);
         setWorks([]);
       }
@@ -546,44 +627,82 @@ function ObrasManager({
     return () => {
       alive = false;
     };
-  }, []);
+  }, [fetchArtists, fetchWorks]);
 
   const handleSave = async (formData: NewWork) => {
-    const data = new FormData();
+    setSavingWork(true);
+    setWorkMessage(null);
 
-    data.append("titulo", formData.titulo);
-    data.append("descripcion", formData.descripcion);
-    data.append("precio", String(formData.precio));
-    data.append("stock", String(formData.stock));
-    data.append("artistaId", String(formData.artistaId));
+    try {
+      const titulo = String(formData.titulo ?? "").trim();
+      const descripcion = String(formData.descripcion ?? "").trim();
+      const precio = Number(formData.precio);
+      const stock = Number(formData.stock);
+      const artistaId = Number(formData.artistaId);
 
-    if (formData.imagen) {
-      data.append("imagen", formData.imagen);
-    }
+      if (!titulo) throw new Error("Falta el título de la obra.");
+      if (!Number.isFinite(precio) || precio <= 0) {
+        throw new Error("El precio debe ser mayor a 0.");
+      }
+      if (!Number.isFinite(stock) || stock < 0) {
+        throw new Error("El stock debe ser 0 o mayor.");
+      }
+      if (!Number.isFinite(artistaId) || artistaId <= 0) {
+        throw new Error("Debes seleccionar un artista.");
+      }
+      if (!effectiveEditingWork && !(formData.imagen instanceof File)) {
+        throw new Error("Debes seleccionar una imagen para crear la obra.");
+      }
 
-    if (effectiveEditingWork) {
-      await fetch(`${API}/obras/${effectiveEditingWork.id}`, {
-        method: "PATCH",
+      const data = new FormData();
+      data.append("titulo", titulo);
+      data.append("descripcion", descripcion);
+      data.append("precio", String(precio));
+      data.append("stock", String(stock));
+      data.append("artistaId", String(artistaId));
+
+      if (formData.imagen instanceof File) {
+        data.append("imagen", formData.imagen, formData.imagen.name);
+      }
+
+      const url = effectiveEditingWork
+        ? `${API}/obras/${effectiveEditingWork.id}`
+        : `${API}/obras`;
+
+      const res = await fetch(url, {
+        method: effectiveEditingWork ? "PATCH" : "POST",
         body: data,
       });
+
+      if (!res.ok) {
+        throw new Error(await parseResponseError(res));
+      }
 
       setLocalEditingWork(null);
       onClearEditingWork();
-    } else {
-      await fetch(`${API}/obras`, {
-        method: "POST",
-        body: data,
-      });
+      setWorks(await fetchWorks());
+      setWorkMessage(
+        effectiveEditingWork
+          ? "Obra actualizada correctamente ✅"
+          : "Obra creada correctamente ✅",
+      );
+    } catch (error) {
+      console.error("Error al guardar obra:", error);
+      setWorkMessage(getErrorMessage(error));
+    } finally {
+      setSavingWork(false);
     }
-
-    const updated = await fetchWorks();
-    setWorks(updated);
   };
 
   const handleDelete = async (id: number) => {
-    await fetch(`${API}/obras/${id}`, { method: "DELETE" });
-    const data = await fetchWorks();
-    setWorks(data);
+    const res = await fetch(`${API}/obras/${id}`, { method: "DELETE" });
+
+    if (!res.ok) {
+      setWorkMessage("No se pudo eliminar la obra.");
+      return;
+    }
+
+    setWorks(await fetchWorks());
   };
 
   const initialValues: NewWork | undefined = effectiveEditingWork
@@ -594,13 +713,16 @@ function ObrasManager({
           typeof effectiveEditingWork.precio === "number"
             ? effectiveEditingWork.precio
             : Number(effectiveEditingWork.precio),
-        imagenUrl: effectiveEditingWork.imagenUrl ?? undefined,
+        imagenUrl: effectiveEditingWork.imagenUrl ?? effectiveEditingWork.imagen ?? undefined,
         stock: effectiveEditingWork.stock,
         artistaId: effectiveEditingWork.artista?.id ?? 0,
       }
     : undefined;
 
-  const artistOptions = artists.map((a) => ({ id: a.id, nombre: a.nombre }));
+  const artistOptions = artists.map((artist) => ({
+    id: artist.id,
+    nombre: artist.nombre,
+  }));
 
   return (
     <div>
@@ -619,6 +741,18 @@ function ObrasManager({
         }
       />
 
+      {savingWork && (
+        <p className="mt-3 text-sm text-yellow-300">
+          Guardando obra, espera unos segundos...
+        </p>
+      )}
+
+      {workMessage && (
+        <div className="mt-3 mb-4 rounded-lg border border-gray-800 bg-[#0e1624] p-3 text-sm text-gray-200">
+          {workMessage}
+        </div>
+      )}
+
       <h2 className="text-xl font-bold text-verdeEsmeralda mb-4">
         🖼 Lista de obras
       </h2>
@@ -630,54 +764,58 @@ function ObrasManager({
       )}
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
-        {works.map((w) => (
-          <div
-            key={w.id}
-            className="bg-[#0e1624] border border-gray-800 p-4 rounded-lg flex flex-col gap-3"
-          >
-            {getAdminImageUrl(w.imagenUrl, w.imagen) && (
-  <img
-    src={getAdminImageUrl(w.imagenUrl, w.imagen) ?? ""}
-    alt={w.titulo}
-    className="w-full h-40 rounded-lg object-cover"
-    loading="lazy"
-  />
-)}
+        {works.map((work) => {
+          const imageUrl = getAdminImageUrl(work.imagenUrl, work.imagen);
 
-            <div className="flex-1">
-              <p className="font-semibold text-gray-200">{w.titulo}</p>
-              <p className="text-xs text-verdeEsmeralda mb-1">
-                {w.artista?.nombre}
-              </p>
-              <p className="text-sm text-gray-400 line-clamp-3">
-                {w.descripcion}
-              </p>
+          return (
+            <div
+              key={work.id}
+              className="bg-[#0e1624] border border-gray-800 p-4 rounded-lg flex flex-col gap-3"
+            >
+              {imageUrl && (
+                <img
+                  src={imageUrl}
+                  alt={work.titulo}
+                  className="w-full h-40 rounded-lg object-cover"
+                  loading="lazy"
+                />
+              )}
+
+              <div className="flex-1">
+                <p className="font-semibold text-gray-200">{work.titulo}</p>
+                <p className="text-xs text-verdeEsmeralda mb-1">
+                  {work.artista?.nombre}
+                </p>
+                <p className="text-sm text-gray-400 line-clamp-3">
+                  {work.descripcion}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-bold text-gray-100">
+                  {formatPrecio(work.precio)} Bs
+                </span>
+                <span className="text-gray-400">Stock: {work.stock}</span>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setLocalEditingWork(work)}
+                  className="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-500"
+                >
+                  Editar
+                </button>
+
+                <button
+                  onClick={() => void handleDelete(work.id)}
+                  className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
+                >
+                  Eliminar
+                </button>
+              </div>
             </div>
-
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-bold text-gray-100">
-                {formatPrecio(w.precio)} Bs
-              </span>
-              <span className="text-gray-400">Stock: {w.stock}</span>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setLocalEditingWork(w)}
-                className="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-500"
-              >
-                Editar
-              </button>
-
-              <button
-                onClick={() => void handleDelete(w.id)}
-                className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -689,40 +827,45 @@ function OrdersManager() {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
-  const loadOrders = async (): Promise<Pedido[]> => {
-  const [pedidosRes, obrasRes] = await Promise.all([
-    fetch(`${API}/pedidos`),
-    fetch(`${API}/obras`),
-  ]);
+  const loadOrders = useCallback(async (): Promise<Pedido[]> => {
+    const [pedidosRes, obrasRes] = await Promise.all([
+      fetch(`${API}/pedidos`),
+      fetch(`${API}/obras`),
+    ]);
 
-  const pedidosData = (await pedidosRes.json()) as Pedido[];
-  const obrasData = (await obrasRes.json()) as Work[];
+    const pedidosData = (await pedidosRes.json()) as Pedido[];
+    const obrasData = (await obrasRes.json()) as Work[];
 
-  const pedidos = Array.isArray(pedidosData) ? pedidosData : [];
-  const obras = Array.isArray(obrasData) ? obrasData : [];
+    const pedidos = Array.isArray(pedidosData) ? pedidosData : [];
+    const obras = Array.isArray(obrasData) ? obrasData : [];
 
-  return enrichPedidoItemsWithImages(pedidos, obras);
-};
+    return enrichPedidoItemsWithImages(pedidos, obras);
+  }, []);
 
   useEffect(() => {
     let alive = true;
 
-    (async () => {
+    void (async () => {
       try {
         const data = await loadOrders();
+
         if (!alive) return;
-        const normalized = data.map((p) => ({
-          ...p,
-          estado: p.estado ?? "pendiente",
-          items: Array.isArray(p.items) ? p.items : [],
-          yaPago: p.yaPago ?? false,
-          comprobante: p.comprobante ?? "",
-          buyerPhone: p.buyerPhone ?? "",
+
+        const normalized = data.map((pedido) => ({
+          ...pedido,
+          estado: pedido.estado ?? "pendiente",
+          items: Array.isArray(pedido.items) ? pedido.items : [],
+          yaPago: pedido.yaPago ?? false,
+          comprobante: pedido.comprobante ?? "",
+          buyerPhone: pedido.buyerPhone ?? "",
         }));
+
         setOrders(normalized.sort((a, b) => Number(b.id) - Number(a.id)));
-      } catch (e) {
-        console.error(e);
+      } catch (error) {
+        console.error(error);
+
         if (!alive) return;
+
         setOrders([]);
       } finally {
         if (alive) setLoading(false);
@@ -732,14 +875,16 @@ function OrdersManager() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [loadOrders]);
 
   const updateOrderStateLocal = (id: number, estado: PedidoEstado) => {
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, estado } : o)));
+    setOrders((prev) =>
+      prev.map((order) => (order.id === id ? { ...order, estado } : order)),
+    );
   };
 
   const handleSetEstado = async (id: number, estado: PedidoEstado) => {
-    const previous = orders.find((o) => o.id === id)?.estado ?? "pendiente";
+    const previous = orders.find((order) => order.id === id)?.estado ?? "pendiente";
 
     updateOrderStateLocal(id, estado);
     setSavingId(id);
@@ -757,11 +902,11 @@ function OrdersManager() {
       }
 
       setInfoMsg(`Estado del pedido #${id} actualizado a "${estado}".`);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       updateOrderStateLocal(id, previous);
       setInfoMsg(
-        `Cambio visual aplicado fallido en backend para pedido #${id}. Si no existe PATCH /pedidos/:id/estado, el cambio no quedará guardado.`,
+        `No se pudo guardar el estado del pedido #${id}. Verifica el backend.`,
       );
     } finally {
       setSavingId(null);
@@ -818,17 +963,14 @@ function OrdersManager() {
                     <span className="font-semibold text-gray-100">Cliente:</span>{" "}
                     {order.buyerName}
                   </p>
-
                   <p className="text-sm text-gray-400">{order.buyerEmail}</p>
 
-                  {order.buyerPhone ? (
+                  {order.buyerPhone && (
                     <p className="text-sm text-gray-300">
-                      <span className="font-semibold text-gray-100">
-                        Teléfono:
-                      </span>{" "}
+                      <span className="font-semibold text-gray-100">Teléfono:</span>{" "}
                       {order.buyerPhone}
                     </p>
-                  ) : null}
+                  )}
 
                   <p className="text-xs text-gray-500">
                     Fecha: {formatFecha(order.createdAt)}
@@ -854,17 +996,17 @@ function OrdersManager() {
                     </span>
                   </p>
 
-                  {order.comprobante ? (
+                  {order.comprobante && (
                     <p className="text-xs text-gray-500 whitespace-pre-line">
                       Comprobante: {order.comprobante}
                     </p>
-                  ) : null}
+                  )}
 
-                  {order.buyerNote ? (
+                  {order.buyerNote && (
                     <p className="text-xs text-gray-500 whitespace-pre-line">
                       Nota: {order.buyerNote}
                     </p>
-                  ) : null}
+                  )}
                 </div>
 
                 <div className="text-left lg:text-right">
@@ -882,44 +1024,48 @@ function OrdersManager() {
 
                 {order.items?.length ? (
                   <div className="grid md:grid-cols-2 gap-3">
-                    {order.items.map((item, idx) => (
-                      <div
-                        key={`${order.id}-${item.obraId}-${idx}`}
-                        className="bg-[#0b1220] border border-gray-800 rounded-xl p-3 flex gap-3"
-                      >
-                        {getAdminImageUrl(item.imagenUrl, item.imagen) ? (
-  <img
-    src={getAdminImageUrl(item.imagenUrl, item.imagen) ?? ""}
-    alt={item.titulo ?? `Obra ${item.obraId}`}
-    className="w-20 h-20 rounded-lg object-cover"
-    loading="lazy"
-  />
-) : (
-                          <div className="w-20 h-20 rounded-lg bg-[#111827] border border-gray-700 flex items-center justify-center text-[10px] text-gray-500">
-                            Sin imagen
-                          </div>
-                        )}
+                    {order.items.map((item, index) => {
+                      const imageUrl = getAdminImageUrl(item.imagenUrl, item.imagen);
 
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-100">
-                            {item.titulo ?? `Obra #${item.obraId}`}
-                          </p>
+                      return (
+                        <div
+                          key={`${order.id}-${item.obraId}-${index}`}
+                          className="bg-[#0b1220] border border-gray-800 rounded-xl p-3 flex gap-3"
+                        >
+                          {imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={item.titulo ?? `Obra ${item.obraId}`}
+                              className="w-20 h-20 rounded-lg object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-20 h-20 rounded-lg bg-[#111827] border border-gray-700 flex items-center justify-center text-[10px] text-gray-500">
+                              Sin imagen
+                            </div>
+                          )}
 
-                          {item.artistaNombre ? (
-                            <p className="text-xs text-verdeEsmeralda">
-                              {item.artistaNombre}
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-gray-100">
+                              {item.titulo ?? `Obra #${item.obraId}`}
                             </p>
-                          ) : null}
 
-                          <div className="mt-1 text-xs text-gray-400 space-y-1">
-                            <p>Obra ID: {item.obraId}</p>
-                            <p>Cantidad: {item.cantidad}</p>
-                            <p>Precio: {formatPrecio(item.precio)} Bs</p>
-                            <p>Subtotal: {formatPrecio(item.subtotal)} Bs</p>
+                            {item.artistaNombre && (
+                              <p className="text-xs text-verdeEsmeralda">
+                                {item.artistaNombre}
+                              </p>
+                            )}
+
+                            <div className="mt-1 text-xs text-gray-400 space-y-1">
+                              <p>Obra ID: {item.obraId}</p>
+                              <p>Cantidad: {item.cantidad}</p>
+                              <p>Precio: {formatPrecio(item.precio)} Bs</p>
+                              <p>Subtotal: {formatPrecio(item.subtotal)} Bs</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-gray-500">
@@ -934,37 +1080,24 @@ function OrdersManager() {
                 </h3>
 
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => void handleSetEstado(order.id, "pendiente")}
-                    disabled={savingId === order.id}
-                    className="text-xs px-3 py-2 rounded-lg bg-yellow-600 text-black font-semibold hover:opacity-90 disabled:opacity-50"
-                  >
-                    Pendiente
-                  </button>
-
-                  <button
-                    onClick={() => void handleSetEstado(order.id, "pagado")}
-                    disabled={savingId === order.id}
-                    className="text-xs px-3 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:opacity-90 disabled:opacity-50"
-                  >
-                    Pagado
-                  </button>
-
-                  <button
-                    onClick={() => void handleSetEstado(order.id, "entregado")}
-                    disabled={savingId === order.id}
-                    className="text-xs px-3 py-2 rounded-lg bg-green-600 text-white font-semibold hover:opacity-90 disabled:opacity-50"
-                  >
-                    Entregado
-                  </button>
-
-                  <button
-                    onClick={() => void handleSetEstado(order.id, "cancelado")}
-                    disabled={savingId === order.id}
-                    className="text-xs px-3 py-2 rounded-lg bg-red-600 text-white font-semibold hover:opacity-90 disabled:opacity-50"
-                  >
-                    Cancelado
-                  </button>
+                  {["pendiente", "pagado", "entregado", "cancelado"].map((estado) => (
+                    <button
+                      key={estado}
+                      onClick={() => void handleSetEstado(order.id, estado)}
+                      disabled={savingId === order.id}
+                      className={`text-xs px-3 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 ${
+                        estado === "pendiente"
+                          ? "bg-yellow-600 text-black"
+                          : estado === "pagado"
+                            ? "bg-blue-600 text-white"
+                            : estado === "entregado"
+                              ? "bg-green-600 text-white"
+                              : "bg-red-600 text-white"
+                      }`}
+                    >
+                      {estado.charAt(0).toUpperCase() + estado.slice(1)}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -980,7 +1113,6 @@ function ReportsPanel() {
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [analyticsAvailable, setAnalyticsAvailable] = useState(true);
   const [pdfError, setPdfError] = useState<string | null>(null);
-
   const [tipoFiltro, setTipoFiltro] = useState<
     "general" | "dia" | "mes" | "anio" | "rango"
   >("general");
@@ -989,112 +1121,80 @@ function ReportsPanel() {
   const [anio, setAnio] = useState(String(new Date().getFullYear()));
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
+  const [resumen, setResumen] = useState<ResumenReporte>(EMPTY_REPORT);
 
-  const [resumen, setResumen] = useState<ResumenReporte>({
-    totalPedidos: 0,
-    totalIngresos: 0,
-    totalPedidosHoy: 0,
-    totalIngresosHoy: 0,
-    totalPedidosFiltrados: 0,
-    totalIngresosFiltrados: 0,
-    porMetodo: {},
-    pedidosRecientes: [],
-    pedidos: [],
-    pedidosFiltrados: [],
-    clientes: [],
-    obrasVendidas: [],
-    artistasMasVendidos: [],
-    artistasMenosVendidos: [],
-  });
-
-  const buildQueryString = () => {
+  const buildQueryString = useCallback(() => {
     const params = new URLSearchParams();
 
-    if (tipoFiltro === "dia" && fecha) {
-      params.set("fecha", fecha);
-    }
-
+    if (tipoFiltro === "dia" && fecha) params.set("fecha", fecha);
     if (tipoFiltro === "mes" && mes && anio) {
       params.set("mes", mes);
       params.set("anio", anio);
     }
-
-    if (tipoFiltro === "anio" && anio) {
-      params.set("anio", anio);
-    }
-
+    if (tipoFiltro === "anio" && anio) params.set("anio", anio);
     if (tipoFiltro === "rango") {
       if (desde) params.set("desde", desde);
       if (hasta) params.set("hasta", hasta);
     }
 
     return params.toString();
-  };
+  }, [anio, desde, fecha, hasta, mes, tipoFiltro]);
 
-  const getReportUrl = () => {
+  const getReportUrl = useCallback(() => {
     const query = buildQueryString();
     return query ? `${API}/reportes?${query}` : `${API}/reportes`;
-  };
+  }, [buildQueryString]);
 
-  const getPdfUrl = () => {
+  const getPdfUrl = useCallback(() => {
     const query = buildQueryString();
     return query
       ? `${API}/reportes/obras/pdf?${query}`
       : `${API}/reportes/obras/pdf`;
-  };
+  }, [buildQueryString]);
 
-  const openPdfInNewTab = () => {
-    setPdfError(null);
-    try {
-      window.open(getPdfUrl(), "_blank", "noopener,noreferrer");
-    } catch (e) {
-      console.error(e);
-      setPdfError("No se pudo abrir el PDF. Verifica que el endpoint esté activo.");
-    }
-  };
+  const loadReports = useCallback(async (): Promise<{
+    resumen: ResumenReporte;
+    analytics: AnalyticsSummary | null;
+    analyticsAvailable: boolean;
+  }> => {
+    const [resumenRes, obrasRes] = await Promise.all([
+      fetch(getReportUrl()),
+      fetch(`${API}/obras`),
+    ]);
 
-  const loadReports = async (): Promise<{
-  resumen: ResumenReporte;
-  analytics: AnalyticsSummary | null;
-  analyticsAvailable: boolean;
-}> => {
-  const [resumenRes, obrasRes] = await Promise.all([
-    fetch(getReportUrl()),
-    fetch(`${API}/obras`),
-  ]);
+    const resumenData = (await resumenRes.json()) as ResumenReporte;
+    const obrasData = (await obrasRes.json()) as Work[];
+    const obras = Array.isArray(obrasData) ? obrasData : [];
 
-  const resumenData = (await resumenRes.json()) as ResumenReporte;
-  const obrasData = (await obrasRes.json()) as Work[];
-  const obras = Array.isArray(obrasData) ? obrasData : [];
-
-  const resumenConImagenes: ResumenReporte = {
-    ...resumenData,
-    pedidos: enrichPedidoItemsWithImages(resumenData.pedidos ?? [], obras),
-    pedidosRecientes: enrichPedidoItemsWithImages(
-      resumenData.pedidosRecientes ?? [],
-      obras
-    ),
-    pedidosFiltrados: enrichPedidoItemsWithImages(
-      resumenData.pedidosFiltrados ?? [],
-      obras
-    ),
-    obrasVendidas: enrichObrasVendidasWithImages(
-      resumenData.obrasVendidas,
-      obras
-    ),
-    artistasMasVendidos: enrichObrasVendidasWithImages(
-      resumenData.artistasMasVendidos,
-      obras
-    ),
-    artistasMenosVendidos: enrichObrasVendidasWithImages(
-      resumenData.artistasMenosVendidos,
-      obras
-    ),
-  };
+    const resumenConImagenes: ResumenReporte = {
+      ...resumenData,
+      pedidos: enrichPedidoItemsWithImages(resumenData.pedidos ?? [], obras),
+      pedidosRecientes: enrichPedidoItemsWithImages(
+        resumenData.pedidosRecientes ?? [],
+        obras,
+      ),
+      pedidosFiltrados: enrichPedidoItemsWithImages(
+        resumenData.pedidosFiltrados ?? [],
+        obras,
+      ),
+      obrasVendidas: enrichObrasVendidasWithImages(
+        resumenData.obrasVendidas,
+        obras,
+      ),
+      artistasMasVendidos: enrichObrasVendidasWithImages(
+        resumenData.artistasMasVendidos,
+        obras,
+      ),
+      artistasMenosVendidos: enrichObrasVendidasWithImages(
+        resumenData.artistasMenosVendidos,
+        obras,
+      ),
+    };
 
     try {
-      const aRes = await fetch(`${API}/analytics/summary`);
-      if (!aRes.ok) {
+      const analyticsRes = await fetch(`${API}/analytics/summary`);
+
+      if (!analyticsRes.ok) {
         return {
           resumen: resumenConImagenes,
           analytics: null,
@@ -1102,11 +1202,11 @@ function ReportsPanel() {
         };
       }
 
-      const aData = (await aRes.json()) as AnalyticsSummary;
+      const analyticsData = (await analyticsRes.json()) as AnalyticsSummary;
 
       return {
         resumen: resumenConImagenes,
-        analytics: aData,
+        analytics: analyticsData,
         analyticsAvailable: true,
       };
     } catch {
@@ -1116,49 +1216,29 @@ function ReportsPanel() {
         analyticsAvailable: false,
       };
     }
-  };
+  }, [getReportUrl]);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+
+    try {
+      const result = await loadReports();
+      setResumen(result.resumen);
+      setAnalytics(result.analytics);
+      setAnalyticsAvailable(result.analyticsAvailable);
+    } catch (error) {
+      console.error(error);
+      setResumen(EMPTY_REPORT);
+      setAnalytics(null);
+      setAnalyticsAvailable(false);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadReports]);
 
   useEffect(() => {
-    let alive = true;
-
-    (async () => {
-      setLoading(true);
-      try {
-        const r = await loadReports();
-        if (!alive) return;
-        setResumen(r.resumen);
-        setAnalytics(r.analytics);
-        setAnalyticsAvailable(r.analyticsAvailable);
-      } catch (e) {
-        console.error(e);
-        if (!alive) return;
-        setResumen({
-          totalPedidos: 0,
-          totalIngresos: 0,
-          totalPedidosHoy: 0,
-          totalIngresosHoy: 0,
-          totalPedidosFiltrados: 0,
-          totalIngresosFiltrados: 0,
-          porMetodo: {},
-          pedidosRecientes: [],
-          pedidos: [],
-          pedidosFiltrados: [],
-          clientes: [],
-          obrasVendidas: [],
-          artistasMasVendidos: [],
-          artistasMenosVendidos: [],
-        });
-        setAnalytics(null);
-        setAnalyticsAvailable(false);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, []); 
+    void refresh();
+  }, [refresh]);
 
   const analyticsStats = useMemo(() => {
     if (!analytics) {
@@ -1178,35 +1258,14 @@ function ReportsPanel() {
     };
   }, [analytics]);
 
-  const refresh = async () => {
-    setLoading(true);
+  const openPdfInNewTab = () => {
+    setPdfError(null);
+
     try {
-      const r = await loadReports();
-      setResumen(r.resumen);
-      setAnalytics(r.analytics);
-      setAnalyticsAvailable(r.analyticsAvailable);
-    } catch (e) {
-      console.error(e);
-      setResumen({
-        totalPedidos: 0,
-        totalIngresos: 0,
-        totalPedidosHoy: 0,
-        totalIngresosHoy: 0,
-        totalPedidosFiltrados: 0,
-        totalIngresosFiltrados: 0,
-        porMetodo: {},
-        pedidosRecientes: [],
-        pedidos: [],
-        pedidosFiltrados: [],
-        clientes: [],
-        obrasVendidas: [],
-        artistasMasVendidos: [],
-        artistasMenosVendidos: [],
-      });
-      setAnalytics(null);
-      setAnalyticsAvailable(false);
-    } finally {
-      setLoading(false);
+      window.open(getPdfUrl(), "_blank", "noopener,noreferrer");
+    } catch (error) {
+      console.error(error);
+      setPdfError("No se pudo abrir el PDF. Verifica que el endpoint esté activo.");
     }
   };
 
@@ -1216,7 +1275,7 @@ function ReportsPanel() {
         <input
           type="date"
           value={fecha}
-          onChange={(e) => setFecha(e.target.value)}
+          onChange={(event) => setFecha(event.target.value)}
           className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
         />
       );
@@ -1227,7 +1286,7 @@ function ReportsPanel() {
         <>
           <select
             value={mes}
-            onChange={(e) => setMes(e.target.value)}
+            onChange={(event) => setMes(event.target.value)}
             className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
           >
             <option value="">Mes</option>
@@ -1248,7 +1307,7 @@ function ReportsPanel() {
           <input
             type="number"
             value={anio}
-            onChange={(e) => setAnio(e.target.value)}
+            onChange={(event) => setAnio(event.target.value)}
             placeholder="Año"
             className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white w-28"
           />
@@ -1261,7 +1320,7 @@ function ReportsPanel() {
         <input
           type="number"
           value={anio}
-          onChange={(e) => setAnio(e.target.value)}
+          onChange={(event) => setAnio(event.target.value)}
           placeholder="Año"
           className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white w-28"
         />
@@ -1274,13 +1333,13 @@ function ReportsPanel() {
           <input
             type="date"
             value={desde}
-            onChange={(e) => setDesde(e.target.value)}
+            onChange={(event) => setDesde(event.target.value)}
             className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
           />
           <input
             type="date"
             value={hasta}
-            onChange={(e) => setHasta(e.target.value)}
+            onChange={(event) => setHasta(event.target.value)}
             className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
           />
         </>
@@ -1295,7 +1354,9 @@ function ReportsPanel() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-verdeEsmeralda">Reportes 📊</h1>
+            <h1 className="text-2xl font-bold text-verdeEsmeralda">
+              Reportes 📊
+            </h1>
             <p className="text-sm text-gray-300">
               Reportes filtrados por día, mes, año o rango de fechas.
             </p>
@@ -1323,60 +1384,27 @@ function ReportsPanel() {
           <h2 className="text-sm font-bold text-gray-100">Filtro del reporte</h2>
 
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setTipoFiltro("general")}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold ${
-                tipoFiltro === "general"
-                  ? "bg-verdeEsmeralda text-black"
-                  : "bg-white/10 text-white border border-white/10"
-              }`}
-            >
-              General
-            </button>
-
-            <button
-              onClick={() => setTipoFiltro("dia")}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold ${
-                tipoFiltro === "dia"
-                  ? "bg-verdeEsmeralda text-black"
-                  : "bg-white/10 text-white border border-white/10"
-              }`}
-            >
-              Día
-            </button>
-
-            <button
-              onClick={() => setTipoFiltro("mes")}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold ${
-                tipoFiltro === "mes"
-                  ? "bg-verdeEsmeralda text-black"
-                  : "bg-white/10 text-white border border-white/10"
-              }`}
-            >
-              Mes
-            </button>
-
-            <button
-              onClick={() => setTipoFiltro("anio")}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold ${
-                tipoFiltro === "anio"
-                  ? "bg-verdeEsmeralda text-black"
-                  : "bg-white/10 text-white border border-white/10"
-              }`}
-            >
-              Año
-            </button>
-
-            <button
-              onClick={() => setTipoFiltro("rango")}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold ${
-                tipoFiltro === "rango"
-                  ? "bg-verdeEsmeralda text-black"
-                  : "bg-white/10 text-white border border-white/10"
-              }`}
-            >
-              Rango
-            </button>
+            {(["general", "dia", "mes", "anio", "rango"] as const).map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setTipoFiltro(filter)}
+                className={`px-3 py-2 rounded-lg text-xs font-semibold ${
+                  tipoFiltro === filter
+                    ? "bg-verdeEsmeralda text-black"
+                    : "bg-white/10 text-white border border-white/10"
+                }`}
+              >
+                {filter === "general"
+                  ? "General"
+                  : filter === "dia"
+                    ? "Día"
+                    : filter === "mes"
+                      ? "Mes"
+                      : filter === "anio"
+                        ? "Año"
+                        : "Rango"}
+              </button>
+            ))}
           </div>
 
           <div className="flex flex-wrap gap-2">{renderFiltroCampos()}</div>
@@ -1442,13 +1470,13 @@ function ReportsPanel() {
                 {Object.keys(resumen.porMetodo ?? {}).length === 0 ? (
                   <p className="text-sm text-gray-400">Aún no hay pedidos.</p>
                 ) : (
-                  Object.entries(resumen.porMetodo ?? {}).map(([k, v]) => (
+                  Object.entries(resumen.porMetodo ?? {}).map(([key, value]) => (
                     <div
-                      key={k}
+                      key={key}
                       className="flex items-center justify-between text-sm"
                     >
-                      <span className="text-gray-300">{k}</span>
-                      <span className="font-bold text-gray-100">{v}</span>
+                      <span className="text-gray-300">{key}</span>
+                      <span className="font-bold text-gray-100">{value}</span>
                     </div>
                   ))
                 )}
@@ -1461,11 +1489,9 @@ function ReportsPanel() {
               </h2>
 
               {!analyticsAvailable ? (
-                <div className="text-sm text-gray-400 space-y-2">
-                  <p>
-                    Analytics no disponible aún. Falta el endpoint:
-                    <span className="text-gray-200"> /analytics/summary</span>
-                  </p>
+                <div className="text-sm text-gray-400">
+                  Analytics no disponible aún. Falta el endpoint:
+                  <span className="text-gray-200"> /analytics/summary</span>
                 </div>
               ) : (
                 <div className="grid sm:grid-cols-3 gap-3">
@@ -1540,40 +1566,44 @@ function ReportsPanel() {
               </p>
             ) : (
               <div className="grid md:grid-cols-2 gap-4">
-                {resumen.obrasVendidas.slice(0, 12).map((obra) => (
-                  <div
-                    key={`${obra.obraId}-${obra.titulo}`}
-                    className="bg-[#0b1220] border border-gray-800 rounded-xl p-4 flex gap-3"
-                  >
-                    {getAdminImageUrl(obra.imagenUrl, obra.imagen) ? (
-  <img
-    src={getAdminImageUrl(obra.imagenUrl, obra.imagen) ?? ""}
-    alt={obra.titulo}
-    className="w-20 h-20 rounded-lg object-cover"
-    loading="lazy"
-  />
-) : (
-                      <div className="w-20 h-20 rounded-lg bg-[#111827] border border-gray-700 flex items-center justify-center text-[10px] text-gray-500">
-                        Sin imagen
-                      </div>
-                    )}
+                {resumen.obrasVendidas.slice(0, 12).map((obra) => {
+                  const imageUrl = getAdminImageUrl(obra.imagenUrl, obra.imagen);
 
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-gray-100">
-                        {obra.titulo}
-                      </p>
-                      <p className="text-xs text-verdeEsmeralda">
-                        {obra.artistaNombre}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Cantidad vendida: {obra.cantidadVendida}
-                      </p>
-                      <p className="text-sm font-semibold text-gray-100 mt-1">
-                        {formatPrecio(obra.totalVendido)} Bs
-                      </p>
+                  return (
+                    <div
+                      key={`${obra.obraId}-${obra.titulo}`}
+                      className="bg-[#0b1220] border border-gray-800 rounded-xl p-4 flex gap-3"
+                    >
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={obra.titulo}
+                          className="w-20 h-20 rounded-lg object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-lg bg-[#111827] border border-gray-700 flex items-center justify-center text-[10px] text-gray-500">
+                          Sin imagen
+                        </div>
+                      )}
+
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-gray-100">
+                          {obra.titulo}
+                        </p>
+                        <p className="text-xs text-verdeEsmeralda">
+                          {obra.artistaNombre}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Cantidad vendida: {obra.cantidadVendida}
+                        </p>
+                        <p className="text-sm font-semibold text-gray-100 mt-1">
+                          {formatPrecio(obra.totalVendido)} Bs
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1645,30 +1675,31 @@ function ReportsPanel() {
               </p>
             ) : (
               <div className="space-y-3">
-                {resumen.pedidosFiltrados.slice(0, 12).map((p) => (
+                {resumen.pedidosFiltrados.slice(0, 12).map((pedido) => (
                   <div
-                    key={p.id}
+                    key={pedido.id}
                     className="bg-[#0b1220] border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                   >
                     <div>
                       <p className="text-sm font-bold text-gray-100">
-                        Pedido #{p.id} — {p.buyerName}
+                        Pedido #{pedido.id} — {pedido.buyerName}
                       </p>
                       <p className="text-xs text-gray-400">
-                        {p.buyerEmail} · {p.buyerPhone || "Sin teléfono"}
+                        {pedido.buyerEmail} · {pedido.buyerPhone || "Sin teléfono"}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Pago: {p.metodoPago} · Estado: {p.estado || "pendiente"}
+                        Pago: {pedido.metodoPago} · Estado:{" "}
+                        {pedido.estado || "pendiente"}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Fecha: {formatFecha(p.createdAt)}
+                        Fecha: {formatFecha(pedido.createdAt)}
                       </p>
                     </div>
 
                     <div className="text-right">
                       <p className="text-xs text-gray-400">Total</p>
                       <p className="text-lg font-extrabold text-gray-100">
-                        {formatPrecio(p.total)} Bs
+                        {formatPrecio(pedido.total)} Bs
                       </p>
                     </div>
                   </div>
@@ -1688,7 +1719,6 @@ export default function AdminPanel() {
   const [screen, setScreen] = useState<
     "dashboard" | "artists" | "obras" | "pedidos" | "reportes"
   >("dashboard");
-
   const [artists, setArtists] = useState<Artist[]>([]);
   const [works, setWorks] = useState<Work[]>([]);
   const [editingWorkFromDashboard, setEditingWorkFromDashboard] =
@@ -1696,51 +1726,61 @@ export default function AdminPanel() {
 
   useEffect(() => {
     const token = localStorage.getItem("crisalida_token");
-    if (!token) navigate("/admin/login");
+
+    if (!token) {
+      navigate("/admin/login");
+    }
   }, [navigate]);
 
-  const loadAll = async (): Promise<{ artists: Artist[]; works: Work[] }> => {
-    const [aRes, wRes] = await Promise.all([
+  const loadAll = useCallback(async (): Promise<{
+    artists: Artist[];
+    works: Work[];
+  }> => {
+    const [artistsRes, worksRes] = await Promise.all([
       fetch(`${API}/artistas`),
       fetch(`${API}/obras`),
     ]);
-    const aData = (await aRes.json()) as Artist[];
-    const wData = (await wRes.json()) as Work[];
+
+    const artistsData = (await artistsRes.json()) as Artist[];
+    const worksData = (await worksRes.json()) as Work[];
 
     return {
-      artists: Array.isArray(aData) ? aData : [],
-      works: Array.isArray(wData) ? wData : [],
-    };
-  };
-
-  useEffect(() => {
-    let alive = true;
-
-    (async () => {
-      try {
-        const r = await loadAll();
-        if (!alive) return;
-        setArtists(r.artists);
-        setWorks(r.works);
-      } catch (e) {
-        console.error(e);
-        if (!alive) return;
-        setArtists([]);
-        setWorks([]);
-      }
-    })();
-
-    return () => {
-      alive = false;
+      artists: Array.isArray(artistsData) ? artistsData : [],
+      works: Array.isArray(worksData) ? worksData : [],
     };
   }, []);
+
+  const refreshDashboard = useCallback(async () => {
+    try {
+      const result = await loadAll();
+      setArtists(result.artists);
+      setWorks(result.works);
+    } catch (error) {
+      console.error(error);
+      setArtists([]);
+      setWorks([]);
+    }
+  }, [loadAll]);
+
+ useEffect(() => {
+  const timer = window.setTimeout(() => {
+    void refreshDashboard();
+  }, 0);
+
+  return () => {
+    window.clearTimeout(timer);
+  };
+}, [refreshDashboard]);
 
   const stats = useMemo(() => {
     const artistsCount = artists.length;
     const worksCount = works.length;
-    const totalStock = works.reduce((acc, w) => acc + Number(w.stock ?? 0), 0);
+    const totalStock = works.reduce(
+      (acc, work) => acc + Number(work.stock ?? 0),
+      0,
+    );
     const outOfStockCount = works.filter(
-      (w) => Number(w.stock ?? 0) <= 0,
+      (work) => Number(work.stock ?? 0) <= 0,
     ).length;
     const latestWorks = [...works].sort((a, b) => b.id - a.id).slice(0, 6);
 
@@ -1753,21 +1793,9 @@ export default function AdminPanel() {
     };
   }, [artists, works]);
 
-  const onEditWorkFromDashboard = (w: Work) => {
-    setEditingWorkFromDashboard(w);
+  const onEditWorkFromDashboard = (work: Work) => {
+    setEditingWorkFromDashboard(work);
     setScreen("obras");
-  };
-
-  const refreshDashboard = async () => {
-    try {
-      const r = await loadAll();
-      setArtists(r.artists);
-      setWorks(r.works);
-    } catch (e) {
-      console.error(e);
-      setArtists([]);
-      setWorks([]);
-    }
   };
 
   return (
