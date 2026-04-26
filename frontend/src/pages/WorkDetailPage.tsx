@@ -229,29 +229,13 @@ export default function WorkDetailPage() {
                 src={imageUrl}
                 alt={obra.titulo}
                 className={`w-full h-full object-cover pointer-events-none transition-transform duration-300 ${
-                  zoomActive ? "scale-[1.8]" : "scale-100"
+                  zoomActive ? "scale-[5.8]" : "scale-100"
                 }`}
                 style={{
                   transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
                 }}
                 draggable={false}
               />
-
-              {zoomActive && (
-                <div
-                  className="hidden md:block absolute w-36 h-36 rounded-full border border-white/40 shadow-2xl pointer-events-none z-20 bg-no-repeat"
-                  style={{
-                    left: `calc(${zoomPosition.x}% - 72px)`,
-                    top: `calc(${zoomPosition.y}% - 72px)`,
-                    backgroundImage: `url(${imageUrl})`,
-                    backgroundSize: "220% 220%",
-                    backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
-                    boxShadow:
-                      "0 0 0 9999px rgba(0,0,0,0.12), 0 12px 30px rgba(0,0,0,0.45)",
-                  }}
-                />
-              )}
-
               <div className="absolute top-3 left-3 z-30 text-[10px] text-white/70 bg-black/40 border border-white/10 rounded-full px-3 py-1 backdrop-blur-sm">
                 {zoomActive
                   ? "Zoom activo"
