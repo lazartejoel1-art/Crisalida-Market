@@ -6,8 +6,25 @@ export const API_URL =
 export function buildImageUrl(image?: string | null): string | null {
   if (!image) return null;
 
-  const value = String(image).trim();
+  let value = String(image).trim();
+
   if (!value) return null;
+
+  if (value.startsWith("/uploads/https://")) {
+    value = value.replace("/uploads/", "");
+  }
+
+  if (value.startsWith("uploads/https://")) {
+    value = value.replace("uploads/", "");
+  }
+
+  if (value.startsWith("/uploads/http://")) {
+    value = value.replace("/uploads/", "");
+  }
+
+  if (value.startsWith("uploads/http://")) {
+    value = value.replace("uploads/", "");
+  }
 
   if (value.startsWith("http://") || value.startsWith("https://")) {
     return value;
