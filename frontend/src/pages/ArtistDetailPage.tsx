@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { API_URL, buildImageUrl } from "../services/api";
 
 type Work = {
   id: number;
   titulo: string;
   descripcion: string;
   precio: number | string;
-  imagenUrl: string;
+  imagen?: string | null;
+  imagenUrl?: string | null;
   stock: number;
 };
 
@@ -14,8 +16,8 @@ type ArtistDetail = {
   id: number;
   nombre: string;
   descripcion: string;
-  fotoUrl: string;
-  // opcionales por si luego agregas estos campos en admin
+  foto?: string | null;
+  fotoUrl?: string | null;
   origen?: string;
   instagram?: string;
   facebook?: string;
@@ -32,13 +34,22 @@ export default function ArtistDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!id) {
+      setError("Artista no encontrado.");
+      setLoading(false);
+      return;
+    }
+
     const load = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(`http://localhost:3000/artistas/${id}`);
-        if (!res.ok) throw new Error("No se pudo cargar el artista");
+        const res = await fetch(`${API_URL}/artistas/${id}`);
+
+        if (!res.ok) {
+          throw new Error("No se pudo cargar el artista");
+        }
 
         const data = (await res.json()) as ArtistDetail;
         setArtist(data);
@@ -56,7 +67,9 @@ export default function ArtistDetailPage() {
   if (loading) {
     return (
       <section className="max-w-6xl mx-auto px-4 py-10">
-        <p className="text-sm text-gray-400 animate-pulse">Cargando artista...</p>
+        <p className="text-sm text-gray-400 animate-pulse">
+          Cargando artista...
+        </p>
       </section>
     );
   }
@@ -64,8 +77,14 @@ export default function ArtistDetailPage() {
   if (error || !artist) {
     return (
       <section className="max-w-6xl mx-auto px-4 py-10">
-        <p className="text-sm text-red-400 mb-3">{error ?? "Artista no encontrado."}</p>
-        <Link to="/artistas" className="text-sm text-verdeEsmeralda hover:underline">
+        <p className="text-sm text-red-400 mb-3">
+          {error ?? "Artista no encontrado."}
+        </p>
+
+        <Link
+          to="/artistas"
+          className="text-sm text-verdeEsmeralda hover:underline"
+        >
           ← Volver a artistas
         </Link>
       </section>
@@ -73,10 +92,12 @@ export default function ArtistDetailPage() {
   }
 
   const obras = artist.obras ?? [];
+  const artistImage = buildImageUrl(artist.fotoUrl || artist.foto);
 
   return (
     <section className="max-w-6xl mx-auto px-4 py-10">
       <button
+        type="button"
         onClick={() => navigate(-1)}
         className="text-xs text-gray-400 hover:text-verdeEsmeralda mb-4"
       >
@@ -85,9 +106,9 @@ export default function ArtistDetailPage() {
 
       <div className="bg-[#050816] border border-gray-800 rounded-2xl p-6 grid md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
-          {artist.fotoUrl ? (
+          {artistImage ? (
             <img
-              src={artist.fotoUrl}
+              src={artistImage}
               alt={artist.nombre}
               className="w-full aspect-square object-cover rounded-2xl border border-gray-800"
             />
@@ -100,7 +121,10 @@ export default function ArtistDetailPage() {
 
         <div className="md:col-span-2">
           <h1 className="text-2xl font-bold text-gray-100">{artist.nombre}</h1>
-          <p className="text-sm text-gray-300 mt-2">{artist.descripcion}</p>
+
+          <p className="text-sm text-gray-300 mt-2">
+            {artist.descripcion || "Artista de la colectiva Crisálida."}
+          </p>
 
           <div className="mt-4 flex flex-wrap gap-2 text-xs">
             {artist.origen && (
@@ -108,6 +132,7 @@ export default function ArtistDetailPage() {
                 📍 {artist.origen}
               </span>
             )}
+
             {artist.instagram && (
               <a
                 className="px-3 py-1 rounded-full border border-gray-700 text-verdeEsmeralda hover:underline"
@@ -118,6 +143,7 @@ export default function ArtistDetailPage() {
                 Instagram
               </a>
             )}
+
             {artist.facebook && (
               <a
                 className="px-3 py-1 rounded-full border border-gray-700 text-verdeEsmeralda hover:underline"
@@ -128,6 +154,7 @@ export default function ArtistDetailPage() {
                 Facebook
               </a>
             )}
+
             {artist.web && (
               <a
                 className="px-3 py-1 rounded-full border border-gray-700 text-verdeEsmeralda hover:underline"
@@ -156,14 +183,17 @@ export default function ArtistDetailPage() {
             const price =
               typeof w.precio === "number" ? w.precio : Number(w.precio ?? 0);
 
+            const safePrice = Number.isFinite(price) ? price : 0;
+            const imageUrl = buildImageUrl(w.imagenUrl || w.imagen);
+
             return (
               <article
                 key={w.id}
                 className="bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden flex flex-col"
               >
-                {w.imagenUrl ? (
+                {imageUrl ? (
                   <img
-                    src={w.imagenUrl}
+                    src={imageUrl}
                     alt={w.titulo}
                     className="w-full h-44 object-cover"
                   />
@@ -176,12 +206,15 @@ export default function ArtistDetailPage() {
                 <div className="p-4 flex-1 flex flex-col gap-2">
                   <div className="flex items-start justify-between gap-3">
                     <p className="font-semibold text-gray-100">{w.titulo}</p>
+
                     <p className="text-sm font-bold text-gray-100">
-                      {price.toFixed(2)} Bs
+                      {safePrice.toFixed(2)} Bs
                     </p>
                   </div>
 
-                  <p className="text-xs text-gray-400 line-clamp-3">{w.descripcion}</p>
+                  <p className="text-xs text-gray-400 line-clamp-3">
+                    {w.descripcion}
+                  </p>
 
                   <div className="mt-auto flex gap-2">
                     <Link
