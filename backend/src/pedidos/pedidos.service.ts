@@ -8,6 +8,7 @@ import { In, Repository } from 'typeorm';
 import { Pedido } from './pedidos.entity';
 import { CreatePedidoDto } from './dto/create-pedido.dto';
 import { Obra } from '../obras/obra.entity';
+import { sendPedidoEmail } from '../mail/mail.service';
 
 type PedidoItemCalculado = {
   obraId: number;
@@ -188,7 +189,13 @@ export class PedidosService {
       comprobante: data.comprobante ?? '',
     });
 
-    return await this.pedidoRepository.save(pedido);
+    const savedPedido = await this.pedidoRepository.save(pedido);
+
+    void sendPedidoEmail(savedPedido).catch((error) => {
+      console.error('Error enviando email de pedido:', error);
+    });
+
+    return savedPedido;
   }
 
   async actualizarEstado(id: number, estado: string): Promise<Pedido> {
