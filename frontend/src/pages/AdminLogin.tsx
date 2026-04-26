@@ -32,10 +32,7 @@ export default function AdminLogin() {
         return;
       }
 
-      const data = (await response.json()) as {
-        access_token: string;
-        user?: unknown;
-      };
+      const data = await response.json();
 
       localStorage.setItem("crisalida_token", data.access_token);
 
@@ -60,6 +57,7 @@ export default function AdminLogin() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* USUARIO */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Usuario
@@ -67,14 +65,15 @@ export default function AdminLogin() {
 
             <input
               type="text"
-              className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-verdeEsmeralda"
+              className="w-full border rounded-lg px-3 py-2 text-sm text-negroSuave bg-white placeholder-gray-400 outline-none focus:ring-2 focus:ring-verdeEsmeralda"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin"
+              placeholder="Introduzca su usuario"
               autoComplete="username"
             />
           </div>
 
+          {/* CONTRASEÑA */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Contraseña
@@ -82,10 +81,10 @@ export default function AdminLogin() {
 
             <input
               type="password"
-              className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-verdeEsmeralda"
+              className="w-full border rounded-lg px-3 py-2 text-sm text-negroSuave bg-white placeholder-gray-400 outline-none focus:ring-2 focus:ring-verdeEsmeralda"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Digite su contraseña"
               autoComplete="current-password"
             />
           </div>
