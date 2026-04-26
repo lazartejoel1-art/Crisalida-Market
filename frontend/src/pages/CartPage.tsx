@@ -27,6 +27,14 @@ type PedidoMinimo = {
   createdAt?: string;
 };
 
+function onlyLetters(value: string) {
+  return value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+}
+
+function onlyNumbers(value: string) {
+  return value.replace(/\D/g, "");
+}
+
 export default function CartPage() {
   const navigate = useNavigate();
 
@@ -203,6 +211,11 @@ export default function CartPage() {
       return;
     }
 
+    if (buyerPhone.trim().length < 7) {
+      setMessage("Por favor, ingresa un teléfono válido.");
+      return;
+    }
+
     setSubmitting(true);
     setMessage(null);
 
@@ -372,10 +385,12 @@ export default function CartPage() {
               <input
                 type="text"
                 value={buyerName}
-                onChange={(e) => setBuyerName(e.target.value)}
+                onChange={(e) => setBuyerName(onlyLetters(e.target.value))}
                 disabled={pedidoRegistrado}
-                className="w-full px-3 py-2 rounded-lg bg-[#020617] border border-gray-700 text-sm text-gray-100"
+                className="w-full px-3 py-2 rounded-lg bg-[#020617] border border-gray-700 text-sm text-gray-100 placeholder:text-gray-500"
                 placeholder="Nombre completo"
+                inputMode="text"
+                autoComplete="name"
               />
 
               <input
@@ -383,17 +398,22 @@ export default function CartPage() {
                 value={buyerEmail}
                 onChange={(e) => setBuyerEmail(e.target.value)}
                 disabled={pedidoRegistrado}
-                className="w-full px-3 py-2 rounded-lg bg-[#020617] border border-gray-700 text-sm text-gray-100"
+                className="w-full px-3 py-2 rounded-lg bg-[#020617] border border-gray-700 text-sm text-gray-100 placeholder:text-gray-500"
                 placeholder="Correo electrónico"
+                inputMode="email"
+                autoComplete="email"
               />
 
               <input
-                type="text"
+                type="tel"
                 value={buyerPhone}
-                onChange={(e) => setBuyerPhone(e.target.value)}
+                onChange={(e) => setBuyerPhone(onlyNumbers(e.target.value))}
                 disabled={pedidoRegistrado}
-                className="w-full px-3 py-2 rounded-lg bg-[#020617] border border-gray-700 text-sm text-gray-100"
+                className="w-full px-3 py-2 rounded-lg bg-[#020617] border border-gray-700 text-sm text-gray-100 placeholder:text-gray-500"
                 placeholder="Teléfono"
+                inputMode="numeric"
+                autoComplete="tel"
+                maxLength={12}
               />
 
               <select
@@ -410,7 +430,7 @@ export default function CartPage() {
                 value={buyerNote}
                 onChange={(e) => setBuyerNote(e.target.value)}
                 disabled={pedidoRegistrado}
-                className="w-full px-3 py-2 rounded-lg bg-[#020617] border border-gray-700 text-sm text-gray-100"
+                className="w-full px-3 py-2 rounded-lg bg-[#020617] border border-gray-700 text-sm text-gray-100 placeholder:text-gray-500"
                 rows={3}
                 placeholder="Nota o comentario opcional"
               />
