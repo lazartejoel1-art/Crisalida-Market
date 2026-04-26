@@ -112,7 +112,7 @@ type ResumenReporte = {
   artistasMenosVendidos?: ObraVendida[];
 };
 
-const API = "http://localhost:3000";
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const formatPrecio = (precio: number | string | null | undefined): string => {
   if (precio === null || precio === undefined || precio === "") return "0.00";
@@ -816,7 +816,7 @@ function OrdersManager() {
                             src={
                               item.imagenUrl.startsWith("http")
                                 ? item.imagenUrl
-                                : `http://localhost:3000${item.imagenUrl}`
+                                : `${API}${item.imagenUrl}`
                             }
                             alt={item.titulo ?? `Obra ${item.obraId}`}
                             className="w-20 h-20 rounded-lg object-cover"
@@ -1446,7 +1446,7 @@ function ReportsPanel() {
                         src={
                           obra.imagenUrl.startsWith("http")
                             ? obra.imagenUrl
-                            : `http://localhost:3000${obra.imagenUrl}`
+                            : `${API}${obra.imagenUrl}`
                         }
                         alt={obra.titulo}
                         className="w-20 h-20 rounded-lg object-cover"
