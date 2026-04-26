@@ -181,7 +181,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
 
-  const API = "http://localhost:3000";
+  const API = import.meta.env.VITE_API_URL || "https://crisalida-market.onrender.com";
 
   const fetchWorks = async () => {
     setLoading(true);

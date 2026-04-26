@@ -4,9 +4,6 @@ import { Repository } from 'typeorm';
 import { Artista } from './artista.entity';
 import { CrearArtistaDto } from './dto/create-artista.dto';
 
-const API_URL =
-  process.env.API_PUBLIC_URL || 'https://crisalida-market.onrender.com';
-
 function buildImageUrl(image?: string | null): string | null {
   if (!image) return null;
 
@@ -14,7 +11,7 @@ function buildImageUrl(image?: string | null): string | null {
     return image;
   }
 
-  return `${API_URL}/uploads/${image}`;
+  return image;
 }
 
 @Injectable()
@@ -48,6 +45,7 @@ export class ArtistasService {
       fotoUrl: buildImageUrl(artista.foto),
       obras: artista.obras?.map((o) => ({
         ...o,
+        imagen: buildImageUrl(o.imagen),
         imagenUrl: buildImageUrl(o.imagen),
       })),
     };

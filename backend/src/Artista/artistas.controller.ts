@@ -28,6 +28,10 @@ function uploadToCloudinary(
   folder: string,
 ): Promise<UploadApiResponse> {
   return new Promise((resolve, reject) => {
+    if (!file) {
+      return reject(new Error('No se recibió ninguna imagen'));
+    }
+
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder,

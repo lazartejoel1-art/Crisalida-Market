@@ -4,9 +4,6 @@ import { Repository } from 'typeorm';
 import { Obra } from './obra.entity';
 import { CreateObraDto } from './dto/create-obra.dto';
 
-const API_URL =
-  process.env.API_PUBLIC_URL || 'https://crisalida-market.onrender.com';
-
 function buildImageUrl(imagen?: string | null): string | null {
   if (!imagen) return null;
 
@@ -14,7 +11,7 @@ function buildImageUrl(imagen?: string | null): string | null {
     return imagen;
   }
 
-  return `${API_URL}/uploads/${imagen}`;
+  return imagen;
 }
 
 @Injectable()
@@ -31,7 +28,7 @@ export class ObrasService {
 
     return obras.map((obra) => ({
       ...obra,
-      imagen: obra.imagen || null,
+      imagen: buildImageUrl(obra.imagen),
       imagenUrl: buildImageUrl(obra.imagen),
     }));
   }
@@ -48,7 +45,7 @@ export class ObrasService {
 
     return {
       ...obra,
-      imagen: obra.imagen || null,
+      imagen: buildImageUrl(obra.imagen),
       imagenUrl: buildImageUrl(obra.imagen),
     };
   }
@@ -57,7 +54,7 @@ export class ObrasService {
     const obra = this.obraRepository.create({
       ...dto,
       imagen: dto.imagen || dto.imagenUrl || '',
-      artista: { id: dto.artistaId },
+      artista: { id: Number(dto.artistaId) },
     });
 
     return this.obraRepository.save(obra);
@@ -79,6 +76,7 @@ export class ObrasService {
     Object.assign(obra, {
       ...dto,
       imagen: dto.imagen || dto.imagenUrl || obra.imagen,
+      artista: dto.artistaId ? { id: Number(dto.artistaId) } : obra.artista,
     });
 
     return this.obraRepository.save(obra);

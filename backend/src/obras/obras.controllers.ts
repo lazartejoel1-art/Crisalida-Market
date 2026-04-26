@@ -27,15 +27,24 @@ function uploadToCloudinary(
   file: Express.Multer.File,
 ): Promise<UploadApiResponse> {
   return new Promise((resolve, reject) => {
+    if (!file) {
+      return reject(new Error('No se recibió ninguna imagen'));
+    }
+
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: 'crisalida-market/obras',
         resource_type: 'image',
       },
       (error, result) => {
-        if (error)
+        if (error) {
           return reject(new Error(error.message || 'Error uploading image'));
-        if (!result) return reject(new Error('No se pudo subir la imagen'));
+        }
+
+        if (!result) {
+          return reject(new Error('No se pudo subir la imagen'));
+        }
+
         resolve(result);
       },
     );
@@ -73,8 +82,7 @@ export class ObrasController {
     if (file) {
       const result = await uploadToCloudinary(file);
       body.imagen = result.secure_url;
-    } else {
-      body.imagen = '';
+      body.imagenUrl = result.secure_url;
     }
 
     return this.obrasService.crear(body);
@@ -100,6 +108,7 @@ export class ObrasController {
     if (file) {
       const result = await uploadToCloudinary(file);
       body.imagen = result.secure_url;
+      body.imagenUrl = result.secure_url;
     }
 
     return this.obrasService.actualizar(id, body);
