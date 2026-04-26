@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ArtistForm, { NewArtist } from "../components/ArtistForm";
 import WorkForm, { NewWork } from "../components/WorkForm";
-
+import { buildImageUrl } from "../services/api";
 /**
  * =========================================================
  * ✅ ADMIN PANEL - CRISÁLIDA
@@ -27,7 +27,8 @@ type Work = {
   titulo: string;
   descripcion: string;
   precio: number | string;
-  imagenUrl: string;
+  imagen?: string | null;
+  imagenUrl?: string | null;
   stock: number;
   artista: {
     id: number;
@@ -41,7 +42,8 @@ type PedidoItem = {
   precio?: number | string;
   subtotal?: number | string;
   cantidad: number;
-  imagenUrl?: string;
+  imagen?: string | null;
+  imagenUrl?: string | null;
   artistaNombre?: string;
 };
 
@@ -92,7 +94,8 @@ type ObraVendida = {
   artistaNombre: string;
   cantidadVendida: number;
   totalVendido: number;
-  imagenUrl?: string;
+  imagen?: string | null;
+  imagenUrl?: string | null;
 };
 
 type ResumenReporte = {
@@ -145,7 +148,9 @@ const formatPrecio = (precio: number | string | null | undefined): string => {
 
 function formatFecha(iso?: string) {
   if (!iso) return "Sin fecha";
+
   const d = new Date(iso);
+
   if (Number.isNaN(d.getTime())) return "Sin fecha";
 
   return d.toLocaleString("es-BO", {
@@ -155,6 +160,17 @@ function formatFecha(iso?: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function getAdminImageUrl(
+  image?: string | null,
+  fallbackImage?: string | null
+): string | null {
+  const cleanImage = image && String(image).trim() !== "" ? image : null;
+  const cleanFallback =
+    fallbackImage && String(fallbackImage).trim() !== "" ? fallbackImage : null;
+
+  return buildImageUrl(cleanImage || cleanFallback);
 }
 
 function getEstadoBadgeClass(estado?: string) {
@@ -268,14 +284,14 @@ function DashboardHome({
                 onClick={() => onEditWork(w)}
                 className="text-left rounded-xl overflow-hidden border border-gray-800 bg-[#0b1220] hover:border-verdeEsmeralda/40 transition"
               >
-                {w.imagenUrl ? (
-                  <img
-                    src={w.imagenUrl}
-                    alt={w.titulo}
-                    className="w-full h-32 object-cover"
-                    loading="lazy"
-                  />
-                ) : (
+                {getAdminImageUrl(w.imagenUrl, w.imagen) ? (
+  <img
+    src={getAdminImageUrl(w.imagenUrl, w.imagen) ?? ""}
+    alt={w.titulo}
+    className="w-full h-32 object-cover"
+    loading="lazy"
+  />
+) : (
                   <div className="w-full h-32 flex items-center justify-center text-xs text-gray-500">
                     Sin imagen
                   </div>
@@ -528,7 +544,7 @@ function ObrasManager({
           typeof effectiveEditingWork.precio === "number"
             ? effectiveEditingWork.precio
             : Number(effectiveEditingWork.precio),
-        imagenUrl: effectiveEditingWork.imagenUrl,
+        imagenUrl: effectiveEditingWork.imagenUrl ?? undefined,
         stock: effectiveEditingWork.stock,
         artistaId: effectiveEditingWork.artista?.id ?? 0,
       }
@@ -569,13 +585,14 @@ function ObrasManager({
             key={w.id}
             className="bg-[#0e1624] border border-gray-800 p-4 rounded-lg flex flex-col gap-3"
           >
-            {w.imagenUrl && (
-              <img
-                src={w.imagenUrl}
-                alt={w.titulo}
-                className="w-full h-40 rounded-lg object-cover"
-              />
-            )}
+            {getAdminImageUrl(w.imagenUrl, w.imagen) && (
+  <img
+    src={getAdminImageUrl(w.imagenUrl, w.imagen) ?? ""}
+    alt={w.titulo}
+    className="w-full h-40 rounded-lg object-cover"
+    loading="lazy"
+  />
+)}
 
             <div className="flex-1">
               <p className="font-semibold text-gray-200">{w.titulo}</p>
@@ -811,17 +828,14 @@ function OrdersManager() {
                         key={`${order.id}-${item.obraId}-${idx}`}
                         className="bg-[#0b1220] border border-gray-800 rounded-xl p-3 flex gap-3"
                       >
-                        {item.imagenUrl ? (
-                          <img
-                            src={
-                              item.imagenUrl.startsWith("http")
-                                ? item.imagenUrl
-                                : `${API}${item.imagenUrl}`
-                            }
-                            alt={item.titulo ?? `Obra ${item.obraId}`}
-                            className="w-20 h-20 rounded-lg object-cover"
-                          />
-                        ) : (
+                        {getAdminImageUrl(item.imagenUrl, item.imagen) ? (
+  <img
+    src={getAdminImageUrl(item.imagenUrl, item.imagen) ?? ""}
+    alt={item.titulo ?? `Obra ${item.obraId}`}
+    className="w-20 h-20 rounded-lg object-cover"
+    loading="lazy"
+  />
+) : (
                           <div className="w-20 h-20 rounded-lg bg-[#111827] border border-gray-700 flex items-center justify-center text-[10px] text-gray-500">
                             Sin imagen
                           </div>
@@ -1441,17 +1455,14 @@ function ReportsPanel() {
                     key={`${obra.obraId}-${obra.titulo}`}
                     className="bg-[#0b1220] border border-gray-800 rounded-xl p-4 flex gap-3"
                   >
-                    {obra.imagenUrl ? (
-                      <img
-                        src={
-                          obra.imagenUrl.startsWith("http")
-                            ? obra.imagenUrl
-                            : `${API}${obra.imagenUrl}`
-                        }
-                        alt={obra.titulo}
-                        className="w-20 h-20 rounded-lg object-cover"
-                      />
-                    ) : (
+                    {getAdminImageUrl(obra.imagenUrl, obra.imagen) ? (
+  <img
+    src={getAdminImageUrl(obra.imagenUrl, obra.imagen) ?? ""}
+    alt={obra.titulo}
+    className="w-20 h-20 rounded-lg object-cover"
+    loading="lazy"
+  />
+) : (
                       <div className="w-20 h-20 rounded-lg bg-[#111827] border border-gray-700 flex items-center justify-center text-[10px] text-gray-500">
                         Sin imagen
                       </div>
