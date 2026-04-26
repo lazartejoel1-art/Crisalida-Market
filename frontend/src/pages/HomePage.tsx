@@ -22,6 +22,10 @@ type Work = {
   };
 };
 
+type WorkWithLegacyImage = Work & {
+  imagen?: string;
+};
+
 function toNumber(v: number | string) {
   const n = typeof v === "number" ? v : Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
@@ -44,9 +48,11 @@ function Shell({
 function WorksGrid({
   works,
   onOpen,
+  api,
 }: {
   works: Work[];
   onOpen: (id: number) => void;
+  api: string;
 }) {
   const metaById = useMemo(() => {
     const m = new Map<
@@ -122,11 +128,16 @@ function WorksGrid({
                 }}
               >
                 <img
-                  src={w.imagenUrl}
-                  alt={w.titulo}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
+  src={
+    w.imagenUrl ||
+    (((w as WorkWithLegacyImage).imagen?.startsWith("http"))
+      ? (w as WorkWithLegacyImage).imagen
+      : `${api}/${(w as WorkWithLegacyImage).imagen}`)
+  }
+  alt={w.titulo}
+  className="w-full h-full object-cover"
+  loading="lazy"
+/>
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
 
@@ -183,15 +194,22 @@ export default function HomePage() {
 
   const API = import.meta.env.VITE_API_URL || "https://crisalida-market.onrender.com";
 
+useEffect(() => {
   const fetchWorks = async () => {
     setLoading(true);
     try {
       const res = await fetch(`${API}/obras`);
       const data = (await res.json()) as Work[];
 
-      const clean = (Array.isArray(data) ? data : []).filter(
-        (w) => typeof w.imagenUrl === "string" && w.imagenUrl.trim().length > 0
-      );
+    const clean = (Array.isArray(data) ? data : []).filter(
+  (w) => {
+    const imagen = (w as WorkWithLegacyImage).imagen;
+    return (
+      (typeof w.imagenUrl === "string" && w.imagenUrl.trim().length > 0) ||
+      (typeof imagen === "string" && imagen.trim().length > 0)
+    );
+  }
+);
 
       setWorks(clean);
       setIndex(0);
@@ -202,10 +220,8 @@ export default function HomePage() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    void fetchWorks();
-  }, []);
+  void fetchWorks();
+}, []);
 
   useEffect(() => {
     if (!works.length) return;
@@ -435,7 +451,29 @@ export default function HomePage() {
                 <div className="mt-6 flex gap-3">
                   <button
                     type="button"
-                    onClick={() => void fetchWorks()}
+                    onClick={() => {
+                      setLoading(true);
+                      fetch(`${API}/obras`)
+                        .then((res) => res.json())
+                        .then((data) => {
+                          const clean = (Array.isArray(data) ? data : []).filter(
+                            (w: WorkWithLegacyImage) => {
+                              const imagen = w.imagen;
+                              return (
+                                (typeof w.imagenUrl === "string" && w.imagenUrl.trim().length > 0) ||
+                                (typeof imagen === "string" && imagen.trim().length > 0)
+                              );
+                            }
+                          );
+                          setWorks(clean);
+                          setIndex(0);
+                        })
+                        .catch((e) => {
+                          console.error(e);
+                          setWorks([]);
+                        })
+                        .finally(() => setLoading(false));
+                    }}
                     className="px-4 py-2 rounded-lg font-semibold"
                     style={{ background: "var(--c-accent)", color: "#07110a" }}
                   >
@@ -540,7 +578,7 @@ export default function HomePage() {
               No hay obras con imagen todavía. Sube obras desde Admin.
             </div>
           ) : (
-            <WorksGrid works={cascadeWorks} onOpen={goToWork} />
+            <WorksGrid works={cascadeWorks} onOpen={goToWork} api={API} />
           )}
         </Shell>
 
