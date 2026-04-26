@@ -229,7 +229,7 @@ export default function WorkDetailPage() {
                 src={imageUrl}
                 alt={obra.titulo}
                 className={`w-full h-full object-cover pointer-events-none transition-transform duration-300 ${
-                  zoomActive ? "scale-[5.8]" : "scale-100"
+                  zoomActive ? "scale-[5.0]" : "scale-100"
                 }`}
                 style={{
                   transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
