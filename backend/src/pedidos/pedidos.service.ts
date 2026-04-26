@@ -19,6 +19,32 @@ type PedidoItemCalculado = {
   artistaNombre?: string;
 };
 
+function cleanImageUrl(image?: string | null): string {
+  if (!image) return '';
+
+  let value = String(image).trim();
+
+  if (!value) return '';
+
+  if (value.startsWith('/uploads/https://')) {
+    value = value.replace('/uploads/', '');
+  }
+
+  if (value.startsWith('uploads/https://')) {
+    value = value.replace('uploads/', '');
+  }
+
+  if (value.startsWith('/uploads/http://')) {
+    value = value.replace('/uploads/', '');
+  }
+
+  if (value.startsWith('uploads/http://')) {
+    value = value.replace('uploads/', '');
+  }
+
+  return value;
+}
+
 @Injectable()
 export class PedidosService {
   constructor(
@@ -29,12 +55,64 @@ export class PedidosService {
     private readonly obraRepository: Repository<Obra>,
   ) {}
 
+  private async enriquecerPedidosConImagenes(
+    pedidos: Pedido[],
+  ): Promise<Pedido[]> {
+    const obraIds = pedidos
+      .flatMap((pedido) => {
+        const items = Array.isArray(pedido.items) ? pedido.items : [];
+        return items.map((item) => Number(item.obraId));
+      })
+      .filter((id) => !Number.isNaN(id) && id > 0);
+
+    const obraIdsUnicos = [...new Set(obraIds)];
+
+    if (obraIdsUnicos.length === 0) {
+      return pedidos;
+    }
+
+    const obras = await this.obraRepository.find({
+      where: {
+        id: In(obraIdsUnicos),
+      },
+      relations: ['artista'],
+    });
+
+    const obrasMap = new Map<number, Obra>(
+      obras.map((obra) => [Number(obra.id), obra]),
+    );
+
+    return pedidos.map((pedido) => {
+      const items = Array.isArray(pedido.items) ? pedido.items : [];
+
+      return {
+        ...pedido,
+        items: items.map((item) => {
+          const obra = obrasMap.get(Number(item.obraId));
+
+          const imageValue = cleanImageUrl(
+            item.imagenUrl || obra?.imagenUrl || obra?.imagen,
+          );
+
+          return {
+            ...item,
+            titulo: item.titulo || obra?.titulo || `Obra #${item.obraId}`,
+            imagenUrl: imageValue,
+            artistaNombre: item.artistaNombre || obra?.artista?.nombre || '',
+          };
+        }),
+      };
+    });
+  }
+
   async obtenerTodos(): Promise<Pedido[]> {
-    return await this.pedidoRepository.find({
+    const pedidos = await this.pedidoRepository.find({
       order: {
         id: 'DESC',
       },
     });
+
+    return this.enriquecerPedidosConImagenes(pedidos);
   }
 
   async obtenerPorId(id: number): Promise<Pedido> {
@@ -46,7 +124,9 @@ export class PedidosService {
       throw new NotFoundException(`No se encontró el pedido con id ${id}`);
     }
 
-    return pedido;
+    const pedidos = await this.enriquecerPedidosConImagenes([pedido]);
+
+    return pedidos[0];
   }
 
   async crear(data: CreatePedidoDto): Promise<Pedido> {
@@ -54,7 +134,7 @@ export class PedidosService {
 
     const obraIds = itemsEntrada
       .map((item) => Number(item.obraId))
-      .filter((id) => !Number.isNaN(id));
+      .filter((id) => !Number.isNaN(id) && id > 0);
 
     const obras = await this.obraRepository.find({
       where: {
@@ -72,13 +152,7 @@ export class PedidosService {
       const precio = Number(obra?.precio ?? 0);
       const cantidad = Number(item.cantidad ?? 0);
       const subtotal = precio * cantidad;
-
-      let imagenUrl = '';
-      if (obra?.imagen && String(obra.imagen).trim().length > 0) {
-        imagenUrl = String(obra.imagen).startsWith('/uploads/')
-          ? String(obra.imagen)
-          : `/uploads/${String(obra.imagen)}`;
-      }
+      const imageValue = cleanImageUrl(obra?.imagenUrl || obra?.imagen);
 
       const artistaNombre =
         obra?.artista && typeof obra.artista.nombre === 'string'
@@ -91,7 +165,7 @@ export class PedidosService {
         titulo: obra?.titulo ?? 'Obra',
         precio,
         subtotal,
-        imagenUrl,
+        imagenUrl: imageValue,
         artistaNombre,
       };
     });
@@ -119,7 +193,6 @@ export class PedidosService {
 
   async actualizarEstado(id: number, estado: string): Promise<Pedido> {
     const estadosPermitidos = ['pendiente', 'pagado', 'entregado', 'cancelado'];
-
     const estadoNormalizado = estado.trim().toLowerCase();
 
     if (!estadosPermitidos.includes(estadoNormalizado)) {
@@ -128,7 +201,14 @@ export class PedidosService {
       );
     }
 
-    const pedido = await this.obtenerPorId(id);
+    const pedido = await this.pedidoRepository.findOne({
+      where: { id },
+    });
+
+    if (!pedido) {
+      throw new NotFoundException(`No se encontró el pedido con id ${id}`);
+    }
+
     pedido.estado = estadoNormalizado;
 
     return await this.pedidoRepository.save(pedido);
@@ -138,7 +218,13 @@ export class PedidosService {
     id: number,
     data: { yaPago?: boolean; comprobante?: string },
   ): Promise<Pedido> {
-    const pedido = await this.obtenerPorId(id);
+    const pedido = await this.pedidoRepository.findOne({
+      where: { id },
+    });
+
+    if (!pedido) {
+      throw new NotFoundException(`No se encontró el pedido con id ${id}`);
+    }
 
     pedido.yaPago = data.yaPago ?? true;
     pedido.comprobante = data.comprobante ?? pedido.comprobante ?? '';
