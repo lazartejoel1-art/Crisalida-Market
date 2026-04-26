@@ -1,17 +1,14 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import type { Artista } from "../services/types";
+import { buildImageUrl } from "../services/api";
 
 interface Props {
   artista: Artista;
 }
 
-const API_URL = "http://localhost:3000";
-
 export default function ArtistaCard({ artista }: Props) {
-  const imageUrl = artista.foto
-    ? `${API_URL}/uploads/${artista.foto}`
-    : "/placeholder.jpg";
+  const imageUrl = buildImageUrl(artista.fotoUrl || artista.foto);
 
   return (
     <Link to={`/artistas/${artista.id}`}>
@@ -21,11 +18,20 @@ export default function ArtistaCard({ artista }: Props) {
         transition={{ type: "spring", stiffness: 200, damping: 18 }}
       >
         <div className="h-52 w-full bg-gray-200 overflow-hidden">
-          <img
-            src={imageUrl}
-            alt={artista.nombre}
-            className="w-full h-full object-cover"
-          />
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={artista.nombre}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">
+              Sin foto
+            </div>
+          )}
         </div>
 
         <div className="p-4 flex flex-col flex-1 justify-between">
@@ -33,6 +39,7 @@ export default function ArtistaCard({ artista }: Props) {
             <h3 className="text-lg font-bold text-negroSuave truncate">
               {artista.nombre}
             </h3>
+
             <p className="text-sm text-gray-600 mt-1 line-clamp-2">
               {artista.descripcion}
             </p>
