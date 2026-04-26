@@ -239,7 +239,7 @@ export default function WorkDetailPage() {
               <div className="absolute top-3 left-3 z-30 text-[10px] text-white/70 bg-black/40 border border-white/10 rounded-full px-3 py-1 backdrop-blur-sm">
                 {zoomActive
                   ? "Zoom activo"
-                  : "Pasa el mouse o toca para ampliar"}
+                  : "desliza para ampliar"}
               </div>
             </>
           ) : (
