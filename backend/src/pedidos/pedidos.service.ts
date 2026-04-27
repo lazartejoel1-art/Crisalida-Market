@@ -240,8 +240,10 @@ export class PedidosService {
   }
 
   async vaciarPedidos(): Promise<{ message: string }> {
+    const tableName = this.pedidoRepository.metadata.tablePath;
+
     await this.pedidoRepository.query(
-      'TRUNCATE TABLE public.pedido_detalles, public.pedidos RESTART IDENTITY CASCADE',
+      `TRUNCATE TABLE ${tableName} RESTART IDENTITY CASCADE`,
     );
 
     return {
