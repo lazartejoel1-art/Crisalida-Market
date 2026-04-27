@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -39,5 +40,10 @@ export class PedidosController {
     @Body() body: { yaPago?: boolean; comprobante?: string },
   ): Promise<Pedido> {
     return await this.pedidosService.reportarPago(id, body);
+  }
+
+  @Delete('clear/all')
+  async vaciarPedidos(): Promise<{ message: string }> {
+    return await this.pedidosService.vaciarPedidos();
   }
 }

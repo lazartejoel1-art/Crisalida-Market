@@ -238,4 +238,14 @@ export class PedidosService {
 
     return await this.pedidoRepository.save(pedido);
   }
+
+  async vaciarPedidos(): Promise<{ message: string }> {
+    await this.pedidoRepository.query(
+      'TRUNCATE TABLE public.pedido_detalles, public.pedidos RESTART IDENTITY CASCADE',
+    );
+
+    return {
+      message: 'Pedidos vaciados correctamente',
+    };
+  }
 }
