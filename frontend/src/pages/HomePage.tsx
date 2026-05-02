@@ -352,7 +352,7 @@ function WorksGrid({
       const y = (((seed * 7) % 233280) / 233280) * 10 - 5;
       const d = 0.04 * (idx % 10);
       const s = 1 + (((seed * 13) % 233280) / 233280) * 0.02;
-      const t = 7.2 + (idx % 3) * 0.7;
+      const t = 12 + (idx % 3) * 1.2;
 
       m.set(w.id, { r, x, y, d, s, t });
     });
@@ -502,7 +502,7 @@ export default function HomePage() {
 
     const t = setInterval(() => {
       setIndex((prev) => (prev + 1) % works.length);
-    }, 3600);
+    }, 7000);
 
     return () => clearInterval(t);
   }, [works.length]);
