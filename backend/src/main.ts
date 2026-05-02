@@ -7,24 +7,21 @@ import * as fs from 'fs';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Crear carpeta uploads
   const uploadsPath = join(process.cwd(), 'uploads');
+
   if (!fs.existsSync(uploadsPath)) {
-    fs.mkdirSync(uploadsPath);
+    fs.mkdirSync(uploadsPath, { recursive: true });
   }
 
-  // CORS
   app.enableCors({
-    origin: true, // 🔥 importante para producción
+    origin: true,
     credentials: true,
   });
 
-  // Archivos estáticos
   app.useStaticAssets(uploadsPath, {
     prefix: '/uploads/',
   });
 
-  // 🔥 ESTE ES EL CAMBIO CLAVE
   const port = process.env.PORT || 10000;
 
   await app.listen(port, '0.0.0.0');
