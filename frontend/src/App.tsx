@@ -19,6 +19,7 @@ import ArtistsPage from "./pages/ArtistasPage";
 import ContactPage from "./pages/Contacto";
 import ArtistDetailPage from "./pages/ArtistDetailPage";
 import MuseosPage from "./pages/MuseosPage";
+import EventoDetailPage from "./pages/EventoDetailPage";
 
 export default function App() {
   useEffect(() => {
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/artistas/:id" element={<ArtistDetailPage />} />
           <Route path="/tienda" element={<StorePage />} />
           <Route path="/obra/:id" element={<WorkDetailPage />} />
+          <Route path="/eventos/:id" element={<EventoDetailPage />} />
           <Route path="/carrito" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/artistas" element={<ArtistsPage />} />

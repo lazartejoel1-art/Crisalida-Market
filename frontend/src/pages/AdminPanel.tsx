@@ -38,6 +38,17 @@ type Work = {
   };
 };
 
+type Evento = {
+  id: number;
+  titulo: string;
+  descripcion?: string;
+  fecha?: string;
+  lugar?: string;
+  flyer?: string | null;
+  flyerUrl?: string | null;
+  activo?: boolean;
+};
+
 type PedidoItem = {
   obraId: number;
   titulo?: string;
@@ -1713,11 +1724,343 @@ function ReportsPanel() {
   );
 }
 
+
+function EventosManager() {
+  const [eventos, setEventos] = useState<Evento[]>([]);
+  const [editingEvento, setEditingEvento] = useState<Evento | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [titulo, setTitulo] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [fecha, setFecha] = useState("");
+  const [lugar, setLugar] = useState("");
+  const [activo, setActivo] = useState(true);
+  const [flyer, setFlyer] = useState<File | null>(null);
+
+  const loadEventos = useCallback(async (): Promise<Evento[]> => {
+    const res = await fetch(`${API}/eventos`);
+
+    if (!res.ok) {
+      throw new Error(await parseResponseError(res));
+    }
+
+    const data = (await res.json()) as Evento[];
+    return Array.isArray(data) ? data : [];
+  }, []);
+
+  const refreshEventos = useCallback(async () => {
+    setLoading(true);
+
+    try {
+      setEventos(await loadEventos());
+    } catch (error) {
+      console.error("Error al cargar eventos", error);
+      setEventos([]);
+      setMessage("No se pudieron cargar los eventos. Verifica el backend.");
+    } finally {
+      setLoading(false);
+    }
+  }, [loadEventos]);
+
+  useEffect(() => {
+    void refreshEventos();
+  }, [refreshEventos]);
+
+  const resetForm = () => {
+    setEditingEvento(null);
+    setTitulo("");
+    setDescripcion("");
+    setFecha("");
+    setLugar("");
+    setActivo(true);
+    setFlyer(null);
+  };
+
+  const startEdit = (evento: Evento) => {
+    setEditingEvento(evento);
+    setTitulo(evento.titulo ?? "");
+    setDescripcion(evento.descripcion ?? "");
+    setFecha(evento.fecha ?? "");
+    setLugar(evento.lugar ?? "");
+    setActivo(evento.activo ?? true);
+    setFlyer(null);
+    setMessage(null);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      if (!titulo.trim()) {
+        throw new Error("Falta el título del evento.");
+      }
+
+      if (!editingEvento && !(flyer instanceof File)) {
+        throw new Error("Debes subir un flyer para crear el evento.");
+      }
+
+      const data = new FormData();
+      data.append("titulo", titulo.trim());
+      data.append("descripcion", descripcion.trim());
+      data.append("fecha", fecha.trim());
+      data.append("lugar", lugar.trim());
+      data.append("activo", String(activo));
+
+      if (flyer instanceof File) {
+        data.append("flyer", flyer, flyer.name);
+      }
+
+      const url = editingEvento
+        ? `${API}/eventos/${editingEvento.id}`
+        : `${API}/eventos`;
+
+      const res = await fetch(url, {
+        method: editingEvento ? "PATCH" : "POST",
+        body: data,
+      });
+
+      if (!res.ok) {
+        throw new Error(await parseResponseError(res));
+      }
+
+      await refreshEventos();
+      resetForm();
+      setMessage(
+        editingEvento
+          ? "Evento actualizado correctamente ✅"
+          : "Evento creado correctamente ✅",
+      );
+    } catch (error) {
+      console.error("Error al guardar evento", error);
+      setMessage(getErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    setMessage(null);
+
+    const confirmar = window.confirm("¿Seguro que quieres eliminar este evento?");
+    if (!confirmar) return;
+
+    try {
+      const res = await fetch(`${API}/eventos/${id}`, { method: "DELETE" });
+
+      if (!res.ok) {
+        throw new Error(await parseResponseError(res));
+      }
+
+      await refreshEventos();
+      setMessage("Evento eliminado correctamente ✅");
+    } catch (error) {
+      console.error("Error al eliminar evento", error);
+      setMessage(getErrorMessage(error));
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-verdeEsmeralda mb-2">
+          Eventos y exposiciones 🗓
+        </h1>
+        <p className="text-sm text-gray-300">
+          Desde aquí puedes agregar flyers de exposiciones para mostrarlos en el
+          inicio de la página.
+        </p>
+      </div>
+
+      <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-5 space-y-4">
+        <h2 className="text-lg font-bold text-gray-100">
+          {editingEvento ? "Editar evento" : "Agregar evento"}
+        </h2>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <input
+            value={titulo}
+            onChange={(event) => setTitulo(event.target.value)}
+            placeholder="Título del evento"
+            className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+          />
+
+          <input
+            value={fecha}
+            onChange={(event) => setFecha(event.target.value)}
+            placeholder="Fecha. Ej: 13 de mayo de 2026"
+            className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+          />
+
+          <input
+            value={lugar}
+            onChange={(event) => setLugar(event.target.value)}
+            placeholder="Lugar. Ej: Museo Costumbrista Juan de Vargas"
+            className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+          />
+
+          <select
+            value={activo ? "true" : "false"}
+            onChange={(event) => setActivo(event.target.value === "true")}
+            className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+          >
+            <option value="true">Activo / visible en la web</option>
+            <option value="false">Inactivo / oculto</option>
+          </select>
+        </div>
+
+        <textarea
+          value={descripcion}
+          onChange={(event) => setDescripcion(event.target.value)}
+          placeholder="Descripción breve del evento"
+          rows={3}
+          className="w-full px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+        />
+
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-gray-200">
+            Flyer del evento
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(event) => setFlyer(event.target.files?.[0] ?? null)}
+            className="block w-full text-sm text-gray-300 file:mr-4 file:rounded-lg file:border-0 file:bg-verdeEsmeralda file:px-4 file:py-2 file:text-sm file:font-semibold file:text-black"
+          />
+          {editingEvento && (
+            <p className="text-xs text-gray-500">
+              Si no seleccionas un nuevo flyer, se conserva el actual.
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => void handleSave()}
+            disabled={saving}
+            className="px-4 py-2 rounded-lg bg-verdeEsmeralda text-black font-semibold hover:opacity-90 disabled:opacity-60"
+          >
+            {saving
+              ? "Guardando..."
+              : editingEvento
+                ? "Actualizar evento"
+                : "Guardar evento"}
+          </button>
+
+          {editingEvento && (
+            <button
+              onClick={resetForm}
+              disabled={saving}
+              className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white font-semibold hover:bg-white/15 disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+          )}
+        </div>
+
+        {message && (
+          <div className="rounded-lg border border-gray-800 bg-[#0b1220] p-3 text-sm text-gray-200">
+            {message}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h2 className="text-xl font-bold text-verdeEsmeralda mb-4">
+          Lista de eventos
+        </h2>
+
+        {loading ? (
+          <p className="text-sm text-gray-400">Cargando eventos...</p>
+        ) : eventos.length === 0 ? (
+          <p className="text-sm text-gray-400">
+            Aún no hay eventos registrados.
+          </p>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {eventos.map((evento) => {
+              const flyerUrl = getAdminImageUrl(evento.flyerUrl, evento.flyer);
+
+              return (
+                <div
+                  key={evento.id}
+                  className="bg-[#0e1624] border border-gray-800 rounded-xl overflow-hidden"
+                >
+                  {flyerUrl ? (
+                    <img
+                      src={flyerUrl}
+                      alt={evento.titulo}
+                      className="w-full h-56 object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-56 flex items-center justify-center text-sm text-gray-500">
+                      Sin flyer
+                    </div>
+                  )}
+
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-bold text-gray-100">
+                        {evento.titulo}
+                      </h3>
+
+                      <span
+                        className={`text-[11px] px-2 py-1 rounded-full ${
+                          evento.activo
+                            ? "bg-emerald-900/30 text-emerald-300 border border-emerald-800/40"
+                            : "bg-red-900/30 text-red-300 border border-red-800/40"
+                        }`}
+                      >
+                        {evento.activo ? "Activo" : "Inactivo"}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-verdeEsmeralda">
+                      {evento.fecha || "Sin fecha"}
+                    </p>
+
+                    <p className="text-xs text-gray-400">
+                      {evento.lugar || "Sin lugar"}
+                    </p>
+
+                    <p className="text-sm text-gray-400 line-clamp-3">
+                      {evento.descripcion || "Sin descripción"}
+                    </p>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        onClick={() => startEdit(evento)}
+                        className="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-500"
+                      >
+                        Editar
+                      </button>
+
+                      <button
+                        onClick={() => void handleDelete(evento.id)}
+                        className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPanel() {
   const navigate = useNavigate();
 
   const [screen, setScreen] = useState<
-    "dashboard" | "artists" | "obras" | "pedidos" | "reportes"
+    "dashboard" | "artists" | "obras" | "pedidos" | "reportes" | "eventos"
   >("dashboard");
   const [artists, setArtists] = useState<Artist[]>([]);
   const [works, setWorks] = useState<Work[]>([]);
@@ -1829,6 +2172,13 @@ export default function AdminPanel() {
             </button>
 
             <button
+              onClick={() => setScreen("eventos")}
+              className="block w-full text-left text-gray-300 hover:text-verdeEsmeralda"
+            >
+              🗓 Eventos
+            </button>
+
+            <button
               onClick={() => setScreen("pedidos")}
               className="block w-full text-left text-gray-300 hover:text-verdeEsmeralda"
             >
@@ -1885,6 +2235,8 @@ export default function AdminPanel() {
             onClearEditingWork={() => setEditingWorkFromDashboard(null)}
           />
         )}
+
+        {screen === "eventos" && <EventosManager />}
 
         {screen === "pedidos" && <OrdersManager />}
 
