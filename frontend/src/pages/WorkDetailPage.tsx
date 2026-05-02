@@ -237,9 +237,7 @@ export default function WorkDetailPage() {
                 draggable={false}
               />
               <div className="absolute top-3 left-3 z-30 text-[10px] text-white/70 bg-black/40 border border-white/10 rounded-full px-3 py-1 backdrop-blur-sm">
-                {zoomActive
-                  ? "Zoom activo"
-                  : "desliza para ampliar"}
+                {zoomActive ? "Zoom activo" : "desliza para ampliar"}
               </div>
             </>
           ) : (
@@ -265,7 +263,17 @@ export default function WorkDetailPage() {
           </h1>
 
           <p className="text-sm text-gray-400 mb-2">
-            {obra.artista?.nombre ? (
+            {obra.artista?.nombre && obra.artista?.id ? (
+              <>
+                Por{" "}
+                <Link
+                  to={`/artistas/${obra.artista.id}`}
+                  className="text-verdeEsmeralda font-medium hover:underline underline-offset-4"
+                >
+                  {obra.artista.nombre}
+                </Link>
+              </>
+            ) : obra.artista?.nombre ? (
               <>
                 Por{" "}
                 <span className="text-verdeEsmeralda font-medium">
