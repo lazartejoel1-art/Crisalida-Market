@@ -20,6 +20,7 @@ import ContactPage from "./pages/Contacto";
 import ArtistDetailPage from "./pages/ArtistDetailPage";
 import MuseosPage from "./pages/MuseosPage";
 import EventoDetailPage from "./pages/EventoDetailPage";
+import EventosPage from "./pages/EventosPage";
 
 export default function App() {
   useEffect(() => {
@@ -55,7 +56,7 @@ export default function App() {
           <Route path="/artistas" element={<ArtistsPage />} />
           <Route path="/contacto" element={<ContactPage />} />
           <Route path="/museo" element={<MuseosPage />} />
-
+          <Route path="/eventos" element={<EventosPage />} />
           {/* Admin */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminPanel />} />
