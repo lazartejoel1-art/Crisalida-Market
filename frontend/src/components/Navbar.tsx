@@ -1,104 +1,160 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { buildImageUrl } from "../services/api";
 
-type Evento = {
+type NavItem = { label: string; to: string };
+
+type CartItem = {
   id: number;
-  titulo: string;
-  descripcion?: string | null;
-  fecha?: string | null;
-  lugar?: string | null;
-  flyer?: string | null;
-  flyerUrl?: string | null;
-  activo?: boolean;
+  cantidad: number;
 };
 
-const API =
-  import.meta.env.VITE_API_URL || "https://crisalida-market.onrender.com";
+type NavbarProps = {
+  title?: string;
+  logoSrc?: string;
+  cartTo?: string;
+};
 
-export default function EventosPage() {
-  const [eventos, setEventos] = useState<Evento[]>([]);
-  const [loading, setLoading] = useState(true);
+const NAV: NavItem[] = [
+  { label: "Inicio", to: "/" },
+  { label: "Tienda", to: "/tienda" },
+  { label: "Galería", to: "/museo" },
+  { label: "Eventos", to: "/eventos" },
+  { label: "Carrito", to: "/carrito" },
+  { label: "Artistas", to: "/artistas" },
+  { label: "Contacto", to: "/contacto" },
+  { label: "Admin", to: "/admin/login" },
+];
+
+const CART_KEY = "crisalida_cart";
+
+function readCartCount() {
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    const parsed = raw ? (JSON.parse(raw) as CartItem[]) : [];
+
+    if (!Array.isArray(parsed)) return 0;
+
+    return parsed.reduce((acc, item) => acc + Number(item.cantidad ?? 0), 0);
+  } catch {
+    return 0;
+  }
+}
+
+export default function Navbar({
+  title = "Crisálida",
+  logoSrc = "/uploads/crisalida.png",
+  cartTo = "/carrito",
+}: NavbarProps) {
+  const [open, setOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(() => readCartCount());
 
   useEffect(() => {
-    fetch(`${API}/eventos/activos`)
-      .then((res) => res.json())
-      .then((data) => {
-        setEventos(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setEventos([]);
-        setLoading(false);
-      });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    const updateCart = () => {
+      setCartCount(readCartCount());
+    };
+
+    window.addEventListener("storage", updateCart);
+    window.addEventListener("crisalida_cart_updated", updateCart);
+
+    return () => {
+      window.removeEventListener("storage", updateCart);
+      window.removeEventListener("crisalida_cart_updated", updateCart);
+    };
   }, []);
 
   return (
-    <div className="min-h-screen px-6 py-10 text-white">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-extrabold mb-2 text-verdeEsmeralda">
-          Eventos y exposiciones
-        </h1>
+    <>
+      <header
+        className="sticky top-0 z-50 border-b"
+        style={{
+          background: "var(--c-topbar-bg)",
+          borderColor: "var(--c-topbar-border)",
+          color: "var(--c-topbar-text)",
+        }}
+      >
+        <div className="h-14 px-4 flex items-center justify-between relative">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="w-10 h-10 flex items-center justify-center rounded-md"
+            aria-label="Abrir menú"
+          >
+            <span className="text-2xl">☰</span>
+          </button>
 
-        <p className="text-gray-400 mb-8">
-          Descubre las actividades, muestras y exposiciones de Crisálida.
-        </p>
+          <Link
+            to="/"
+            className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2"
+          >
+            <img
+              src={logoSrc}
+              alt="Logo"
+              className="w-8 h-8 rounded-full object-cover"
+            />
+            <span className="font-extrabold">{title}</span>
+          </Link>
 
-        {loading ? (
-          <p>Cargando eventos...</p>
-        ) : eventos.length === 0 ? (
-          <p className="text-gray-400">No hay eventos disponibles.</p>
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-            {eventos.map((evento) => {
-              const img = buildImageUrl(evento.flyerUrl || evento.flyer);
+          <Link
+            to={cartTo}
+            className="relative w-10 h-10 flex items-center justify-center"
+          >
+            <span className="text-xl">🛒</span>
 
-              return (
-                <motion.div
-                  key={evento.id}
-                  className="bg-[#0e1624] border border-gray-800 rounded-xl overflow-hidden"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-verdeEsmeralda text-black text-[11px] font-bold flex items-center justify-center">
+                {cartCount}
+              </span>
+            )}
+          </Link>
+        </div>
+      </header>
+
+      {open && (
+        <div className="fixed inset-0 z-[60]">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setOpen(false)}
+          />
+
+          <aside
+            className="absolute left-0 top-0 h-full w-[280px] border-r p-5"
+            style={{
+              background: "var(--c-panel)",
+              borderColor: "var(--c-border)",
+            }}
+          >
+            <div className="flex justify-between items-center mb-5">
+              <span className="font-bold">{title}</span>
+
+              <button type="button" onClick={() => setOpen(false)}>
+                ✕
+              </button>
+            </div>
+
+            <nav className="space-y-2">
+              {NAV.map((it) => (
+                <Link
+                  key={it.to}
+                  to={it.to}
+                  onClick={() => setOpen(false)}
+                  className="block px-3 py-2 rounded-lg"
                 >
-                  <Link to={`/eventos/${evento.id}`}>
-                    {img ? (
-                      <img
-                        src={img}
-                        alt={evento.titulo}
-                        className="w-full h-64 object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-64 flex items-center justify-center text-gray-500">
-                        Sin imagen
-                      </div>
-                    )}
-
-                    <div className="p-4">
-                      <h3 className="font-bold text-lg">
-                        {evento.titulo}
-                      </h3>
-
-                      <p className="text-xs text-verdeEsmeralda mt-1">
-                        {evento.fecha || "Fecha por confirmar"}
-                      </p>
-
-                      <p className="text-xs text-gray-400">
-                        {evento.lugar || "Lugar por confirmar"}
-                      </p>
-
-                      <p className="text-sm text-gray-400 mt-2 line-clamp-3">
-                        {evento.descripcion || "Sin descripción"}
-                      </p>
-                    </div>
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
+                  {it.label}
+                </Link>
+              ))}
+            </nav>
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
