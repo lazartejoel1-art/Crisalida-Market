@@ -10,6 +10,10 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import * as fs from 'fs';
+
 import { EventosService } from './eventos.service';
 import { Evento } from './evento.entity';
 
@@ -24,6 +28,24 @@ type EventoBody = {
 type EventoFile = {
   filename: string;
 };
+
+const uploadsPath = join(process.cwd(), 'uploads');
+
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
+
+const flyerStorage = diskStorage({
+  destination: uploadsPath,
+  filename: (_req, file, callback) => {
+    const fileExt = extname(file.originalname);
+    const fileName = `evento-${Date.now()}-${Math.round(
+      Math.random() * 1000000,
+    )}${fileExt}`;
+
+    callback(null, fileName);
+  },
+});
 
 @Controller('eventos')
 export class EventosController {
@@ -40,12 +62,16 @@ export class EventosController {
   }
 
   @Post()
-  @UseInterceptors(FileInterceptor('flyer'))
+  @UseInterceptors(
+    FileInterceptor('flyer', {
+      storage: flyerStorage,
+    }),
+  )
   create(
     @Body() body: EventoBody,
     @UploadedFile() file?: EventoFile,
   ): Promise<Evento> {
-    const flyer = file?.filename;
+    const flyer = file?.filename ?? null;
 
     const data: Partial<Evento> = {
       titulo: body.titulo ?? '',
@@ -61,13 +87,17 @@ export class EventosController {
   }
 
   @Patch(':id')
-  @UseInterceptors(FileInterceptor('flyer'))
+  @UseInterceptors(
+    FileInterceptor('flyer', {
+      storage: flyerStorage,
+    }),
+  )
   update(
     @Param('id') id: string,
     @Body() body: EventoBody,
     @UploadedFile() file?: EventoFile,
   ): Promise<Evento> {
-    const flyer = file?.filename;
+    const flyer = file?.filename ?? null;
 
     const data: Partial<Evento> = {
       titulo: body.titulo ?? '',
