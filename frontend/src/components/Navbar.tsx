@@ -11,7 +11,7 @@ type CartItem = {
 const NAV: NavItem[] = [
   { label: "Inicio", to: "/" },
   { label: "Tienda", to: "/tienda" },
-  { label: "Museo", to: "/museo" },
+  { label: "Galería", to: "/museo" },
   { label: "Carrito", to: "/carrito" },
   { label: "Artistas", to: "/artistas" },
   { label: "Contacto", to: "/contacto" },

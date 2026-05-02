@@ -35,7 +35,7 @@ export default function MuseoPage() {
         setWorks(clean);
       } catch (err) {
         console.error(err);
-        setError("No se pudieron cargar las obras del museo.");
+        setError("No se pudieron cargar las obras de Crisálida.");
       } finally {
         setLoading(false);
       }
@@ -60,7 +60,7 @@ export default function MuseoPage() {
           className="mb-10"
         >
           <h1 className="text-3xl sm:text-4xl font-extrabold">
-            Museo Crisálida
+            Galería Crisálida
           </h1>
 
           <p className="mt-2 max-w-3xl" style={{ color: "var(--c-muted)" }}>
@@ -90,7 +90,7 @@ export default function MuseoPage() {
               color: "var(--c-muted)",
             }}
           >
-            Todavía no hay obras disponibles en el museo.
+            Todavía no hay obras disponibles en la galería.
           </div>
         )}
 

@@ -374,7 +374,7 @@ export default function HomePage() {
                 </div>
 
                 <p className="mt-2 text-sm" style={{ color: "var(--c-muted)" }}>
-                  Explora piezas, entra al Museo o compra en la Tienda.
+                  Explora piezas, entra a la galería o compra en la Tienda.
                 </p>
 
                 <div className="mt-5 grid gap-3">
@@ -387,7 +387,7 @@ export default function HomePage() {
                     }}
                   >
                     <p className="text-xs" style={{ color: "var(--c-accent)" }}>
-                      Museo
+                      Galería
                     </p>
                     <p className="text-sm font-bold text-white">
                       Ver obras completas (galería)
@@ -493,7 +493,7 @@ export default function HomePage() {
                   style={{ background: "var(--c-accent)", color: "#07110a" }}
                   onClick={() => navigate("/museo")}
                 >
-                  Ir al Museo
+                  Ir a la galería
                 </button>
               </div>
             </div>
@@ -516,7 +516,7 @@ export default function HomePage() {
               className="text-sm font-semibold underline underline-offset-4"
               style={{ color: "var(--c-accent)" }}
             >
-              Ver todo en Museo →
+              Ver todo en Galería →
             </Link>
           </div>
 
