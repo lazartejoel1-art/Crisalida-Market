@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { buildImageUrl } from "../services/api";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { API_URL, buildImageUrl } from "../services/api";
+
+type ArtistaInvitadoEvento = {
+  nombre: string;
+  especialidad?: string;
+  descripcion?: string;
+  imagenUrl?: string;
+};
 
 type Evento = {
   id: number;
@@ -11,143 +18,174 @@ type Evento = {
   flyer?: string | null;
   flyerUrl?: string | null;
   activo?: boolean;
+  artistasInvitados?: ArtistaInvitadoEvento[];
 };
 
-const API =
-  import.meta.env.VITE_API_URL || "https://crisalida-market.onrender.com";
+export default function EventoDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
 
-export default function EventosPage() {
-  const [eventos, setEventos] = useState<Evento[]>([]);
+  const [evento, setEvento] = useState<Evento | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API}/eventos`)
-      .then((res) => res.json())
-      .then((data) => {
-        const filtrados = Array.isArray(data)
-          ? data.filter((evento) => evento.activo !== false)
-          : [];
+    if (!id) {
+      setError("Evento no encontrado.");
+      setLoading(false);
+      return;
+    }
 
-        setEventos(filtrados);
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch(`${API_URL}/eventos/${id}`);
+
+        if (!res.ok) {
+          throw new Error("No se pudo cargar el evento");
+        }
+
+        const data = (await res.json()) as Evento;
+        setEvento(data);
+      } catch (e) {
+        console.error(e);
+        setError("No se pudo cargar el evento.");
+      } finally {
         setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error al cargar eventos:", error);
-        setEventos([]);
-        setLoading(false);
-      });
-  }, []);
+      }
+    };
+
+    void load();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <section className="max-w-6xl mx-auto px-4 py-10">
+        <p className="text-sm text-gray-400 animate-pulse">
+          Cargando evento...
+        </p>
+      </section>
+    );
+  }
+
+  if (error || !evento) {
+    return (
+      <section className="max-w-6xl mx-auto px-4 py-10">
+        <p className="text-sm text-red-400 mb-3">
+          {error ?? "Evento no encontrado."}
+        </p>
+
+        <Link
+          to="/eventos"
+          className="text-sm text-verdeEsmeralda hover:underline"
+        >
+          ← Volver a eventos
+        </Link>
+      </section>
+    );
+  }
+
+  const flyer = buildImageUrl(evento.flyerUrl || evento.flyer);
 
   return (
-    <div
-      className="min-h-screen px-6 py-10"
-      style={{ background: "var(--c-bg)", color: "var(--c-text)" }}
-    >
-      <div className="max-w-6xl mx-auto">
-        <p
-          className="text-xs font-semibold uppercase tracking-[0.24em]"
-          style={{ color: "var(--c-accent)" }}
-        >
-          Agenda Crisálida
-        </p>
+    <section className="max-w-6xl mx-auto px-4 py-10 text-white">
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="text-xs text-gray-400 hover:text-verdeEsmeralda mb-4"
+      >
+        ← Volver
+      </button>
 
-        <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold text-white mb-3">
-          Eventos y exposiciones
-        </h1>
-
-        <p className="text-sm mb-8" style={{ color: "var(--c-muted)" }}>
-          Descubre las actividades, muestras y exposiciones de Crisálida.
-        </p>
-
-        {loading ? (
-          <div
-            className="rounded-3xl p-8 text-sm"
-            style={{
-              background: "var(--c-panel)",
-              border: "1px solid var(--c-border)",
-              color: "var(--c-muted)",
-            }}
-          >
-            Cargando eventos...
-          </div>
-        ) : eventos.length === 0 ? (
-          <div
-            className="rounded-3xl p-8 text-sm"
-            style={{
-              background: "var(--c-panel)",
-              border: "1px solid var(--c-border)",
-              color: "var(--c-muted)",
-            }}
-          >
-            No hay eventos disponibles.
-          </div>
+      <div className="bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden">
+        {flyer ? (
+          <img
+            src={flyer}
+            alt={evento.titulo}
+            className="w-full h-[420px] object-cover"
+          />
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {eventos.map((evento) => {
-              const img = buildImageUrl(evento.flyerUrl || evento.flyer);
-
-              return (
-                <Link
-                  key={evento.id}
-                  to={`/eventos/${evento.id}`}
-                  className="group rounded-[28px] overflow-hidden transition hover:scale-[1.01]"
-                  style={{
-                    background: "var(--c-panel)",
-                    border: "1px solid var(--c-border)",
-                  }}
-                >
-                  {img ? (
-                    <img
-                      src={img}
-                      alt={evento.titulo}
-                      className="w-full h-72 object-cover transition-transform duration-500 group-hover:scale-[1.035]"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div
-                      className="h-72 flex items-center justify-center text-sm"
-                      style={{ color: "var(--c-muted)" }}
-                    >
-                      Sin flyer
-                    </div>
-                  )}
-
-                  <div className="p-5">
-                    <p
-                      className="text-xs font-semibold"
-                      style={{ color: "var(--c-accent)" }}
-                    >
-                      {evento.fecha || "Fecha por confirmar"}
-                    </p>
-
-                    <h3 className="mt-2 text-lg font-extrabold text-white line-clamp-2">
-                      {evento.titulo}
-                    </h3>
-
-                    <p className="mt-1 text-xs" style={{ color: "var(--c-muted)" }}>
-                      {evento.lugar || "Lugar por confirmar"}
-                    </p>
-
-                    <p
-                      className="mt-3 text-sm line-clamp-3"
-                      style={{ color: "rgba(255,255,255,0.62)" }}
-                    >
-                      {evento.descripcion || "Ver más detalles del evento."}
-                    </p>
-
-                    <p
-                      className="mt-4 text-xs font-semibold underline underline-offset-4"
-                      style={{ color: "var(--c-accent)" }}
-                    >
-                      Ver detalle →
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
+          <div className="w-full h-[420px] flex items-center justify-center text-gray-500">
+            Sin flyer
           </div>
         )}
+
+        <div className="p-6">
+          <p className="text-sm text-verdeEsmeralda">
+            {evento.fecha || "Fecha por confirmar"}
+          </p>
+
+          <h1 className="text-3xl font-bold mt-2">
+            {evento.titulo}
+          </h1>
+
+          <p className="text-sm text-gray-400 mt-2">
+            {evento.lugar || "Lugar por confirmar"}
+          </p>
+
+          <div className="mt-6">
+            <h2 className="text-xl font-bold text-verdeEsmeralda mb-3">
+              Sobre el evento
+            </h2>
+
+            <p className="text-gray-300 whitespace-pre-line leading-relaxed">
+              {evento.descripcion ||
+                "Este evento pertenece a la colectiva Crisálida."}
+            </p>
+          </div>
+        </div>
       </div>
-    </div>
+
+      {Array.isArray(evento.artistasInvitados) &&
+        evento.artistasInvitados.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-2xl font-bold text-verdeEsmeralda mb-5">
+              Artistas invitados
+            </h2>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {evento.artistasInvitados.map((artista, index) => {
+                const imageUrl = buildImageUrl(artista.imagenUrl);
+
+                return (
+                  <div
+                    key={`${artista.nombre}-${index}`}
+                    className="bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden"
+                  >
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={artista.nombre}
+                        className="w-full h-64 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-64 flex items-center justify-center text-gray-500 text-sm">
+                        Sin imagen
+                      </div>
+                    )}
+
+                    <div className="p-4">
+                      <h3 className="font-bold text-lg text-white">
+                        {artista.nombre}
+                      </h3>
+
+                      <p className="text-sm text-verdeEsmeralda mt-1">
+                        {artista.especialidad || "Artista invitado"}
+                      </p>
+
+                      <p className="text-sm text-gray-400 mt-3 leading-relaxed">
+                        {artista.descripcion ||
+                          "Participante del evento."}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+    </section>
   );
 }

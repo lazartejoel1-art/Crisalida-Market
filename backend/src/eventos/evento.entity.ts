@@ -1,5 +1,12 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
+export type ArtistaInvitadoEvento = {
+  nombre: string;
+  especialidad?: string;
+  descripcion?: string;
+  imagenUrl?: string;
+};
+
 @Entity()
 export class Evento {
   @PrimaryGeneratedColumn()
@@ -22,6 +29,9 @@ export class Evento {
 
   @Column({ nullable: true })
   flyerUrl!: string;
+
+  @Column('jsonb', { nullable: true })
+  artistasInvitados!: ArtistaInvitadoEvento[];
 
   @Column({ default: true })
   activo!: boolean;

@@ -38,6 +38,13 @@ type Work = {
   };
 };
 
+type ArtistaInvitadoEvento = {
+  nombre: string;
+  especialidad?: string;
+  descripcion?: string;
+  imagenUrl?: string;
+};
+
 type Evento = {
   id: number;
   titulo: string;
@@ -47,6 +54,7 @@ type Evento = {
   flyer?: string | null;
   flyerUrl?: string | null;
   activo?: boolean;
+  artistasInvitados?: ArtistaInvitadoEvento[];
 };
 
 type PedidoItem = {
@@ -1739,6 +1747,14 @@ function EventosManager() {
   const [activo, setActivo] = useState(true);
   const [flyer, setFlyer] = useState<File | null>(null);
 
+  const [artistasInvitados, setArtistasInvitados] = useState<
+    ArtistaInvitadoEvento[]
+  >([]);
+  const [artistaNombre, setArtistaNombre] = useState("");
+  const [artistaEspecialidad, setArtistaEspecialidad] = useState("");
+  const [artistaDescripcion, setArtistaDescripcion] = useState("");
+  const [artistaImagenUrl, setArtistaImagenUrl] = useState("");
+
   const loadEventos = useCallback(async (): Promise<Evento[]> => {
     const res = await fetch(`${API}/eventos`);
 
@@ -1768,6 +1784,13 @@ function EventosManager() {
     void refreshEventos();
   }, [refreshEventos]);
 
+  const resetArtistForm = () => {
+    setArtistaNombre("");
+    setArtistaEspecialidad("");
+    setArtistaDescripcion("");
+    setArtistaImagenUrl("");
+  };
+
   const resetForm = () => {
     setEditingEvento(null);
     setTitulo("");
@@ -1776,6 +1799,8 @@ function EventosManager() {
     setLugar("");
     setActivo(true);
     setFlyer(null);
+    setArtistasInvitados([]);
+    resetArtistForm();
   };
 
   const startEdit = (evento: Evento) => {
@@ -1786,7 +1811,35 @@ function EventosManager() {
     setLugar(evento.lugar ?? "");
     setActivo(evento.activo ?? true);
     setFlyer(null);
+    setArtistasInvitados(
+      Array.isArray(evento.artistasInvitados) ? evento.artistasInvitados : [],
+    );
+    resetArtistForm();
     setMessage(null);
+  };
+
+  const addArtistaInvitado = () => {
+    if (!artistaNombre.trim()) {
+      setMessage("Debes escribir el nombre del artista invitado.");
+      return;
+    }
+
+    setArtistasInvitados((prev) => [
+      ...prev,
+      {
+        nombre: artistaNombre.trim(),
+        especialidad: artistaEspecialidad.trim(),
+        descripcion: artistaDescripcion.trim(),
+        imagenUrl: artistaImagenUrl.trim(),
+      },
+    ]);
+
+    resetArtistForm();
+    setMessage(null);
+  };
+
+  const removeArtistaInvitado = (index: number) => {
+    setArtistasInvitados((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
   };
 
   const handleSave = async () => {
@@ -1808,6 +1861,7 @@ function EventosManager() {
       data.append("fecha", fecha.trim());
       data.append("lugar", lugar.trim());
       data.append("activo", String(activo));
+      data.append("artistasInvitados", JSON.stringify(artistasInvitados));
 
       if (flyer instanceof File) {
         data.append("flyer", flyer, flyer.name);
@@ -1869,8 +1923,8 @@ function EventosManager() {
           Eventos y exposiciones 🗓
         </h1>
         <p className="text-sm text-gray-300">
-          Desde aquí puedes agregar flyers de exposiciones para mostrarlos en el
-          inicio de la página.
+          Desde aquí puedes agregar flyers, detalles y artistas invitados para
+          mostrarlos en la página de eventos.
         </p>
       </div>
 
@@ -1918,6 +1972,98 @@ function EventosManager() {
           rows={3}
           className="w-full px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
         />
+
+        <div className="bg-[#0b1220] border border-gray-800 rounded-xl p-4 space-y-4">
+          <div>
+            <h3 className="text-sm font-bold text-verdeEsmeralda">
+              Artistas invitados
+            </h3>
+            <p className="text-xs text-gray-400">
+              Agrega los artistas que participarán en este evento.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-3">
+            <input
+              value={artistaNombre}
+              onChange={(event) => setArtistaNombre(event.target.value)}
+              placeholder="Nombre del artista"
+              className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+            />
+
+            <input
+              value={artistaEspecialidad}
+              onChange={(event) => setArtistaEspecialidad(event.target.value)}
+              placeholder="Especialidad. Ej: Grabado, pintura, fotografía"
+              className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+            />
+
+            <input
+              value={artistaImagenUrl}
+              onChange={(event) => setArtistaImagenUrl(event.target.value)}
+              placeholder="URL de imagen del artista opcional"
+              className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white md:col-span-2"
+            />
+          </div>
+
+          <textarea
+            value={artistaDescripcion}
+            onChange={(event) => setArtistaDescripcion(event.target.value)}
+            placeholder="Descripción breve del artista invitado"
+            rows={2}
+            className="w-full px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+          />
+
+          <button
+            type="button"
+            onClick={addArtistaInvitado}
+            className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-sm font-semibold hover:bg-white/15"
+          >
+            + Agregar artista invitado
+          </button>
+
+          {artistasInvitados.length > 0 && (
+            <div className="space-y-2">
+              {artistasInvitados.map((artista, index) => (
+                <div
+                  key={`${artista.nombre}-${index}`}
+                  className="flex items-start justify-between gap-3 rounded-lg border border-gray-800 bg-[#0e1624] p-3"
+                >
+                  <div className="flex gap-3">
+                    {artista.imagenUrl && (
+                      <img
+                        src={buildImageUrl(artista.imagenUrl) ?? artista.imagenUrl}
+                        alt={artista.nombre}
+                        className="w-12 h-12 rounded-full object-cover"
+                        loading="lazy"
+                      />
+                    )}
+
+                    <div>
+                      <p className="text-sm font-bold text-gray-100">
+                        {artista.nombre}
+                      </p>
+                      <p className="text-xs text-verdeEsmeralda">
+                        {artista.especialidad || "Sin especialidad"}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {artista.descripcion || "Sin descripción"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => removeArtistaInvitado(index)}
+                    className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-gray-200">
@@ -1982,6 +2128,9 @@ function EventosManager() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {eventos.map((evento) => {
               const flyerUrl = getAdminImageUrl(evento.flyerUrl, evento.flyer);
+              const invitados = Array.isArray(evento.artistasInvitados)
+                ? evento.artistasInvitados
+                : [];
 
               return (
                 <div
@@ -2028,6 +2177,10 @@ function EventosManager() {
 
                     <p className="text-sm text-gray-400 line-clamp-3">
                       {evento.descripcion || "Sin descripción"}
+                    </p>
+
+                    <p className="text-xs text-gray-300">
+                      Artistas invitados: {invitados.length}
                     </p>
 
                     <div className="flex gap-2 pt-2">
