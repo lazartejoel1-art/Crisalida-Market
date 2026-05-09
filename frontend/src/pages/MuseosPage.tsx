@@ -125,7 +125,7 @@ export default function MuseoPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
                 <div className="absolute bottom-3 right-3 text-[10px] text-white/40 uppercase tracking-widest pointer-events-none">
-                  Crisálida · Museo
+                  Crisálida · Galería
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 p-4 z-20">
