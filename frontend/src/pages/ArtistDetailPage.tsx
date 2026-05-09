@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { API_URL, buildImageUrl } from "../services/api";
 
@@ -21,9 +21,205 @@ type ArtistDetail = {
   origen?: string;
   instagram?: string;
   facebook?: string;
+  tiktok?: string;
   web?: string;
   obras?: Work[];
 };
+
+type SocialLink = {
+  label: string;
+  value: string;
+  href: string;
+  icon: string;
+};
+
+function normalizeExternalUrl(value: string): string {
+  const clean = value.trim();
+
+  if (!clean) return "";
+
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
+    return clean;
+  }
+
+  return `https://${clean}`;
+}
+
+function normalizeInstagram(value: string): string {
+  const clean = value.trim().replace(/^@/, "");
+
+  if (!clean) return "";
+
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
+    return clean;
+  }
+
+  return `https://www.instagram.com/${clean}`;
+}
+
+function normalizeTikTok(value: string): string {
+  const clean = value.trim().replace(/^@/, "");
+
+  if (!clean) return "";
+
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
+    return clean;
+  }
+
+  return `https://www.tiktok.com/@${clean}`;
+}
+
+function normalizeFacebook(value: string): string {
+  const clean = value.trim();
+
+  if (!clean) return "";
+
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
+    return clean;
+  }
+
+  return `https://www.facebook.com/search/top?q=${encodeURIComponent(clean)}`;
+}
+
+function normalizeEmail(value: string): string {
+  const clean = value.trim();
+  return clean ? `mailto:${clean}` : "";
+}
+
+function uniqueLinks(links: SocialLink[]): SocialLink[] {
+  const seen = new Set<string>();
+
+  return links.filter((link) => {
+    const key = `${link.label}-${link.value}`.toLowerCase();
+
+    if (seen.has(key)) return false;
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function buildArtistInfo(artist: ArtistDetail): {
+  description: string;
+  links: SocialLink[];
+} {
+  const rawDescription = artist.descripcion || "";
+  const lines = rawDescription
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const descriptionLines: string[] = [];
+  const links: SocialLink[] = [];
+
+  const pushLink = (link: SocialLink) => {
+    if (link.value.trim() && link.href.trim()) {
+      links.push(link);
+    }
+  };
+
+  if (artist.instagram) {
+    pushLink({
+      label: "Instagram",
+      value: artist.instagram,
+      href: normalizeInstagram(artist.instagram),
+      icon: "📸",
+    });
+  }
+
+  if (artist.facebook) {
+    pushLink({
+      label: "Facebook",
+      value: artist.facebook,
+      href: normalizeFacebook(artist.facebook),
+      icon: "📘",
+    });
+  }
+
+  if (artist.tiktok) {
+    pushLink({
+      label: "TikTok",
+      value: artist.tiktok,
+      href: normalizeTikTok(artist.tiktok),
+      icon: "🎵",
+    });
+  }
+
+  if (artist.web) {
+    pushLink({
+      label: "Web",
+      value: artist.web,
+      href: normalizeExternalUrl(artist.web),
+      icon: "🌐",
+    });
+  }
+
+  lines.forEach((line) => {
+    const instagramMatch = line.match(/(?:instagram|ig)\s*:?\s*(@?[\w.]+)/i);
+    const facebookMatch = line.match(/facebook\s*:?\s*([^\n]+)/i);
+    const tiktokMatch = line.match(/(?:tiktok|tik tok)\s*:?\s*(@?[\w.]+)/i);
+    const emailMatch = line.match(/[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}/);
+    const urlMatch = line.match(/https?:\/\/[^\s]+|www\.[^\s]+/i);
+
+    if (instagramMatch?.[1]) {
+      pushLink({
+        label: "Instagram",
+        value: instagramMatch[1],
+        href: normalizeInstagram(instagramMatch[1]),
+        icon: "📸",
+      });
+      return;
+    }
+
+    if (facebookMatch?.[1]) {
+      pushLink({
+        label: "Facebook",
+        value: facebookMatch[1].trim(),
+        href: normalizeFacebook(facebookMatch[1].trim()),
+        icon: "📘",
+      });
+      return;
+    }
+
+    if (tiktokMatch?.[1]) {
+      pushLink({
+        label: "TikTok",
+        value: tiktokMatch[1],
+        href: normalizeTikTok(tiktokMatch[1]),
+        icon: "🎵",
+      });
+      return;
+    }
+
+    if (emailMatch?.[0]) {
+      pushLink({
+        label: "Correo",
+        value: emailMatch[0],
+        href: normalizeEmail(emailMatch[0]),
+        icon: "✉️",
+      });
+      return;
+    }
+
+    if (urlMatch?.[0]) {
+      pushLink({
+        label: "Enlace",
+        value: urlMatch[0],
+        href: normalizeExternalUrl(urlMatch[0]),
+        icon: "🔗",
+      });
+      return;
+    }
+
+    descriptionLines.push(line);
+  });
+
+  return {
+    description:
+      descriptionLines.join("\n\n") || "Artista de la colectiva Crisálida.",
+    links: uniqueLinks(links),
+  };
+}
 
 export default function ArtistDetailPage() {
   const { id } = useParams();
@@ -63,6 +259,17 @@ export default function ArtistDetailPage() {
 
     void load();
   }, [id]);
+
+  const artistInfo = useMemo(() => {
+    if (!artist) {
+      return {
+        description: "",
+        links: [] as SocialLink[],
+      };
+    }
+
+    return buildArtistInfo(artist);
+  }, [artist]);
 
   if (loading) {
     return (
@@ -119,51 +326,54 @@ export default function ArtistDetailPage() {
           )}
         </div>
 
-        <div className="md:col-span-2">
-          <h1 className="text-2xl font-bold text-gray-100">{artist.nombre}</h1>
+        <div className="md:col-span-2 space-y-5">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-verdeEsmeralda font-semibold">
+              Artista Crisálida
+            </p>
 
-          <p className="text-sm text-gray-300 mt-2">
-            {artist.descripcion || "Artista de la colectiva Crisálida."}
-          </p>
+            <h1 className="text-3xl font-extrabold text-gray-100 mt-2">
+              {artist.nombre}
+            </h1>
 
-          <div className="mt-4 flex flex-wrap gap-2 text-xs">
             {artist.origen && (
-              <span className="px-3 py-1 rounded-full border border-gray-700 text-gray-200">
-                📍 {artist.origen}
-              </span>
+              <p className="text-sm text-gray-400 mt-2">📍 {artist.origen}</p>
             )}
+          </div>
 
-            {artist.instagram && (
-              <a
-                className="px-3 py-1 rounded-full border border-gray-700 text-verdeEsmeralda hover:underline"
-                href={artist.instagram}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Instagram
-              </a>
-            )}
+          <div>
+            <h2 className="text-sm font-bold text-verdeEsmeralda mb-2">
+              Descripción
+            </h2>
 
-            {artist.facebook && (
-              <a
-                className="px-3 py-1 rounded-full border border-gray-700 text-verdeEsmeralda hover:underline"
-                href={artist.facebook}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Facebook
-              </a>
-            )}
+            <p className="text-sm text-gray-300 whitespace-pre-line leading-relaxed">
+              {artistInfo.description}
+            </p>
+          </div>
 
-            {artist.web && (
-              <a
-                className="px-3 py-1 rounded-full border border-gray-700 text-verdeEsmeralda hover:underline"
-                href={artist.web}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Web
-              </a>
+          <div>
+            <h2 className="text-sm font-bold text-verdeEsmeralda mb-3">
+              Redes y contacto
+            </h2>
+
+            {artistInfo.links.length === 0 ? (
+              <p className="text-xs text-gray-500">
+                No hay redes sociales registradas.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {artistInfo.links.map((link) => (
+                  <a
+                    key={`${link.label}-${link.value}`}
+                    className="px-3 py-2 rounded-full border border-gray-700 text-verdeEsmeralda hover:border-verdeEsmeralda hover:bg-verdeEsmeralda/10 text-xs font-semibold transition"
+                    href={link.href}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {link.icon} {link.label}
+                  </a>
+                ))}
+              </div>
             )}
           </div>
         </div>

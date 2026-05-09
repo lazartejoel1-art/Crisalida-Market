@@ -1,4 +1,4 @@
-import { useEffect, useState, FormEvent } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 export type NewArtist = {
   nombre: string;
@@ -26,7 +26,17 @@ export default function ArtistForm({
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Rellenar formulario cuando cambie el artista en edición
+  const descriptionRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const resizeDescription = () => {
+    const element = descriptionRef.current;
+
+    if (!element) return;
+
+    element.style.height = "auto";
+    element.style.height = `${Math.max(element.scrollHeight, 180)}px`;
+  };
+
   useEffect(() => {
     if (initialValues) {
       setNombre(initialValues.nombre);
@@ -41,44 +51,24 @@ export default function ArtistForm({
     }
   }, [initialValues]);
 
+  useEffect(() => {
+    resizeDescription();
+  }, [descripcion]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
-      let finalFotoUrl = fotoUrlInput;
-
-      // Si el usuario seleccionó un archivo, lo subimos al backend
-      if (file) {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const res = await fetch(
-          "http://localhost:3000/artistas/upload-image",
-          {
-            method: "POST",
-            body: formData,
-          },
-        );
-
-        if (!res.ok) {
-          console.error("Error subiendo imagen");
-        } else {
-          const data = (await res.json()) as { url?: string };
-          finalFotoUrl = data.url || finalFotoUrl;
-        }
-      }
-
       const newArtist: NewArtist = {
-        nombre,
-        descripcion,
+        nombre: nombre.trim(),
+        descripcion: descripcion.trim(),
         foto: file || undefined,
-        fotoUrl: finalFotoUrl,
+        fotoUrl: fotoUrlInput.trim(),
       };
 
       onSave(newArtist);
 
-      // 🔥 LIMPIAR FORMULARIO SOLO AL CREAR
       if (mode === "create") {
         setNombre("");
         setDescripcion("");
@@ -113,11 +103,17 @@ export default function ArtistForm({
       <div>
         <label className="block text-gray-300 text-sm mb-1">Descripción</label>
         <textarea
-          className="w-full px-3 py-2 rounded bg-[#050816] border border-gray-700 text-gray-200 focus:ring-2 focus:ring-verdeEsmeralda text-sm"
+          ref={descriptionRef}
+          className="w-full min-h-[180px] px-3 py-3 rounded bg-[#050816] border border-gray-700 text-gray-200 focus:ring-2 focus:ring-verdeEsmeralda text-sm leading-relaxed resize-y overflow-hidden"
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
-          placeholder="Descripción breve del artista"
+          placeholder={`Descripción del artista\n\nInstagram: @usuario\nFacebook: Nombre o enlace\nTikTok: @usuario\nCorreo: artista@email.com`}
+          rows={7}
         />
+        <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+          Consejo: escribe la biografía arriba y deja las redes en líneas separadas.
+          En la página pública se mostrarán ordenadas y como enlaces clickeables.
+        </p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -139,7 +135,7 @@ export default function ArtistForm({
 
         <div>
           <label className="block text-gray-300 text-sm mb-1">
-            Imagen desde tu PC
+            Imagen desde tu PC o celular
           </label>
           <input
             type="file"
