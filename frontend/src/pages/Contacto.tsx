@@ -16,19 +16,19 @@ const socials = [
   {
     name: "TikTok",
     icon: <FaTiktok />,
-    url: "https://tiktok.com/crisalida.collective",
+    url: "https://www.tiktok.com/@crisalida_8?_r=1&_t=ZS-96EEFsBsywP",
     color: "hover:text-white",
   },
   {
     name: "Facebook",
     icon: <FaFacebookF />,
-    url: "https://facebook.com/crisalida",
+    url: "https://www.facebook.com/share/18RT8qmWAJ/",
     color: "hover:text-blue-500",
   },
   {
     name: "Gmail",
     icon: <FaEnvelope />,
-    url: "mailto:crisalida.colectiva@gmail.com",
+    url: "mailto:crisalida.contact@gmail.com",
     color: "hover:text-red-400",
   },
 ];
