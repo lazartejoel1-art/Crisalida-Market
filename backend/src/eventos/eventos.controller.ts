@@ -15,7 +15,7 @@ import { extname, join } from 'path';
 import * as fs from 'fs';
 
 import { EventosService } from './eventos.service';
-import { Evento } from './evento.entity';
+import { ArtistaInvitadoEvento, Evento } from './evento.entity';
 
 type EventoBody = {
   titulo?: string;
@@ -23,6 +23,7 @@ type EventoBody = {
   fecha?: string;
   lugar?: string;
   activo?: string | boolean;
+  artistasInvitados?: string;
 };
 
 type EventoFile = {
@@ -47,6 +48,32 @@ const flyerStorage = diskStorage({
   },
 });
 
+function isArtistaInvitadoEvento(
+  value: unknown,
+): value is ArtistaInvitadoEvento {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const item = value as Record<string, unknown>;
+
+  return typeof item.nombre === 'string';
+}
+
+function parseArtistasInvitados(value?: string): ArtistaInvitadoEvento[] {
+  if (!value) return [];
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter(isArtistaInvitadoEvento);
+  } catch {
+    return [];
+  }
+}
+
 @Controller('eventos')
 export class EventosController {
   constructor(private readonly eventosService: EventosService) {}
@@ -59,6 +86,11 @@ export class EventosController {
   @Get('activos')
   findActivos(): Promise<Evento[]> {
     return this.eventosService.findActivos();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string): Promise<Evento> {
+    return this.eventosService.findOne(Number(id));
   }
 
   @Post()
@@ -81,6 +113,7 @@ export class EventosController {
       activo: body.activo === 'false' ? false : true,
       flyer: flyer ?? undefined,
       flyerUrl: flyer ? `/uploads/${flyer}` : undefined,
+      artistasInvitados: parseArtistasInvitados(body.artistasInvitados),
     };
 
     return this.eventosService.create(data);
@@ -105,6 +138,7 @@ export class EventosController {
       fecha: body.fecha ?? '',
       lugar: body.lugar ?? '',
       activo: body.activo === 'false' ? false : true,
+      artistasInvitados: parseArtistasInvitados(body.artistasInvitados),
     };
 
     if (flyer) {

@@ -23,6 +23,18 @@ export class EventosService {
     });
   }
 
+  async findOne(id: number) {
+    const evento = await this.eventosRepository.findOne({
+      where: { id },
+    });
+
+    if (!evento) {
+      throw new NotFoundException('Evento no encontrado.');
+    }
+
+    return evento;
+  }
+
   async create(data: Partial<Evento>) {
     const evento = this.eventosRepository.create(data);
     return this.eventosRepository.save(evento);

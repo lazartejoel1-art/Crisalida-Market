@@ -1754,6 +1754,20 @@ function EventosManager() {
   const [artistaEspecialidad, setArtistaEspecialidad] = useState("");
   const [artistaDescripcion, setArtistaDescripcion] = useState("");
   const [artistaImagenUrl, setArtistaImagenUrl] = useState("");
+  const [artistaImagenPreview, setArtistaImagenPreview] = useState("");
+
+  const getInvitadoImageUrl = (image?: string | null): string | null => {
+    const cleanImage = image && String(image).trim() !== "" ? image : null;
+
+    if (!cleanImage) return null;
+
+    if (cleanImage.startsWith("data:image")) return cleanImage;
+    if (cleanImage.startsWith("http://") || cleanImage.startsWith("https://")) {
+      return cleanImage;
+    }
+
+    return buildImageUrl(cleanImage);
+  };
 
   const loadEventos = useCallback(async (): Promise<Evento[]> => {
     const res = await fetch(`${API}/eventos`);
@@ -1789,6 +1803,7 @@ function EventosManager() {
     setArtistaEspecialidad("");
     setArtistaDescripcion("");
     setArtistaImagenUrl("");
+    setArtistaImagenPreview("");
   };
 
   const resetForm = () => {
@@ -1816,6 +1831,30 @@ function EventosManager() {
     );
     resetArtistForm();
     setMessage(null);
+  };
+
+  const handleArtistaImageFile = (file?: File | null) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setMessage("Selecciona una imagen válida para el artista invitado.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      setArtistaImagenUrl(result);
+      setArtistaImagenPreview(result);
+      setMessage(null);
+    };
+
+    reader.onerror = () => {
+      setMessage("No se pudo leer la imagen del artista invitado.");
+    };
+
+    reader.readAsDataURL(file);
   };
 
   const addArtistaInvitado = () => {
@@ -1979,7 +2018,7 @@ function EventosManager() {
               Artistas invitados
             </h3>
             <p className="text-xs text-gray-400">
-              Agrega los artistas que participarán en este evento.
+              Al editar un evento, aquí también puedes agregar o quitar artistas invitados.
             </p>
           </div>
 
@@ -1998,12 +2037,34 @@ function EventosManager() {
               className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
             />
 
-            <input
-              value={artistaImagenUrl}
-              onChange={(event) => setArtistaImagenUrl(event.target.value)}
-              placeholder="URL de imagen del artista opcional"
-              className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white md:col-span-2"
-            />
+            <div className="md:col-span-2 space-y-2">
+              <input
+                value={artistaImagenUrl}
+                onChange={(event) => {
+                  setArtistaImagenUrl(event.target.value);
+                  setArtistaImagenPreview(event.target.value);
+                }}
+                placeholder="URL de imagen del artista opcional"
+                className="w-full px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+              />
+
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) =>
+                  handleArtistaImageFile(event.target.files?.[0] ?? null)
+                }
+                className="block w-full text-sm text-gray-300 file:mr-4 file:rounded-lg file:border-0 file:bg-verdeEsmeralda file:px-4 file:py-2 file:text-sm file:font-semibold file:text-black"
+              />
+
+              {artistaImagenPreview && (
+                <img
+                  src={getInvitadoImageUrl(artistaImagenPreview) ?? artistaImagenPreview}
+                  alt="Vista previa del artista"
+                  className="w-24 h-24 rounded-full object-cover border border-gray-700"
+                />
+              )}
+            </div>
           </div>
 
           <textarea
@@ -2024,43 +2085,47 @@ function EventosManager() {
 
           {artistasInvitados.length > 0 && (
             <div className="space-y-2">
-              {artistasInvitados.map((artista, index) => (
-                <div
-                  key={`${artista.nombre}-${index}`}
-                  className="flex items-start justify-between gap-3 rounded-lg border border-gray-800 bg-[#0e1624] p-3"
-                >
-                  <div className="flex gap-3">
-                    {artista.imagenUrl && (
-                      <img
-                        src={buildImageUrl(artista.imagenUrl) ?? artista.imagenUrl}
-                        alt={artista.nombre}
-                        className="w-12 h-12 rounded-full object-cover"
-                        loading="lazy"
-                      />
-                    )}
+              {artistasInvitados.map((artista, index) => {
+                const imageUrl = getInvitadoImageUrl(artista.imagenUrl);
 
-                    <div>
-                      <p className="text-sm font-bold text-gray-100">
-                        {artista.nombre}
-                      </p>
-                      <p className="text-xs text-verdeEsmeralda">
-                        {artista.especialidad || "Sin especialidad"}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {artista.descripcion || "Sin descripción"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => removeArtistaInvitado(index)}
-                    className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
+                return (
+                  <div
+                    key={`${artista.nombre}-${index}`}
+                    className="flex items-start justify-between gap-3 rounded-lg border border-gray-800 bg-[#0e1624] p-3"
                   >
-                    Quitar
-                  </button>
-                </div>
-              ))}
+                    <div className="flex gap-3">
+                      {imageUrl && (
+                        <img
+                          src={imageUrl}
+                          alt={artista.nombre}
+                          className="w-12 h-12 rounded-full object-cover"
+                          loading="lazy"
+                        />
+                      )}
+
+                      <div>
+                        <p className="text-sm font-bold text-gray-100">
+                          {artista.nombre}
+                        </p>
+                        <p className="text-xs text-verdeEsmeralda">
+                          {artista.especialidad || "Sin especialidad"}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {artista.descripcion || "Sin descripción"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => removeArtistaInvitado(index)}
+                      className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -2182,6 +2247,19 @@ function EventosManager() {
                     <p className="text-xs text-gray-300">
                       Artistas invitados: {invitados.length}
                     </p>
+
+                    {invitados.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {invitados.slice(0, 4).map((artista, index) => (
+                          <span
+                            key={`${artista.nombre}-${index}`}
+                            className="text-[11px] px-2 py-1 rounded-full border border-gray-700 text-gray-300"
+                          >
+                            {artista.nombre}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="flex gap-2 pt-2">
                       <button
