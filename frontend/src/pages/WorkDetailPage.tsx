@@ -1,4 +1,4 @@
-import { MouseEvent, TouchEvent, useEffect, useState } from "react";
+import { MouseEvent, TouchEvent, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { buildImageUrl, fetchObraById } from "../services/api";
 
@@ -25,6 +25,13 @@ type CartItem = {
   artistaNombre?: string;
 };
 
+type FichaTecnica = {
+  descripcionLimpia: string;
+  tecnica: string;
+  dimensiones: string;
+  anio: string;
+};
+
 const CART_KEY = "crisalida_cart";
 
 function getImageUrl(imagePath: string | null | undefined): string | null {
@@ -44,6 +51,60 @@ function readCart(): CartItem[] {
 function saveCart(cart: CartItem[]) {
   localStorage.setItem(CART_KEY, JSON.stringify(cart));
   window.dispatchEvent(new Event("crisalida_cart_updated"));
+}
+
+function extraerCampo(texto: string, etiquetas: string[]): string {
+  for (const etiqueta of etiquetas) {
+    const regex = new RegExp(
+      `${etiqueta}\\s*[:.]?\\s*([^\\.\\n]+(?:\\s*[xX×]\\s*[^\\.\\n]+)?)`,
+      "i",
+    );
+
+    const match = texto.match(regex);
+
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return "";
+}
+
+function limpiarDescripcion(texto: string): string {
+  return texto
+    .replace(/t[ée]cnica\s*[:.]?\s*[^.\n]+\.?/gi, "")
+    .replace(/dimensiones?\s*[:.]?\s*[^.\n]+\.?/gi, "")
+    .replace(/medidas?\s*[:.]?\s*[^.\n]+\.?/gi, "")
+    .replace(/tamañ[oa]\s*[:.]?\s*[^.\n]+\.?/gi, "")
+    .replace(/año\s*[:.]?\s*[^.\n]+\.?/gi, "")
+    .replace(/realizado\s+en\s+\d{4}\.?/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function obtenerFichaTecnica(descripcion: string): FichaTecnica {
+  const tecnica = extraerCampo(descripcion, ["técnica", "tecnica"]);
+  const dimensiones = extraerCampo(descripcion, [
+    "dimensión",
+    "dimensiones",
+    "medida",
+    "medidas",
+    "tamaño",
+    "tamano",
+  ]);
+
+  const anioMatch =
+    descripcion.match(/año\s*[:.]?\s*(\d{4})/i) ||
+    descripcion.match(/realizado\s+en\s+(\d{4})/i) ||
+    descripcion.match(/\b(20\d{2}|19\d{2})\b/);
+
+  return {
+    descripcionLimpia:
+      limpiarDescripcion(descripcion) || "Obra perteneciente a Crisálida.",
+    tecnica: tecnica || "No especificada",
+    dimensiones: dimensiones || "No especificadas",
+    anio: anioMatch?.[1] || "No especificado",
+  };
 }
 
 export default function WorkDetailPage() {
@@ -96,6 +157,10 @@ export default function WorkDetailPage() {
       isMounted = false;
     };
   }, [id]);
+
+  const ficha = useMemo(() => {
+    return obtenerFichaTecnica(obra?.descripcion ?? "");
+  }, [obra?.descripcion]);
 
   const updateZoomPosition = (
     clientX: number,
@@ -170,7 +235,7 @@ export default function WorkDetailPage() {
 
   if (loading) {
     return (
-      <section className="max-w-5xl mx-auto px-4 py-10">
+      <section className="max-w-6xl mx-auto px-4 py-10">
         <p className="text-sm text-gray-400 animate-pulse">Cargando obra...</p>
       </section>
     );
@@ -178,10 +243,11 @@ export default function WorkDetailPage() {
 
   if (error || !obra) {
     return (
-      <section className="max-w-5xl mx-auto px-4 py-10">
+      <section className="max-w-6xl mx-auto px-4 py-10">
         <p className="text-sm text-red-400 mb-4">
           {error ?? "Obra no encontrada."}
         </p>
+
         <Link
           to="/tienda"
           className="text-sm text-verdeEsmeralda hover:underline"
@@ -201,7 +267,7 @@ export default function WorkDetailPage() {
   const imageUrl = getImageUrl(obra.imagenUrl || obra.imagen);
 
   return (
-    <section className="max-w-5xl mx-auto px-4 py-10">
+    <section className="max-w-6xl mx-auto px-4 py-10">
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -210,7 +276,7 @@ export default function WorkDetailPage() {
         ← Volver
       </button>
 
-      <div className="grid md:grid-cols-2 gap-8 items-start">
+      <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-8 items-start">
         <div
           className="relative bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden select-none min-h-[320px] cursor-zoom-in group touch-none"
           onContextMenu={(e) => e.preventDefault()}
@@ -236,6 +302,7 @@ export default function WorkDetailPage() {
                 }}
                 draggable={false}
               />
+
               <div className="absolute top-3 left-3 z-30 text-[10px] text-white/70 bg-black/40 border border-white/10 rounded-full px-3 py-1 backdrop-blur-sm">
                 {zoomActive ? "Zoom activo" : "desliza para ampliar"}
               </div>
@@ -253,70 +320,123 @@ export default function WorkDetailPage() {
           </div>
         </div>
 
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-verdeEsmeralda mb-2">
-            Obra de arte · Crisálida
-          </p>
+        <div className="space-y-6">
+          <div className="bg-[#050816] border border-gray-800 rounded-2xl p-6">
+            <p className="text-xs uppercase tracking-[0.24em] text-verdeEsmeralda mb-3">
+              Obra de arte · Crisálida
+            </p>
 
-          <h1 className="text-2xl font-bold text-gray-100 mb-2">
-            {obra.titulo}
-          </h1>
+            <h1 className="text-3xl font-extrabold text-gray-100 mb-3">
+              {obra.titulo}
+            </h1>
 
-          <p className="text-sm text-gray-400 mb-2">
-            {obra.artista?.nombre && obra.artista?.id ? (
-              <>
-                Por{" "}
-                <Link
-                  to={`/artistas/${obra.artista.id}`}
-                  className="text-verdeEsmeralda font-medium hover:underline underline-offset-4"
-                >
-                  {obra.artista.nombre}
-                </Link>
-              </>
-            ) : obra.artista?.nombre ? (
-              <>
-                Por{" "}
-                <span className="text-verdeEsmeralda font-medium">
-                  {obra.artista.nombre}
-                </span>
-              </>
-            ) : (
-              "Artista de Crisálida"
-            )}
-          </p>
+            <div className="text-sm text-gray-400 mb-5">
+              {obra.artista?.nombre && obra.artista?.id ? (
+                <>
+                  Por{" "}
+                  <Link
+                    to={`/artistas/${obra.artista.id}`}
+                    className="text-verdeEsmeralda font-semibold hover:underline underline-offset-4"
+                  >
+                    {obra.artista.nombre}
+                  </Link>
+                </>
+              ) : obra.artista?.nombre ? (
+                <>
+                  Por{" "}
+                  <span className="text-verdeEsmeralda font-semibold">
+                    {obra.artista.nombre}
+                  </span>
+                </>
+              ) : (
+                "Artista de Crisálida"
+              )}
+            </div>
 
-          <p className="text-3xl font-bold text-verdeEsmeralda mb-3">
-            {safePrice.toFixed(2)} Bs
-          </p>
-
-          <p className="text-sm text-gray-300 mb-4">{obra.descripcion}</p>
-
-          <p className="text-xs text-gray-400 mb-4">
-            Stock disponible:{" "}
-            <span className="text-gray-200 font-medium">{obra.stock}</span>
-          </p>
-
-          <div className="flex flex-wrap gap-3 items-center mb-4">
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={obra.stock <= 0}
-              className="px-4 py-2 rounded-lg bg-verdeEsmeralda text-black text-sm font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {obra.stock > 0 ? "Agregar al carrito" : "Sin stock"}
-            </button>
-
-            <Link
-              to="/carrito"
-              className="text-sm text-gray-300 hover:text-verdeEsmeralda"
-            >
-              Ver carrito →
-            </Link>
+            <p className="text-4xl font-extrabold text-verdeEsmeralda">
+              {safePrice.toFixed(2)} Bs
+            </p>
           </div>
 
-          {addedMessage && (
-            <p className="text-xs text-verdeEsmeralda">{addedMessage}</p>
-          )}
+          <div className="bg-[#050816] border border-gray-800 rounded-2xl p-6">
+            <h2 className="text-lg font-bold text-verdeEsmeralda mb-3">
+              Descripción
+            </h2>
+
+            <p className="text-sm sm:text-base text-gray-300 leading-relaxed whitespace-pre-line">
+              {ficha.descripcionLimpia}
+            </p>
+          </div>
+
+          <div className="bg-[#050816] border border-gray-800 rounded-2xl p-6">
+            <h2 className="text-lg font-bold text-verdeEsmeralda mb-4">
+              Ficha técnica
+            </h2>
+
+            <div className="grid sm:grid-cols-2 gap-3 text-sm">
+              <div className="rounded-xl border border-gray-800 bg-[#0b1220] p-4">
+                <p className="text-xs uppercase tracking-widest text-gray-500">
+                  Técnica
+                </p>
+                <p className="mt-1 text-gray-100 font-semibold">
+                  {ficha.tecnica}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-gray-800 bg-[#0b1220] p-4">
+                <p className="text-xs uppercase tracking-widest text-gray-500">
+                  Dimensiones
+                </p>
+                <p className="mt-1 text-gray-100 font-semibold">
+                  {ficha.dimensiones}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-gray-800 bg-[#0b1220] p-4">
+                <p className="text-xs uppercase tracking-widest text-gray-500">
+                  Año
+                </p>
+                <p className="mt-1 text-gray-100 font-semibold">
+                  {ficha.anio}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-gray-800 bg-[#0b1220] p-4">
+                <p className="text-xs uppercase tracking-widest text-gray-500">
+                  Stock disponible
+                </p>
+                <p className="mt-1 text-gray-100 font-semibold">
+                  {obra.stock}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#050816] border border-gray-800 rounded-2xl p-6">
+            <div className="flex flex-wrap gap-3 items-center">
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={obra.stock <= 0}
+                className="px-5 py-3 rounded-xl bg-verdeEsmeralda text-black text-sm font-bold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {obra.stock > 0 ? "Agregar al carrito" : "Sin stock"}
+              </button>
+
+              <Link
+                to="/carrito"
+                className="text-sm text-gray-300 hover:text-verdeEsmeralda"
+              >
+                Ver carrito →
+              </Link>
+            </div>
+
+            {addedMessage && (
+              <p className="mt-3 text-xs text-verdeEsmeralda">
+                {addedMessage}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </section>
