@@ -2,11 +2,21 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { API_URL, buildImageUrl } from "../services/api";
 
+type ObraArtistaInvitado = {
+  titulo: string;
+  tecnica?: string;
+  anio?: string;
+  descripcion?: string;
+  imagenUrl?: string;
+  precio?: string;
+};
+
 type ArtistaInvitadoEvento = {
   nombre: string;
   especialidad?: string;
   descripcion?: string;
   imagenUrl?: string;
+  obras?: ObraArtistaInvitado[];
 };
 
 type Evento = {
@@ -21,23 +31,11 @@ type Evento = {
   artistasInvitados?: ArtistaInvitadoEvento[];
 };
 
-function getEventoArtistImageUrl(
-  image?: string | null,
-): string | null {
-  if (!image || String(image).trim() === "") {
-    return null;
-  }
+function getEventoImageUrl(image?: string | null): string | null {
+  if (!image || String(image).trim() === "") return null;
 
-  if (image.startsWith("data:image")) {
-    return image;
-  }
-
-  if (
-    image.startsWith("http://") ||
-    image.startsWith("https://")
-  ) {
-    return image;
-  }
+  if (image.startsWith("data:image")) return image;
+  if (image.startsWith("http://") || image.startsWith("https://")) return image;
 
   return buildImageUrl(image);
 }
@@ -47,6 +45,8 @@ export default function EventoDetailPage() {
   const navigate = useNavigate();
 
   const [evento, setEvento] = useState<Evento | null>(null);
+  const [selectedArtist, setSelectedArtist] =
+    useState<ArtistaInvitadoEvento | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,7 +108,10 @@ export default function EventoDetailPage() {
     );
   }
 
-  const flyer = buildImageUrl(evento.flyerUrl || evento.flyer);
+  const flyer = getEventoImageUrl(evento.flyerUrl || evento.flyer);
+  const artistas = Array.isArray(evento.artistasInvitados)
+    ? evento.artistasInvitados
+    : [];
 
   return (
     <section className="max-w-6xl mx-auto px-4 py-10 text-white">
@@ -138,9 +141,7 @@ export default function EventoDetailPage() {
             {evento.fecha || "Fecha por confirmar"}
           </p>
 
-          <h1 className="text-3xl font-bold mt-2">
-            {evento.titulo}
-          </h1>
+          <h1 className="text-3xl font-bold mt-2">{evento.titulo}</h1>
 
           <p className="text-sm text-gray-400 mt-2">
             {evento.lugar || "Lugar por confirmar"}
@@ -159,57 +160,149 @@ export default function EventoDetailPage() {
         </div>
       </div>
 
-      {Array.isArray(evento.artistasInvitados) &&
-        evento.artistasInvitados.length > 0 && (
-          <div className="mt-10">
-            <h2 className="text-2xl font-bold text-verdeEsmeralda mb-5">
-              Artistas invitados
-            </h2>
+      {artistas.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-2xl font-bold text-verdeEsmeralda mb-5">
+            Artistas invitados
+          </h2>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {evento.artistasInvitados.map((artista, index) => {
-                const imageUrl = getEventoArtistImageUrl(
-                  artista.imagenUrl,
-                );
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {artistas.map((artista, index) => {
+              const imageUrl = getEventoImageUrl(artista.imagenUrl);
 
-                return (
-                  <div
-                    key={`${artista.nombre}-${index}`}
-                    className="bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden"
-                  >
-                    {imageUrl ? (
-                      <img
-                        src={imageUrl}
-                        alt={artista.nombre}
-                        className="w-full h-64 object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-64 flex items-center justify-center text-gray-500 text-sm">
-                        Sin imagen
-                      </div>
-                    )}
-
-                    <div className="p-4">
-                      <h3 className="font-bold text-lg text-white">
-                        {artista.nombre}
-                      </h3>
-
-                      <p className="text-sm text-verdeEsmeralda mt-1">
-                        {artista.especialidad ||
-                          "Artista invitado"}
-                      </p>
-
-                      <p className="text-sm text-gray-400 mt-3 leading-relaxed">
-                        {artista.descripcion ||
-                          "Participante del evento."}
-                      </p>
+              return (
+                <button
+                  key={`${artista.nombre}-${index}`}
+                  type="button"
+                  onClick={() => setSelectedArtist(artista)}
+                  className="bg-[#050816] border border-gray-800 rounded-2xl p-5 text-center hover:border-verdeEsmeralda/60 hover:scale-[1.01] transition"
+                >
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={artista.nombre}
+                      className="w-32 h-32 rounded-full object-cover mx-auto border border-gray-700"
+                    />
+                  ) : (
+                    <div className="w-32 h-32 rounded-full mx-auto border border-gray-700 flex items-center justify-center text-gray-500 text-xs">
+                      Sin imagen
                     </div>
-                  </div>
-                );
-              })}
+                  )}
+
+                  <h3 className="font-bold text-lg text-white mt-4">
+                    {artista.nombre}
+                  </h3>
+
+                  <p className="text-sm text-verdeEsmeralda mt-1">
+                    {artista.especialidad || "Artista invitado"}
+                  </p>
+
+                  <p className="text-xs text-gray-400 mt-3">
+                    Ver perfil y obras →
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {selectedArtist && (
+        <div className="mt-12 bg-[#050816] border border-gray-800 rounded-2xl p-6">
+          <button
+            type="button"
+            onClick={() => setSelectedArtist(null)}
+            className="text-xs text-gray-400 hover:text-verdeEsmeralda mb-5"
+          >
+            ← Cerrar perfil
+          </button>
+
+          <div className="grid md:grid-cols-[180px_1fr] gap-6 items-start">
+            {getEventoImageUrl(selectedArtist.imagenUrl) ? (
+              <img
+                src={getEventoImageUrl(selectedArtist.imagenUrl) ?? ""}
+                alt={selectedArtist.nombre}
+                className="w-44 h-44 rounded-full object-cover border border-gray-700"
+              />
+            ) : (
+              <div className="w-44 h-44 rounded-full border border-gray-700 flex items-center justify-center text-gray-500 text-sm">
+                Sin imagen
+              </div>
+            )}
+
+            <div>
+              <h2 className="text-3xl font-bold text-white">
+                {selectedArtist.nombre}
+              </h2>
+
+              <p className="text-verdeEsmeralda mt-1">
+                {selectedArtist.especialidad || "Artista invitado"}
+              </p>
+
+              <p className="text-gray-300 mt-4 whitespace-pre-line leading-relaxed">
+                {selectedArtist.descripcion ||
+                  "Participante del evento."}
+              </p>
             </div>
           </div>
-        )}
+
+          <div className="mt-8">
+            <h3 className="text-xl font-bold text-verdeEsmeralda mb-4">
+              Obras de {selectedArtist.nombre}
+            </h3>
+
+            {!selectedArtist.obras || selectedArtist.obras.length === 0 ? (
+              <p className="text-sm text-gray-400">
+                Este artista invitado aún no tiene obras registradas en este evento.
+              </p>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {selectedArtist.obras.map((obra, index) => {
+                  const obraImg = getEventoImageUrl(obra.imagenUrl);
+
+                  return (
+                    <article
+                      key={`${obra.titulo}-${index}`}
+                      className="bg-[#0e1624] border border-gray-800 rounded-2xl overflow-hidden"
+                    >
+                      {obraImg ? (
+                        <img
+                          src={obraImg}
+                          alt={obra.titulo}
+                          className="w-full h-56 object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-56 flex items-center justify-center text-gray-500 text-sm">
+                          Sin imagen
+                        </div>
+                      )}
+
+                      <div className="p-4">
+                        <h4 className="font-bold text-white">{obra.titulo}</h4>
+
+                        <p className="text-xs text-verdeEsmeralda mt-1">
+                          {obra.tecnica || "Técnica no especificada"}
+                          {obra.anio ? ` · ${obra.anio}` : ""}
+                        </p>
+
+                        <p className="text-sm text-gray-400 mt-3 line-clamp-4">
+                          {obra.descripcion || "Sin descripción."}
+                        </p>
+
+                        {obra.precio && (
+                          <p className="text-sm font-bold text-white mt-3">
+                            {obra.precio} Bs
+                          </p>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
