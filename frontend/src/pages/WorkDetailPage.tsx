@@ -84,6 +84,7 @@ function limpiarDescripcion(texto: string): string {
 
 function obtenerFichaTecnica(descripcion: string): FichaTecnica {
   const tecnica = extraerCampo(descripcion, ["técnica", "tecnica"]);
+
   const dimensiones = extraerCampo(descripcion, [
     "dimensión",
     "dimensiones",
@@ -235,7 +236,7 @@ export default function WorkDetailPage() {
 
   if (loading) {
     return (
-      <section className="max-w-6xl mx-auto px-4 py-10">
+      <section className="w-full px-4 lg:px-10 py-10">
         <p className="text-sm text-gray-400 animate-pulse">Cargando obra...</p>
       </section>
     );
@@ -243,7 +244,7 @@ export default function WorkDetailPage() {
 
   if (error || !obra) {
     return (
-      <section className="max-w-6xl mx-auto px-4 py-10">
+      <section className="w-full px-4 lg:px-10 py-10">
         <p className="text-sm text-red-400 mb-4">
           {error ?? "Obra no encontrada."}
         </p>
@@ -267,7 +268,7 @@ export default function WorkDetailPage() {
   const imageUrl = getImageUrl(obra.imagenUrl || obra.imagen);
 
   return (
-    <section className="max-w-6xl mx-auto px-4 py-10">
+    <section className="w-full px-4 lg:px-10 py-10">
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -276,9 +277,9 @@ export default function WorkDetailPage() {
         ← Volver
       </button>
 
-      <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-8 items-start">
+      <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-10 items-start w-full">
         <div
-          className="relative bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden select-none min-h-[320px] cursor-zoom-in group touch-none"
+          className="relative bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden select-none min-h-[700px] cursor-zoom-in group touch-none"
           onContextMenu={(e) => e.preventDefault()}
           onDragStart={(e) => e.preventDefault()}
           onMouseEnter={() => setZoomActive(true)}
