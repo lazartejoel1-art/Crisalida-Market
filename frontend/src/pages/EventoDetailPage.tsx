@@ -21,6 +21,27 @@ type Evento = {
   artistasInvitados?: ArtistaInvitadoEvento[];
 };
 
+function getEventoArtistImageUrl(
+  image?: string | null,
+): string | null {
+  if (!image || String(image).trim() === "") {
+    return null;
+  }
+
+  if (image.startsWith("data:image")) {
+    return image;
+  }
+
+  if (
+    image.startsWith("http://") ||
+    image.startsWith("https://")
+  ) {
+    return image;
+  }
+
+  return buildImageUrl(image);
+}
+
 export default function EventoDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -147,7 +168,9 @@ export default function EventoDetailPage() {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
               {evento.artistasInvitados.map((artista, index) => {
-                const imageUrl = buildImageUrl(artista.imagenUrl);
+                const imageUrl = getEventoArtistImageUrl(
+                  artista.imagenUrl,
+                );
 
                 return (
                   <div
@@ -172,7 +195,8 @@ export default function EventoDetailPage() {
                       </h3>
 
                       <p className="text-sm text-verdeEsmeralda mt-1">
-                        {artista.especialidad || "Artista invitado"}
+                        {artista.especialidad ||
+                          "Artista invitado"}
                       </p>
 
                       <p className="text-sm text-gray-400 mt-3 leading-relaxed">
