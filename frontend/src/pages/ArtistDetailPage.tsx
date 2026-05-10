@@ -138,88 +138,8 @@ function buildArtistInfo(artist: ArtistDetail): {
     });
   }
 
-  const instagramMatches = rawDescription.match(
-    /(?:instagram|ig)\s*:?\s*@?[\w.]+/gi,
-  );
-
-  instagramMatches?.forEach((match) => {
-    const value = match.replace(/instagram|ig|:/gi, "").trim();
-
-    pushLink({
-      label: "Instagram",
-      value,
-      href: normalizeInstagram(value),
-      icon: "📸",
-    });
-  });
-
-  const facebookMatches = rawDescription.match(/facebook\s*:?\s*[^\n]+/gi);
-
-  facebookMatches?.forEach((match) => {
-    const value = match.replace(/facebook|:/gi, "").trim();
-
-    pushLink({
-      label: "Facebook",
-      value,
-      href: normalizeFacebook(value),
-      icon: "📘",
-    });
-  });
-
-  const tiktokMatches = rawDescription.match(
-    /(?:tiktok|tik tok)\s*:?\s*@?[\w.]+/gi,
-  );
-
-  tiktokMatches?.forEach((match) => {
-    const value = match.replace(/tiktok|tik tok|:/gi, "").trim();
-
-    pushLink({
-      label: "TikTok",
-      value,
-      href: normalizeTikTok(value),
-      icon: "🎵",
-    });
-  });
-
-  const emailMatches = rawDescription.match(
-    /[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}/gi,
-  );
-
-  emailMatches?.forEach((match) => {
-    pushLink({
-      label: "Correo",
-      value: match,
-      href: normalizeEmail(match),
-      icon: "✉️",
-    });
-  });
-
-  const webMatches = rawDescription.match(/https?:\/\/[^\s]+|www\.[^\s]+/gi);
-
-  webMatches?.forEach((match) => {
-    pushLink({
-      label: "Web",
-      value: match,
-      href: normalizeExternalUrl(match),
-      icon: "🌐",
-    });
-  });
-
-  const descriptionClean = rawDescription
-    .replace(/instagram\s*:?\s*@?[\w.]+/gi, "")
-    .replace(/\big\s*:?\s*@?[\w.]+/gi, "")
-    .replace(/facebook\s*:?\s*[^\n]+/gi, "")
-    .replace(/tiktok\s*:?\s*@?[\w.]+/gi, "")
-    .replace(/tik tok\s*:?\s*@?[\w.]+/gi, "")
-    .replace(/[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}/g, "")
-    .replace(/https?:\/\/[^\s]+|www\.[^\s]+/gi, "")
-    .replace(/[ \t]{2,}/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-
   return {
-    description:
-      descriptionClean || rawDescription || "Artista de la colectiva Crisálida.",
+    description: rawDescription || "Artista de la colectiva Crisálida.",
     links: uniqueLinks(links),
   };
 }
