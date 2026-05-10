@@ -23,6 +23,14 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const MAX_IMAGE_SIZE = 50 * 1024 * 1024; // 50 MB
+
+const imageUploadOptions = {
+  limits: {
+    fileSize: MAX_IMAGE_SIZE,
+  },
+};
+
 function uploadToCloudinary(
   file: Express.Multer.File,
 ): Promise<UploadApiResponse> {
@@ -63,7 +71,7 @@ export class ObrasController {
   }
 
   @Post('upload-image')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', imageUploadOptions))
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
     const result = await uploadToCloudinary(file);
 
@@ -76,7 +84,7 @@ export class ObrasController {
   }
 
   @Post()
-  @UseInterceptors(FileInterceptor('imagen'))
+  @UseInterceptors(FileInterceptor('imagen', imageUploadOptions))
   async crear(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() body: CreateObraDto,
@@ -110,7 +118,7 @@ export class ObrasController {
   }
 
   @Patch(':id')
-  @UseInterceptors(FileInterceptor('imagen'))
+  @UseInterceptors(FileInterceptor('imagen', imageUploadOptions))
   async actualizar(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File | undefined,
