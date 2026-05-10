@@ -85,6 +85,12 @@ function buildArtistInfo(artist: ArtistDetail): {
   links: SocialLink[];
 } {
   const rawDescription = artist.descripcion || "";
+  const lines = rawDescription
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const descriptionLines: string[] = [];
   const links: SocialLink[] = [];
 
   const pushLink = (link: SocialLink) => {
@@ -92,10 +98,6 @@ function buildArtistInfo(artist: ArtistDetail): {
       links.push(link);
     }
   };
-
-  // =========================
-  // REDES SOLO DESDE CAMPOS
-  // =========================
 
   if (artist.instagram) {
     pushLink({
@@ -142,15 +144,69 @@ function buildArtistInfo(artist: ArtistDetail): {
     });
   }
 
-  // =========================
-  // DESCRIPCIÓN NORMAL
-  // =========================
+  lines.forEach((line) => {
+    const instagramMatch = line.match(/(?:instagram|ig)\s*:?\s*(@?[\w.]+)/i);
+    const facebookMatch = line.match(/facebook\s*:?\s*([^\n]+)/i);
+    const tiktokMatch = line.match(/(?:tiktok|tik tok)\s*:?\s*(@?[\w.]+)/i);
+    const emailMatch = line.match(/[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}/);
+    const urlMatch = line.match(/https?:\/\/[^\s]+|www\.[^\s]+/i);
 
-  const descriptionClean = rawDescription.trim();
+    if (instagramMatch?.[1]) {
+      pushLink({
+        label: "Instagram",
+        value: instagramMatch[1],
+        href: normalizeInstagram(instagramMatch[1]),
+        icon: "📸",
+      });
+      return;
+    }
+
+    if (facebookMatch?.[1]) {
+      pushLink({
+        label: "Facebook",
+        value: facebookMatch[1].trim(),
+        href: normalizeFacebook(facebookMatch[1].trim()),
+        icon: "📘",
+      });
+      return;
+    }
+
+    if (tiktokMatch?.[1]) {
+      pushLink({
+        label: "TikTok",
+        value: tiktokMatch[1],
+        href: normalizeTikTok(tiktokMatch[1]),
+        icon: "🎵",
+      });
+      return;
+    }
+
+    if (emailMatch?.[0]) {
+      pushLink({
+        label: "Correo",
+        value: emailMatch[0],
+        href: normalizeEmail(emailMatch[0]),
+        icon: "✉️",
+      });
+      return;
+    }
+
+    if (urlMatch?.[0]) {
+      pushLink({
+        label: "Enlace",
+        value: urlMatch[0],
+        href: normalizeExternalUrl(urlMatch[0]),
+        icon: "🔗",
+      });
+      return;
+    }
+
+    descriptionLines.push(line);
+  });
 
   return {
     description:
-      descriptionClean || "Artista de la colectiva Crisálida.",
+      descriptionLines.join("\n\n") || "Artista de la colectiva Crisálida.",
     links: uniqueLinks(links),
   };
 }
