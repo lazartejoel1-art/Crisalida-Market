@@ -22,6 +22,7 @@ type ArtistDetail = {
   instagram?: string;
   facebook?: string;
   tiktok?: string;
+  correo?: string;
   web?: string;
   obras?: Work[];
 };
@@ -35,49 +36,29 @@ type SocialLink = {
 
 function normalizeExternalUrl(value: string): string {
   const clean = value.trim();
-
   if (!clean) return "";
-
-  if (clean.startsWith("http://") || clean.startsWith("https://")) {
-    return clean;
-  }
-
+  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
   return `https://${clean}`;
 }
 
 function normalizeInstagram(value: string): string {
   const clean = value.trim().replace(/^@/, "");
-
   if (!clean) return "";
-
-  if (clean.startsWith("http://") || clean.startsWith("https://")) {
-    return clean;
-  }
-
+  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
   return `https://www.instagram.com/${clean}`;
 }
 
 function normalizeTikTok(value: string): string {
   const clean = value.trim().replace(/^@/, "");
-
   if (!clean) return "";
-
-  if (clean.startsWith("http://") || clean.startsWith("https://")) {
-    return clean;
-  }
-
+  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
   return `https://www.tiktok.com/@${clean}`;
 }
 
 function normalizeFacebook(value: string): string {
   const clean = value.trim();
-
   if (!clean) return "";
-
-  if (clean.startsWith("http://") || clean.startsWith("https://")) {
-    return clean;
-  }
-
+  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
   return `https://www.facebook.com/search/top?q=${encodeURIComponent(clean)}`;
 }
 
@@ -87,14 +68,14 @@ function normalizeEmail(value: string): string {
 }
 
 function uniqueLinks(links: SocialLink[]): SocialLink[] {
-  const seen = new Set<string>();
+  const seenLabels = new Set<string>();
 
   return links.filter((link) => {
-    const key = `${link.label}-${link.value}`.toLowerCase();
+    const key = link.label.toLowerCase();
 
-    if (seen.has(key)) return false;
+    if (seenLabels.has(key)) return false;
 
-    seen.add(key);
+    seenLabels.add(key);
     return true;
   });
 }
@@ -142,6 +123,15 @@ function buildArtistInfo(artist: ArtistDetail): {
       value: artist.tiktok,
       href: normalizeTikTok(artist.tiktok),
       icon: "🎵",
+    });
+  }
+
+  if (artist.correo) {
+    pushLink({
+      label: "Correo",
+      value: artist.correo,
+      href: normalizeEmail(artist.correo),
+      icon: "✉️",
     });
   }
 
@@ -364,7 +354,7 @@ export default function ArtistDetailPage() {
               <div className="flex flex-wrap gap-2">
                 {artistInfo.links.map((link) => (
                   <a
-                    key={`${link.label}-${link.value}`}
+                    key={link.label}
                     className="px-3 py-2 rounded-full border border-gray-700 text-verdeEsmeralda hover:border-verdeEsmeralda hover:bg-verdeEsmeralda/10 text-xs font-semibold transition"
                     href={link.href}
                     target="_blank"
