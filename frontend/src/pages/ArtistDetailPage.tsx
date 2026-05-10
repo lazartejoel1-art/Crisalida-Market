@@ -85,12 +85,6 @@ function buildArtistInfo(artist: ArtistDetail): {
   links: SocialLink[];
 } {
   const rawDescription = artist.descripcion || "";
-  const lines = rawDescription
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const descriptionLines: string[] = [];
   const links: SocialLink[] = [];
 
   const pushLink = (link: SocialLink) => {
@@ -144,69 +138,88 @@ function buildArtistInfo(artist: ArtistDetail): {
     });
   }
 
-  lines.forEach((line) => {
-    const instagramMatch = line.match(/(?:instagram|ig)\s*:?\s*(@?[\w.]+)/i);
-    const facebookMatch = line.match(/facebook\s*:?\s*([^\n]+)/i);
-    const tiktokMatch = line.match(/(?:tiktok|tik tok)\s*:?\s*(@?[\w.]+)/i);
-    const emailMatch = line.match(/[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}/);
-    const urlMatch = line.match(/https?:\/\/[^\s]+|www\.[^\s]+/i);
+  const instagramMatches = rawDescription.match(
+    /(?:instagram|ig)\s*:?\s*@?[\w.]+/gi,
+  );
 
-    if (instagramMatch?.[1]) {
-      pushLink({
-        label: "Instagram",
-        value: instagramMatch[1],
-        href: normalizeInstagram(instagramMatch[1]),
-        icon: "📸",
-      });
-      return;
-    }
+  instagramMatches?.forEach((match) => {
+    const value = match.replace(/instagram|ig|:/gi, "").trim();
 
-    if (facebookMatch?.[1]) {
-      pushLink({
-        label: "Facebook",
-        value: facebookMatch[1].trim(),
-        href: normalizeFacebook(facebookMatch[1].trim()),
-        icon: "📘",
-      });
-      return;
-    }
-
-    if (tiktokMatch?.[1]) {
-      pushLink({
-        label: "TikTok",
-        value: tiktokMatch[1],
-        href: normalizeTikTok(tiktokMatch[1]),
-        icon: "🎵",
-      });
-      return;
-    }
-
-    if (emailMatch?.[0]) {
-      pushLink({
-        label: "Correo",
-        value: emailMatch[0],
-        href: normalizeEmail(emailMatch[0]),
-        icon: "✉️",
-      });
-      return;
-    }
-
-    if (urlMatch?.[0]) {
-      pushLink({
-        label: "Enlace",
-        value: urlMatch[0],
-        href: normalizeExternalUrl(urlMatch[0]),
-        icon: "🔗",
-      });
-      return;
-    }
-
-    descriptionLines.push(line);
+    pushLink({
+      label: "Instagram",
+      value,
+      href: normalizeInstagram(value),
+      icon: "📸",
+    });
   });
+
+  const facebookMatches = rawDescription.match(/facebook\s*:?\s*[^\n]+/gi);
+
+  facebookMatches?.forEach((match) => {
+    const value = match.replace(/facebook|:/gi, "").trim();
+
+    pushLink({
+      label: "Facebook",
+      value,
+      href: normalizeFacebook(value),
+      icon: "📘",
+    });
+  });
+
+  const tiktokMatches = rawDescription.match(
+    /(?:tiktok|tik tok)\s*:?\s*@?[\w.]+/gi,
+  );
+
+  tiktokMatches?.forEach((match) => {
+    const value = match.replace(/tiktok|tik tok|:/gi, "").trim();
+
+    pushLink({
+      label: "TikTok",
+      value,
+      href: normalizeTikTok(value),
+      icon: "🎵",
+    });
+  });
+
+  const emailMatches = rawDescription.match(
+    /[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}/gi,
+  );
+
+  emailMatches?.forEach((match) => {
+    pushLink({
+      label: "Correo",
+      value: match,
+      href: normalizeEmail(match),
+      icon: "✉️",
+    });
+  });
+
+  const webMatches = rawDescription.match(/https?:\/\/[^\s]+|www\.[^\s]+/gi);
+
+  webMatches?.forEach((match) => {
+    pushLink({
+      label: "Web",
+      value: match,
+      href: normalizeExternalUrl(match),
+      icon: "🌐",
+    });
+  });
+
+  const descriptionClean = rawDescription
+    .replace(/instagram\s*:?\s*@?[\w.]+/gi, "")
+    .replace(/\big\s*:?\s*@?[\w.]+/gi, "")
+    .replace(/facebook\s*:?\s*[^\n]+/gi, "")
+    .replace(/tiktok\s*:?\s*@?[\w.]+/gi, "")
+    .replace(/tik tok\s*:?\s*@?[\w.]+/gi, "")
+    .replace(/[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}/g, "")
+    .replace(/https?:\/\/[^\s]+|www\.[^\s]+/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 
   return {
     description:
-      descriptionLines.join("\n\n") || "Artista de la colectiva Crisálida.",
+      descriptionClean || rawDescription || "Artista de la colectiva Crisálida.",
     links: uniqueLinks(links),
   };
 }
