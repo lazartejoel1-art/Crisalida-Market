@@ -39,10 +39,7 @@ function normalizeExternalUrl(value: string): string {
 
   if (!clean) return "";
 
-  if (
-    clean.startsWith("http://") ||
-    clean.startsWith("https://")
-  ) {
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
     return clean;
   }
 
@@ -54,10 +51,7 @@ function normalizeInstagram(value: string): string {
 
   if (!clean) return "";
 
-  if (
-    clean.startsWith("http://") ||
-    clean.startsWith("https://")
-  ) {
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
     return clean;
   }
 
@@ -69,10 +63,7 @@ function normalizeTikTok(value: string): string {
 
   if (!clean) return "";
 
-  if (
-    clean.startsWith("http://") ||
-    clean.startsWith("https://")
-  ) {
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
     return clean;
   }
 
@@ -84,10 +75,7 @@ function normalizeFacebook(value: string): string {
 
   if (!clean) return "";
 
-  if (
-    clean.startsWith("http://") ||
-    clean.startsWith("https://")
-  ) {
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
     return clean;
   }
 
@@ -122,9 +110,38 @@ function buildArtistInfo(
   description: string;
   links: SocialLink[];
 } {
+  const rawDescription =
+    artist.descripcion?.trim() || "Artista de la colectiva Crisálida.";
+
+  const lines = rawDescription
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const cleanDescriptionLines: string[] = [];
+  const socialLines: string[] = [];
+
+  lines.forEach((line) => {
+    const lower = line.toLowerCase();
+
+    if (
+      lower.startsWith("instagram:") ||
+      lower.startsWith("ig:") ||
+      lower.startsWith("facebook:") ||
+      lower.startsWith("tiktok:") ||
+      lower.startsWith("tik tok:") ||
+      lower.startsWith("correo:") ||
+      lower.startsWith("email:") ||
+      lower.startsWith("web:")
+    ) {
+      socialLines.push(line);
+    } else {
+      cleanDescriptionLines.push(line);
+    }
+  });
+
   const description =
-    artist.descripcion?.trim() ||
-    "Artista de la colectiva Crisálida.";
+    cleanDescriptionLines.join("\n") || "Artista de la colectiva Crisálida.";
 
   const links: SocialLink[] = [];
 
@@ -179,6 +196,59 @@ function buildArtistInfo(
     });
   }
 
+  socialLines.forEach((line) => {
+    const [rawLabel, ...rest] = line.split(":");
+    const label = rawLabel.trim().toLowerCase();
+    const value = rest.join(":").trim();
+
+    if (!value) return;
+
+    if (label.includes("instagram") || label === "ig") {
+      pushLink({
+        label: "Instagram",
+        value,
+        href: normalizeInstagram(value),
+        icon: "📸",
+      });
+    }
+
+    if (label.includes("facebook")) {
+      pushLink({
+        label: "Facebook",
+        value,
+        href: normalizeFacebook(value),
+        icon: "📘",
+      });
+    }
+
+    if (label.includes("tiktok") || label.includes("tik tok")) {
+      pushLink({
+        label: "TikTok",
+        value,
+        href: normalizeTikTok(value),
+        icon: "🎵",
+      });
+    }
+
+    if (label.includes("correo") || label.includes("email")) {
+      pushLink({
+        label: "Correo",
+        value,
+        href: normalizeEmail(value),
+        icon: "✉️",
+      });
+    }
+
+    if (label.includes("web")) {
+      pushLink({
+        label: "Web",
+        value,
+        href: normalizeExternalUrl(value),
+        icon: "🌐",
+      });
+    }
+  });
+
   return {
     description,
     links: uniqueLinks(links),
@@ -211,16 +281,13 @@ export default function ArtistDetailPage() {
           throw new Error("No se pudo cargar el artista");
         }
 
-        const data =
-          (await res.json()) as ArtistDetail;
+        const data = (await res.json()) as ArtistDetail;
 
         setArtist(data);
       } catch (e) {
         console.error(e);
 
-        setError(
-          "No se pudo cargar el artista. Intenta más tarde."
-        );
+        setError("No se pudo cargar el artista. Intenta más tarde.");
       } finally {
         setLoading(false);
       }
@@ -269,9 +336,7 @@ export default function ArtistDetailPage() {
 
   const obras = artist.obras ?? [];
 
-  const artistImage = buildImageUrl(
-    artist.fotoUrl || artist.foto
-  );
+  const artistImage = buildImageUrl(artist.fotoUrl || artist.foto);
 
   return (
     <section className="w-full min-h-screen px-2 lg:px-4 py-10 bg-gradient-to-b from-[#020617] via-[#040b1d] to-black">
@@ -309,9 +374,7 @@ export default function ArtistDetailPage() {
             </h1>
 
             {artist.origen && (
-              <p className="text-sm text-gray-400 mt-3">
-                📍 {artist.origen}
-              </p>
+              <p className="text-sm text-gray-400 mt-3">📍 {artist.origen}</p>
             )}
           </div>
 
@@ -365,17 +428,11 @@ export default function ArtistDetailPage() {
         <div className="grid md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
           {obras.map((w) => {
             const price =
-              typeof w.precio === "number"
-                ? w.precio
-                : Number(w.precio ?? 0);
+              typeof w.precio === "number" ? w.precio : Number(w.precio ?? 0);
 
-            const safePrice = Number.isFinite(price)
-              ? price
-              : 0;
+            const safePrice = Number.isFinite(price) ? price : 0;
 
-            const imageUrl = buildImageUrl(
-              w.imagenUrl || w.imagen
-            );
+            const imageUrl = buildImageUrl(w.imagenUrl || w.imagen);
 
             return (
               <article
@@ -396,9 +453,7 @@ export default function ArtistDetailPage() {
 
                 <div className="p-5 flex-1 flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="font-bold text-lg text-white">
-                      {w.titulo}
-                    </p>
+                    <p className="font-bold text-lg text-white">{w.titulo}</p>
 
                     <p className="text-verdeEsmeralda font-black">
                       {safePrice.toFixed(2)} Bs
@@ -419,10 +474,7 @@ export default function ArtistDetailPage() {
                   </div>
 
                   <p className="text-xs text-gray-500">
-                    Stock:{" "}
-                    <span className="text-gray-300">
-                      {w.stock}
-                    </span>
+                    Stock: <span className="text-gray-300">{w.stock}</span>
                   </p>
                 </div>
               </article>
