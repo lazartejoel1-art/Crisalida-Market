@@ -198,7 +198,7 @@ export default function ArtistDetailPage() {
 
   if (loading) {
     return (
-      <section className="w-full min-h-screen px-6 lg:px-14 py-10 bg-gradient-to-b from-[#020617] via-[#040b1d] to-black">
+      <section className="max-w-6xl mx-auto px-4 py-10">
         <p className="text-sm text-gray-400 animate-pulse">
           Cargando artista...
         </p>
@@ -236,13 +236,13 @@ export default function ArtistDetailPage() {
         ← Volver
       </button>
 
-      <div className="w-full bg-[#050816]/90 backdrop-blur-md border border-emerald-500/10 rounded-[2rem] p-8 lg:p-12 grid lg:grid-cols-[420px_1fr] gap-10 shadow-2xl shadow-black/40">
+      <div className="bg-[#050816] border border-gray-800 rounded-2xl p-6 grid md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
           {artistImage ? (
             <img
               src={artistImage}
               alt={artist.nombre}
-              className="w-full h-full max-h-[700px] object-cover rounded-[2rem] border border-emerald-500/10 shadow-2xl"
+              className="w-full aspect-square object-cover rounded-2xl border border-gray-800"
             />
           ) : (
             <div className="w-full aspect-square rounded-2xl border border-gray-800 flex items-center justify-center text-gray-500 text-sm">
@@ -257,7 +257,7 @@ export default function ArtistDetailPage() {
               Artista Crisálida
             </p>
 
-            <h1 className="text-5xl lg:text-7xl font-black text-white mt-3 tracking-tight leading-none">
+            <h1 className="text-3xl font-extrabold text-gray-100 mt-2">
               {artist.nombre}
             </h1>
 
@@ -271,7 +271,7 @@ export default function ArtistDetailPage() {
               Descripción
             </h2>
 
-            <p className="text-[17px] lg:text-lg text-gray-300 whitespace-pre-line leading-[1.9] tracking-wide max-w-5xl">
+            <p className="text-sm text-gray-300 whitespace-pre-line leading-relaxed">
               {artistInfo.description}
             </p>
           </div>
@@ -286,11 +286,11 @@ export default function ArtistDetailPage() {
                 No hay redes sociales registradas.
               </p>
             ) : (
-              <div className="flex flex-wrap gap-4 pt-2">
+              <div className="flex flex-wrap gap-2">
                 {artistInfo.links.map((link) => (
                   <a
                     key={link.label}
-                    className="px-5 py-3 rounded-full border border-emerald-400/20 bg-black/20 text-verdeEsmeralda hover:border-verdeEsmeralda hover:bg-verdeEsmeralda/10 text-xs font-semibold transition"
+                    className="px-3 py-2 rounded-full border border-gray-700 text-verdeEsmeralda hover:border-verdeEsmeralda hover:bg-verdeEsmeralda/10 text-xs font-semibold transition"
                     href={link.href}
                     target="_blank"
                     rel="noreferrer"
@@ -304,7 +304,7 @@ export default function ArtistDetailPage() {
         </div>
       </div>
 
-      <h2 className="text-3xl font-black text-verdeEsmeralda mt-16 mb-8 tracking-wide">
+      <h2 className="text-xl font-bold text-verdeEsmeralda mt-8 mb-4">
         🖼 Obras de {artist.nombre}
       </h2>
 
@@ -313,7 +313,7 @@ export default function ArtistDetailPage() {
           Este artista aún no tiene obras registradas.
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {obras.map((w) => {
             const price =
               typeof w.precio === "number" ? w.precio : Number(w.precio ?? 0);
