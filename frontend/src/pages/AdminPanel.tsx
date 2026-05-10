@@ -22,11 +22,6 @@ type Artist = {
   descripcion: string;
   fotoUrl?: string | null;
   foto?: string | null;
-  instagram?: string | null;
-  facebook?: string | null;
-  tiktok?: string | null;
-  correo?: string | null;
-  web?: string | null;
 };
 
 type Work = {
@@ -487,18 +482,12 @@ function ArtistsManager() {
 
     try {
       const data = new FormData();
-data.append("nombre", formData.nombre);
-data.append("descripcion", formData.descripcion);
-data.append("instagram", formData.instagram ?? "");
-data.append("facebook", formData.facebook ?? "");
-data.append("tiktok", formData.tiktok ?? "");
-data.append("correo", formData.correo ?? "");
-data.append("web", formData.web ?? "");
-data.append("fotoUrl", formData.fotoUrl ?? "");
+      data.append("nombre", formData.nombre);
+      data.append("descripcion", formData.descripcion);
 
-if (formData.foto instanceof File) {
-  data.append("foto", formData.foto, formData.foto.name);
-}
+      if (formData.foto instanceof File) {
+        data.append("foto", formData.foto, formData.foto.name);
+      }
 
       const url = editingArtist
         ? `${API}/artistas/${editingArtist.id}`
@@ -534,17 +523,12 @@ if (formData.foto instanceof File) {
   };
 
   const initialValues: NewArtist | undefined = editingArtist
-  ? {
-      nombre: editingArtist.nombre,
-      descripcion: editingArtist.descripcion,
-      instagram: editingArtist.instagram ?? undefined,
-      facebook: editingArtist.facebook ?? undefined,
-      tiktok: editingArtist.tiktok ?? undefined,
-      correo: editingArtist.correo ?? undefined,
-      web: editingArtist.web ?? undefined,
-      fotoUrl: editingArtist.fotoUrl ?? editingArtist.foto ?? undefined,
-    }
-  : undefined;
+    ? {
+        nombre: editingArtist.nombre,
+        descripcion: editingArtist.descripcion,
+        fotoUrl: editingArtist.fotoUrl ?? editingArtist.foto ?? undefined,
+      }
+    : undefined;
 
   return (
     <div>
@@ -578,34 +562,38 @@ if (formData.foto instanceof File) {
           return (
             <div
               key={artist.id}
-              className="bg-[#0e1624] border border-gray-800 p-4 rounded-lg flex items-center justify-between gap-4"
+              className="bg-[#0e1624] border border-gray-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full overflow-hidden"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center min-w-0 flex-1">
                 {imageUrl && (
                   <img
                     src={imageUrl}
                     alt={artist.nombre}
-                    className="w-12 h-12 rounded-full object-cover"
+                    className="w-20 h-20 sm:w-12 sm:h-12 rounded-full object-cover shrink-0"
                   />
                 )}
 
-                <div>
-                  <p className="font-semibold text-gray-200">{artist.nombre}</p>
-                  <p className="text-sm text-gray-400">{artist.descripcion}</p>
+                <div className="min-w-0 w-full">
+                  <p className="font-semibold text-gray-200 break-words">
+                    {artist.nombre}
+                  </p>
+                  <p className="text-sm text-gray-400 leading-relaxed break-words line-clamp-4 sm:line-clamp-2">
+                    {artist.descripcion}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end shrink-0">
                 <button
                   onClick={() => setEditingArtist(artist)}
-                  className="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-500"
+                  className="text-xs px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 flex-1 sm:flex-none"
                 >
                   Editar
                 </button>
 
                 <button
                   onClick={() => void handleDelete(artist.id)}
-                  className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
+                  className="text-xs px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500 flex-1 sm:flex-none"
                 >
                   Eliminar
                 </button>
@@ -843,17 +831,17 @@ function ObrasManager({
                 <span className="text-gray-400">Stock: {work.stock}</span>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end shrink-0">
                 <button
                   onClick={() => setLocalEditingWork(work)}
-                  className="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-500"
+                  className="text-xs px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 flex-1 sm:flex-none"
                 >
                   Editar
                 </button>
 
                 <button
                   onClick={() => void handleDelete(work.id)}
-                  className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
+                  className="text-xs px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500 flex-1 sm:flex-none"
                 >
                   Eliminar
                 </button>
@@ -2303,7 +2291,7 @@ function EventosManager() {
                           <img
                             src={imageUrl}
                             alt={artista.nombre}
-                            className="w-12 h-12 rounded-full object-cover"
+                            className="w-20 h-20 sm:w-12 sm:h-12 rounded-full object-cover shrink-0"
                             loading="lazy"
                           />
                         ) : (
@@ -2325,11 +2313,11 @@ function EventosManager() {
                         </div>
                       </button>
 
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end shrink-0">
                         <button
                           type="button"
                           onClick={() => editArtistaInvitado(index)}
-                          className="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-500"
+                          className="text-xs px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 flex-1 sm:flex-none"
                         >
                           Editar
                         </button>
@@ -2337,7 +2325,7 @@ function EventosManager() {
                         <button
                           type="button"
                           onClick={() => removeArtistaInvitado(index)}
-                          className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
+                          className="text-xs px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500 flex-1 sm:flex-none"
                         >
                           Quitar
                         </button>
@@ -2596,14 +2584,14 @@ function EventosManager() {
                     <div className="flex gap-2 pt-2">
                       <button
                         onClick={() => startEdit(evento)}
-                        className="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-500"
+                        className="text-xs px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 flex-1 sm:flex-none"
                       >
                         Editar
                       </button>
 
                       <button
                         onClick={() => void handleDelete(evento.id)}
-                        className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
+                        className="text-xs px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500 flex-1 sm:flex-none"
                       >
                         Eliminar
                       </button>
@@ -2706,13 +2694,13 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-negroSuave text-blancoPuro flex">
-      <aside className="w-44 sm:w-56 shrink-0 bg-[#0d1117] border-r border-gray-800 p-4 sm:p-6 flex flex-col justify-between">
+      <aside className="w-32 sm:w-56 shrink-0 bg-[#0d1117] border-r border-gray-800 p-3 sm:p-6 flex flex-col justify-between">
         <div>
-          <h2 className="text-xl font-bold text-verdeEsmeralda mb-6">
+          <h2 className="text-base sm:text-xl font-bold text-verdeEsmeralda mb-6 break-words">
             Crisálida
           </h2>
 
-          <nav className="space-y-3 text-sm">
+          <nav className="space-y-3 text-xs sm:text-sm">
             <button
               onClick={() => setScreen("dashboard")}
               className="block w-full text-left text-gray-300 hover:text-verdeEsmeralda"
