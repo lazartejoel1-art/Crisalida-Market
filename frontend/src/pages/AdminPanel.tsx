@@ -22,6 +22,11 @@ type Artist = {
   descripcion: string;
   fotoUrl?: string | null;
   foto?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
+  tiktok?: string | null;
+  correo?: string | null;
+  web?: string | null;
 };
 
 type Work = {
@@ -38,21 +43,11 @@ type Work = {
   };
 };
 
-type ObraArtistaInvitado = {
-  titulo: string;
-  tecnica?: string;
-  anio?: string;
-  descripcion?: string;
-  imagenUrl?: string;
-  precio?: string;
-};
-
 type ArtistaInvitadoEvento = {
   nombre: string;
   especialidad?: string;
   descripcion?: string;
   imagenUrl?: string;
-  obras?: ObraArtistaInvitado[];
 };
 
 type Evento = {
@@ -484,6 +479,11 @@ function ArtistsManager() {
       const data = new FormData();
       data.append("nombre", formData.nombre);
       data.append("descripcion", formData.descripcion);
+      data.append("instagram", formData.instagram ?? "");
+      data.append("facebook", formData.facebook ?? "");
+      data.append("tiktok", formData.tiktok ?? "");
+      data.append("correo", formData.correo ?? "");
+      data.append("web", formData.web ?? "");
 
       if (formData.foto instanceof File) {
         data.append("foto", formData.foto, formData.foto.name);
@@ -526,6 +526,11 @@ function ArtistsManager() {
     ? {
         nombre: editingArtist.nombre,
         descripcion: editingArtist.descripcion,
+        instagram: editingArtist.instagram ?? undefined,
+        facebook: editingArtist.facebook ?? undefined,
+        tiktok: editingArtist.tiktok ?? undefined,
+        correo: editingArtist.correo ?? undefined,
+        web: editingArtist.web ?? undefined,
         fotoUrl: editingArtist.fotoUrl ?? editingArtist.foto ?? undefined,
       }
     : undefined;
@@ -575,7 +580,17 @@ function ArtistsManager() {
 
                 <div>
                   <p className="font-semibold text-gray-200">{artist.nombre}</p>
-                  <p className="text-sm text-gray-400">{artist.descripcion}</p>
+                  <p className="text-sm text-gray-400 line-clamp-2">
+                    {artist.descripcion}
+                  </p>
+
+                  <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-verdeEsmeralda">
+                    {artist.instagram && <span>Instagram</span>}
+                    {artist.facebook && <span>Facebook</span>}
+                    {artist.tiktok && <span>TikTok</span>}
+                    {artist.correo && <span>Correo</span>}
+                    {artist.web && <span>Web</span>}
+                  </div>
                 </div>
               </div>
 
@@ -1760,60 +1775,23 @@ function EventosManager() {
   const [artistasInvitados, setArtistasInvitados] = useState<
     ArtistaInvitadoEvento[]
   >([]);
-  const [editingArtistaIndex, setEditingArtistaIndex] = useState<number | null>(
-    null,
-  );
-  const [selectedArtistaIndex, setSelectedArtistaIndex] = useState<number | null>(
-    null,
-  );
-
   const [artistaNombre, setArtistaNombre] = useState("");
   const [artistaEspecialidad, setArtistaEspecialidad] = useState("");
   const [artistaDescripcion, setArtistaDescripcion] = useState("");
   const [artistaImagenUrl, setArtistaImagenUrl] = useState("");
   const [artistaImagenPreview, setArtistaImagenPreview] = useState("");
 
-  const [editingObraIndex, setEditingObraIndex] = useState<number | null>(null);
-  const [obraTitulo, setObraTitulo] = useState("");
-  const [obraTecnica, setObraTecnica] = useState("");
-  const [obraAnio, setObraAnio] = useState("");
-  const [obraDescripcion, setObraDescripcion] = useState("");
-  const [obraPrecio, setObraPrecio] = useState("");
-  const [obraImagenUrl, setObraImagenUrl] = useState("");
-  const [obraImagenPreview, setObraImagenPreview] = useState("");
-
   const getInvitadoImageUrl = (image?: string | null): string | null => {
     const cleanImage = image && String(image).trim() !== "" ? image : null;
+
     if (!cleanImage) return null;
+
     if (cleanImage.startsWith("data:image")) return cleanImage;
     if (cleanImage.startsWith("http://") || cleanImage.startsWith("https://")) {
       return cleanImage;
     }
+
     return buildImageUrl(cleanImage);
-  };
-
-  const imageFileToBase64 = (
-    file: File,
-    onSuccess: (value: string) => void,
-  ) => {
-    if (!file.type.startsWith("image/")) {
-      setMessage("Selecciona una imagen válida.");
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      onSuccess(result);
-      setMessage(null);
-    };
-
-    reader.onerror = () => {
-      setMessage("No se pudo leer la imagen seleccionada.");
-    };
-
-    reader.readAsDataURL(file);
   };
 
   const loadEventos = useCallback(async (): Promise<Evento[]> => {
@@ -1846,23 +1824,11 @@ function EventosManager() {
   }, [refreshEventos]);
 
   const resetArtistForm = () => {
-    setEditingArtistaIndex(null);
     setArtistaNombre("");
     setArtistaEspecialidad("");
     setArtistaDescripcion("");
     setArtistaImagenUrl("");
     setArtistaImagenPreview("");
-  };
-
-  const resetObraForm = () => {
-    setEditingObraIndex(null);
-    setObraTitulo("");
-    setObraTecnica("");
-    setObraAnio("");
-    setObraDescripcion("");
-    setObraPrecio("");
-    setObraImagenUrl("");
-    setObraImagenPreview("");
   };
 
   const resetForm = () => {
@@ -1874,9 +1840,7 @@ function EventosManager() {
     setActivo(true);
     setFlyer(null);
     setArtistasInvitados([]);
-    setSelectedArtistaIndex(null);
     resetArtistForm();
-    resetObraForm();
   };
 
   const startEdit = (evento: Evento) => {
@@ -1890,164 +1854,56 @@ function EventosManager() {
     setArtistasInvitados(
       Array.isArray(evento.artistasInvitados) ? evento.artistasInvitados : [],
     );
-    setSelectedArtistaIndex(null);
     resetArtistForm();
-    resetObraForm();
     setMessage(null);
   };
 
   const handleArtistaImageFile = (file?: File | null) => {
     if (!file) return;
-    imageFileToBase64(file, (result) => {
+
+    if (!file.type.startsWith("image/")) {
+      setMessage("Selecciona una imagen válida para el artista invitado.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
       setArtistaImagenUrl(result);
       setArtistaImagenPreview(result);
-    });
+      setMessage(null);
+    };
+
+    reader.onerror = () => {
+      setMessage("No se pudo leer la imagen del artista invitado.");
+    };
+
+    reader.readAsDataURL(file);
   };
 
-  const handleObraImageFile = (file?: File | null) => {
-    if (!file) return;
-    imageFileToBase64(file, (result) => {
-      setObraImagenUrl(result);
-      setObraImagenPreview(result);
-    });
-  };
-
-  const saveArtistaInvitado = () => {
+  const addArtistaInvitado = () => {
     if (!artistaNombre.trim()) {
       setMessage("Debes escribir el nombre del artista invitado.");
       return;
     }
 
-    const nuevoArtista: ArtistaInvitadoEvento = {
-      nombre: artistaNombre.trim(),
-      especialidad: artistaEspecialidad.trim(),
-      descripcion: artistaDescripcion.trim(),
-      imagenUrl: artistaImagenUrl.trim(),
-      obras:
-        editingArtistaIndex !== null
-          ? artistasInvitados[editingArtistaIndex]?.obras ?? []
-          : [],
-    };
-
-    if (editingArtistaIndex !== null) {
-      setArtistasInvitados((prev) =>
-        prev.map((artista, index) =>
-          index === editingArtistaIndex ? nuevoArtista : artista,
-        ),
-      );
-      setMessage("Artista invitado actualizado ✅");
-    } else {
-      setArtistasInvitados((prev) => [...prev, nuevoArtista]);
-      setMessage("Artista invitado agregado ✅");
-    }
+    setArtistasInvitados((prev) => [
+      ...prev,
+      {
+        nombre: artistaNombre.trim(),
+        especialidad: artistaEspecialidad.trim(),
+        descripcion: artistaDescripcion.trim(),
+        imagenUrl: artistaImagenUrl.trim(),
+      },
+    ]);
 
     resetArtistForm();
-  };
-
-  const editArtistaInvitado = (index: number) => {
-    const artista = artistasInvitados[index];
-    if (!artista) return;
-
-    setEditingArtistaIndex(index);
-    setArtistaNombre(artista.nombre ?? "");
-    setArtistaEspecialidad(artista.especialidad ?? "");
-    setArtistaDescripcion(artista.descripcion ?? "");
-    setArtistaImagenUrl(artista.imagenUrl ?? "");
-    setArtistaImagenPreview(artista.imagenUrl ?? "");
     setMessage(null);
   };
 
   const removeArtistaInvitado = (index: number) => {
-    setArtistasInvitados((prev) =>
-      prev.filter((_, itemIndex) => itemIndex !== index),
-    );
-
-    if (selectedArtistaIndex === index) {
-      setSelectedArtistaIndex(null);
-    }
-
-    resetArtistForm();
-    resetObraForm();
-  };
-
-  const saveObraInvitado = () => {
-    if (selectedArtistaIndex === null) {
-      setMessage("Primero selecciona un artista invitado.");
-      return;
-    }
-
-    if (!obraTitulo.trim()) {
-      setMessage("Debes escribir el título de la obra.");
-      return;
-    }
-
-    const nuevaObra: ObraArtistaInvitado = {
-      titulo: obraTitulo.trim(),
-      tecnica: obraTecnica.trim(),
-      anio: obraAnio.trim(),
-      descripcion: obraDescripcion.trim(),
-      imagenUrl: obraImagenUrl.trim(),
-      precio: obraPrecio.trim(),
-    };
-
-    setArtistasInvitados((prev) =>
-      prev.map((artista, index) => {
-        if (index !== selectedArtistaIndex) return artista;
-
-        const obrasActuales = Array.isArray(artista.obras) ? artista.obras : [];
-
-        const nuevasObras =
-          editingObraIndex !== null
-            ? obrasActuales.map((obra, obraIndex) =>
-                obraIndex === editingObraIndex ? nuevaObra : obra,
-              )
-            : [...obrasActuales, nuevaObra];
-
-        return {
-          ...artista,
-          obras: nuevasObras,
-        };
-      }),
-    );
-
-    resetObraForm();
-    setMessage("Obra del artista invitado guardada ✅");
-  };
-
-  const editObraInvitado = (obraIndex: number) => {
-    if (selectedArtistaIndex === null) return;
-
-    const artista = artistasInvitados[selectedArtistaIndex];
-    const obra = artista?.obras?.[obraIndex];
-    if (!obra) return;
-
-    setEditingObraIndex(obraIndex);
-    setObraTitulo(obra.titulo ?? "");
-    setObraTecnica(obra.tecnica ?? "");
-    setObraAnio(obra.anio ?? "");
-    setObraDescripcion(obra.descripcion ?? "");
-    setObraPrecio(obra.precio ?? "");
-    setObraImagenUrl(obra.imagenUrl ?? "");
-    setObraImagenPreview(obra.imagenUrl ?? "");
-  };
-
-  const removeObraInvitado = (obraIndex: number) => {
-    if (selectedArtistaIndex === null) return;
-
-    setArtistasInvitados((prev) =>
-      prev.map((artista, index) => {
-        if (index !== selectedArtistaIndex) return artista;
-
-        return {
-          ...artista,
-          obras: Array.isArray(artista.obras)
-            ? artista.obras.filter((_, indexObra) => indexObra !== obraIndex)
-            : [],
-        };
-      }),
-    );
-
-    resetObraForm();
+    setArtistasInvitados((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
   };
 
   const handleSave = async () => {
@@ -2124,9 +1980,6 @@ function EventosManager() {
     }
   };
 
-  const selectedArtista =
-    selectedArtistaIndex !== null ? artistasInvitados[selectedArtistaIndex] : null;
-
   return (
     <div className="space-y-6">
       <div>
@@ -2134,8 +1987,8 @@ function EventosManager() {
           Eventos y exposiciones 🗓
         </h1>
         <p className="text-sm text-gray-300">
-          Desde aquí puedes agregar flyers, detalles, artistas invitados y obras
-          por artista.
+          Desde aquí puedes agregar flyers, detalles y artistas invitados para
+          mostrarlos en la página de eventos.
         </p>
       </div>
 
@@ -2185,9 +2038,14 @@ function EventosManager() {
         />
 
         <div className="bg-[#0b1220] border border-gray-800 rounded-xl p-4 space-y-4">
-          <h3 className="text-sm font-bold text-verdeEsmeralda">
-            Artistas invitados
-          </h3>
+          <div>
+            <h3 className="text-sm font-bold text-verdeEsmeralda">
+              Artistas invitados
+            </h3>
+            <p className="text-xs text-gray-400">
+              Al editar un evento, aquí también puedes agregar o quitar artistas invitados.
+            </p>
+          </div>
 
           <div className="grid md:grid-cols-2 gap-3">
             <input
@@ -2200,7 +2058,7 @@ function EventosManager() {
             <input
               value={artistaEspecialidad}
               onChange={(event) => setArtistaEspecialidad(event.target.value)}
-              placeholder="Especialidad. Ej: Pintura, grabado, fotografía"
+              placeholder="Especialidad. Ej: Grabado, pintura, fotografía"
               className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
             />
 
@@ -2226,7 +2084,7 @@ function EventosManager() {
 
               {artistaImagenPreview && (
                 <img
-                  src={getInvitadoImageUrl(artistaImagenPreview) ?? ""}
+                  src={getInvitadoImageUrl(artistaImagenPreview) ?? artistaImagenPreview}
                   alt="Vista previa del artista"
                   className="w-24 h-24 rounded-full object-cover border border-gray-700"
                 />
@@ -2242,27 +2100,13 @@ function EventosManager() {
             className="w-full px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
           />
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={saveArtistaInvitado}
-              className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-sm font-semibold hover:bg-white/15"
-            >
-              {editingArtistaIndex !== null
-                ? "Actualizar artista invitado"
-                : "+ Agregar artista invitado"}
-            </button>
-
-            {editingArtistaIndex !== null && (
-              <button
-                type="button"
-                onClick={resetArtistForm}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-500"
-              >
-                Cancelar edición
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={addArtistaInvitado}
+            className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-sm font-semibold hover:bg-white/15"
+          >
+            + Agregar artista invitado
+          </button>
 
           {artistasInvitados.length > 0 && (
             <div className="space-y-2">
@@ -2272,61 +2116,38 @@ function EventosManager() {
                 return (
                   <div
                     key={`${artista.nombre}-${index}`}
-                    className="rounded-lg border border-gray-800 bg-[#0e1624] p-3"
+                    className="flex items-start justify-between gap-3 rounded-lg border border-gray-800 bg-[#0e1624] p-3"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedArtistaIndex(index);
-                          resetObraForm();
-                        }}
-                        className="flex gap-3 text-left flex-1"
-                      >
-                        {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={artista.nombre}
-                            className="w-12 h-12 rounded-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full border border-gray-700 flex items-center justify-center text-[10px] text-gray-500">
-                            Sin foto
-                          </div>
-                        )}
+                    <div className="flex gap-3">
+                      {imageUrl && (
+                        <img
+                          src={imageUrl}
+                          alt={artista.nombre}
+                          className="w-12 h-12 rounded-full object-cover"
+                          loading="lazy"
+                        />
+                      )}
 
-                        <div>
-                          <p className="text-sm font-bold text-gray-100">
-                            {artista.nombre}
-                          </p>
-                          <p className="text-xs text-verdeEsmeralda">
-                            {artista.especialidad || "Sin especialidad"}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            Obras: {artista.obras?.length ?? 0}
-                          </p>
-                        </div>
-                      </button>
-
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => editArtistaInvitado(index)}
-                          className="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-500"
-                        >
-                          Editar
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => removeArtistaInvitado(index)}
-                          className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
-                        >
-                          Quitar
-                        </button>
+                      <div>
+                        <p className="text-sm font-bold text-gray-100">
+                          {artista.nombre}
+                        </p>
+                        <p className="text-xs text-verdeEsmeralda">
+                          {artista.especialidad || "Sin especialidad"}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {artista.descripcion || "Sin descripción"}
+                        </p>
                       </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => removeArtistaInvitado(index)}
+                      className="text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-500"
+                    >
+                      Quitar
+                    </button>
                   </div>
                 );
               })}
@@ -2334,155 +2155,16 @@ function EventosManager() {
           )}
         </div>
 
-        {selectedArtista && (
-          <div className="bg-[#0b1220] border border-gray-800 rounded-xl p-4 space-y-4">
-            <h3 className="text-sm font-bold text-verdeEsmeralda">
-              Obras de {selectedArtista.nombre}
-            </h3>
-
-            <div className="grid md:grid-cols-2 gap-3">
-              <input
-                value={obraTitulo}
-                onChange={(event) => setObraTitulo(event.target.value)}
-                placeholder="Título de la obra"
-                className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
-              />
-
-              <input
-                value={obraTecnica}
-                onChange={(event) => setObraTecnica(event.target.value)}
-                placeholder="Técnica. Ej: óleo, acrílico, xilografía"
-                className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
-              />
-
-              <input
-                value={obraAnio}
-                onChange={(event) => setObraAnio(event.target.value)}
-                placeholder="Año. Ej: 2026"
-                className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
-              />
-
-              <input
-                value={obraPrecio}
-                onChange={(event) => setObraPrecio(event.target.value)}
-                placeholder="Precio opcional"
-                className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
-              />
-
-              <div className="md:col-span-2 space-y-2">
-                <input
-                  value={obraImagenUrl}
-                  onChange={(event) => {
-                    setObraImagenUrl(event.target.value);
-                    setObraImagenPreview(event.target.value);
-                  }}
-                  placeholder="URL de imagen de la obra opcional"
-                  className="w-full px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
-                />
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) =>
-                    handleObraImageFile(event.target.files?.[0] ?? null)
-                  }
-                  className="block w-full text-sm text-gray-300 file:mr-4 file:rounded-lg file:border-0 file:bg-verdeEsmeralda file:px-4 file:py-2 file:text-sm file:font-semibold file:text-black"
-                />
-
-                {obraImagenPreview && (
-                  <img
-                    src={getInvitadoImageUrl(obraImagenPreview) ?? ""}
-                    alt="Vista previa de la obra"
-                    className="w-32 h-24 rounded-lg object-cover border border-gray-700"
-                  />
-                )}
-              </div>
-            </div>
-
-            <textarea
-              value={obraDescripcion}
-              onChange={(event) => setObraDescripcion(event.target.value)}
-              placeholder="Descripción breve de la obra"
-              rows={2}
-              className="w-full px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
-            />
-
-            <button
-              type="button"
-              onClick={saveObraInvitado}
-              className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white text-sm font-semibold hover:bg-white/15"
-            >
-              {editingObraIndex !== null ? "Actualizar obra" : "+ Agregar obra"}
-            </button>
-
-            {selectedArtista.obras && selectedArtista.obras.length > 0 && (
-              <div className="grid md:grid-cols-2 gap-3">
-                {selectedArtista.obras.map((obra, obraIndex) => {
-                  const obraImg = getInvitadoImageUrl(obra.imagenUrl);
-
-                  return (
-                    <div
-                      key={`${obra.titulo}-${obraIndex}`}
-                      className="bg-[#0e1624] border border-gray-800 rounded-xl p-3 flex gap-3"
-                    >
-                      {obraImg && (
-                        <img
-                          src={obraImg}
-                          alt={obra.titulo}
-                          className="w-20 h-20 rounded-lg object-cover"
-                        />
-                      )}
-
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-gray-100">
-                          {obra.titulo}
-                        </p>
-                        <p className="text-xs text-verdeEsmeralda">
-                          {obra.tecnica || "Sin técnica"}
-                          {obra.anio ? ` · ${obra.anio}` : ""}
-                        </p>
-                        <p className="text-xs text-gray-400 line-clamp-2">
-                          {obra.descripcion || "Sin descripción"}
-                        </p>
-
-                        <div className="flex gap-2 mt-2">
-                          <button
-                            type="button"
-                            onClick={() => editObraInvitado(obraIndex)}
-                            className="text-xs px-2 py-1 rounded bg-blue-600 text-white"
-                          >
-                            Editar
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => removeObraInvitado(obraIndex)}
-                            className="text-xs px-2 py-1 rounded bg-red-600 text-white"
-                          >
-                            Quitar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-gray-200">
             Flyer del evento
           </label>
-
           <input
             type="file"
             accept="image/*"
             onChange={(event) => setFlyer(event.target.files?.[0] ?? null)}
             className="block w-full text-sm text-gray-300 file:mr-4 file:rounded-lg file:border-0 file:bg-verdeEsmeralda file:px-4 file:py-2 file:text-sm file:font-semibold file:text-black"
           />
-
           {editingEvento && (
             <p className="text-xs text-gray-500">
               Si no seleccionas un nuevo flyer, se conserva el actual.
@@ -2559,7 +2241,21 @@ function EventosManager() {
                   )}
 
                   <div className="p-4 space-y-2">
-                    <h3 className="font-bold text-gray-100">{evento.titulo}</h3>
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-bold text-gray-100">
+                        {evento.titulo}
+                      </h3>
+
+                      <span
+                        className={`text-[11px] px-2 py-1 rounded-full ${
+                          evento.activo
+                            ? "bg-emerald-900/30 text-emerald-300 border border-emerald-800/40"
+                            : "bg-red-900/30 text-red-300 border border-red-800/40"
+                        }`}
+                      >
+                        {evento.activo ? "Activo" : "Inactivo"}
+                      </span>
+                    </div>
 
                     <p className="text-xs text-verdeEsmeralda">
                       {evento.fecha || "Sin fecha"}
@@ -2576,6 +2272,19 @@ function EventosManager() {
                     <p className="text-xs text-gray-300">
                       Artistas invitados: {invitados.length}
                     </p>
+
+                    {invitados.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {invitados.slice(0, 4).map((artista, index) => (
+                          <span
+                            key={`${artista.nombre}-${index}`}
+                            className="text-[11px] px-2 py-1 rounded-full border border-gray-700 text-gray-300"
+                          >
+                            {artista.nombre}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="flex gap-2 pt-2">
                       <button
@@ -2792,4 +2501,3 @@ export default function AdminPanel() {
     </div>
   );
 }
-
