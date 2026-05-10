@@ -1,20 +1,35 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Obra } from '../obras/obra.entity';
 
 @Entity()
 export class Artista {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  nombre: string;
+  nombre!: string;
 
   @Column('text')
-  descripcion: string;
+  descripcion!: string;
 
   @Column({ nullable: true })
-  foto: string;
+  foto!: string;
+
+  @Column({ nullable: true })
+  fotoUrl!: string;
+
+  @Column({ nullable: true })
+  instagram!: string;
+
+  @Column({ nullable: true })
+  facebook!: string;
+
+  @Column({ nullable: true })
+  tiktok!: string;
+
+  @Column({ nullable: true })
+  correo!: string;
 
   @OneToMany(() => Obra, (obra) => obra.artista)
-  obras: Obra[];
+  obras!: Obra[];
 }
