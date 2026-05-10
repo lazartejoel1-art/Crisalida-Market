@@ -23,6 +23,9 @@ interface WorkFormProps {
   onCancel?: () => void;
 }
 
+const MAX_IMAGE_SIZE_MB = 50;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+
 function getInitialArtistId(artists: ArtistOption[], initialValues?: NewWork) {
   return initialValues?.artistaId ?? artists[0]?.id ?? 0;
 }
@@ -137,11 +140,8 @@ export default function WorkForm({
       return;
     }
 
-    const maxSizeMb = 10;
-    const maxSizeBytes = maxSizeMb * 1024 * 1024;
-
-    if (selectedFile.size > maxSizeBytes) {
-      setMessage(`La imagen es muy pesada. Máximo ${maxSizeMb} MB.`);
+    if (selectedFile.size > MAX_IMAGE_SIZE_BYTES) {
+      setMessage(`La imagen es muy pesada. Máximo ${MAX_IMAGE_SIZE_MB} MB.`);
       setFile(null);
       return;
     }
@@ -380,7 +380,8 @@ export default function WorkForm({
           }}
         />
         <p className="text-xs text-gray-500 mt-1">
-          Funciona desde celular, tablet o PC. Usa JPG, PNG o WEBP.
+          Funciona desde celular, tablet o PC. Usa JPG, PNG o WEBP. Máximo{" "}
+          {MAX_IMAGE_SIZE_MB} MB.
         </p>
       </div>
 
