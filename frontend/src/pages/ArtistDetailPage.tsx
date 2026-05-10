@@ -93,6 +93,10 @@ function buildArtistInfo(artist: ArtistDetail): {
     }
   };
 
+  // =========================
+  // REDES SOLO DESDE CAMPOS
+  // =========================
+
   if (artist.instagram) {
     pushLink({
       label: "Instagram",
@@ -138,8 +142,15 @@ function buildArtistInfo(artist: ArtistDetail): {
     });
   }
 
+  // =========================
+  // DESCRIPCIÓN NORMAL
+  // =========================
+
+  const descriptionClean = rawDescription.trim();
+
   return {
-    description: rawDescription || "Artista de la colectiva Crisálida.",
+    description:
+      descriptionClean || "Artista de la colectiva Crisálida.",
     links: uniqueLinks(links),
   };
 }
