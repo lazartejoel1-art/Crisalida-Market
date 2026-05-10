@@ -14,6 +14,10 @@ function buildImageUrl(image?: string | null): string | null {
   return image;
 }
 
+function cleanValue(value?: string | null): string {
+  return value?.trim() ?? '';
+}
+
 @Injectable()
 export class ArtistasService {
   constructor(
@@ -22,7 +26,9 @@ export class ArtistasService {
   ) {}
 
   async obtenerTodos() {
-    const artistas = await this.artistaRepository.find();
+    const artistas = await this.artistaRepository.find({
+      order: { id: 'ASC' },
+    });
 
     return artistas.map((a) => ({
       ...a,
@@ -53,8 +59,14 @@ export class ArtistasService {
 
   async crear(dto: CrearArtistaDto, foto?: string) {
     const artista = this.artistaRepository.create({
-      ...dto,
-      foto,
+      nombre: cleanValue(dto.nombre),
+      descripcion: cleanValue(dto.descripcion),
+      instagram: cleanValue(dto.instagram),
+      facebook: cleanValue(dto.facebook),
+      tiktok: cleanValue(dto.tiktok),
+      correo: cleanValue(dto.correo),
+      web: cleanValue(dto.web),
+      foto: foto || cleanValue(dto.fotoUrl) || undefined,
     });
 
     return this.artistaRepository.save(artista);
@@ -69,11 +81,19 @@ export class ArtistasService {
       throw new NotFoundException('Artista no encontrado');
     }
 
+    artista.nombre = cleanValue(dto.nombre);
+    artista.descripcion = cleanValue(dto.descripcion);
+    artista.instagram = cleanValue(dto.instagram);
+    artista.facebook = cleanValue(dto.facebook);
+    artista.tiktok = cleanValue(dto.tiktok);
+    artista.correo = cleanValue(dto.correo);
+    artista.web = cleanValue(dto.web);
+
     if (foto) {
       artista.foto = foto;
+    } else if (dto.fotoUrl && dto.fotoUrl.trim()) {
+      artista.foto = dto.fotoUrl.trim();
     }
-
-    Object.assign(artista, dto);
 
     return this.artistaRepository.save(artista);
   }

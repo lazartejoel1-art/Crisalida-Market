@@ -1,7 +1,17 @@
 export class CrearArtistaDto {
-  nombre: string;
+  nombre!: string;
 
-  bio: string;
+  descripcion!: string;
 
-  instagram: string;
+  instagram?: string;
+
+  facebook?: string;
+
+  tiktok?: string;
+
+  correo?: string;
+
+  web?: string;
+
+  fotoUrl?: string;
 }

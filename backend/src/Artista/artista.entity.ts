@@ -16,9 +16,6 @@ export class Artista {
   foto!: string;
 
   @Column({ nullable: true })
-  fotoUrl!: string;
-
-  @Column({ nullable: true })
   instagram!: string;
 
   @Column({ nullable: true })
@@ -29,6 +26,9 @@ export class Artista {
 
   @Column({ nullable: true })
   correo!: string;
+
+  @Column({ nullable: true })
+  web!: string;
 
   @OneToMany(() => Obra, (obra) => obra.artista)
   obras!: Obra[];
