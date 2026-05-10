@@ -1796,28 +1796,37 @@ function EventosManager() {
     return buildImageUrl(cleanImage);
   };
 
-  const imageFileToBase64 = (
+  const uploadEventoImageToCloudinary = async (
     file: File,
-    onSuccess: (value: string) => void,
-  ) => {
+  ): Promise<string> => {
     if (!file.type.startsWith("image/")) {
-      setMessage("Selecciona una imagen válida.");
-      return;
+      throw new Error("Selecciona una imagen válida.");
     }
 
-    const reader = new FileReader();
+    const data = new FormData();
+    data.append("file", file, file.name);
 
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      onSuccess(result);
-      setMessage(null);
+    const res = await fetch(`${API}/eventos/upload-image`, {
+      method: "POST",
+      body: data,
+    });
+
+    if (!res.ok) {
+      throw new Error(await parseResponseError(res));
+    }
+
+    const result = (await res.json()) as {
+      url?: string;
+      filename?: string;
     };
 
-    reader.onerror = () => {
-      setMessage("No se pudo leer la imagen seleccionada.");
-    };
+    const imageUrl = result.url || result.filename;
 
-    reader.readAsDataURL(file);
+    if (!imageUrl) {
+      throw new Error("No se pudo obtener la URL de la imagen.");
+    }
+
+    return imageUrl;
   };
 
   const loadEventos = useCallback(async (): Promise<Evento[]> => {
@@ -1900,20 +1909,40 @@ function EventosManager() {
     setMessage(null);
   };
 
-  const handleArtistaImageFile = (file?: File | null) => {
+  const handleArtistaImageFile = async (file?: File | null) => {
     if (!file) return;
-    imageFileToBase64(file, (result) => {
-      setArtistaImagenUrl(result);
-      setArtistaImagenPreview(result);
-    });
+
+    try {
+      setMessage("Subiendo imagen del artista...");
+
+      const imageUrl = await uploadEventoImageToCloudinary(file);
+
+      setArtistaImagenUrl(imageUrl);
+      setArtistaImagenPreview(imageUrl);
+
+      setMessage("Imagen del artista subida correctamente ✅");
+    } catch (error) {
+      console.error(error);
+      setMessage(getErrorMessage(error));
+    }
   };
 
-  const handleObraImageFile = (file?: File | null) => {
+  const handleObraImageFile = async (file?: File | null) => {
     if (!file) return;
-    imageFileToBase64(file, (result) => {
-      setObraImagenUrl(result);
-      setObraImagenPreview(result);
-    });
+
+    try {
+      setMessage("Subiendo imagen de la obra...");
+
+      const imageUrl = await uploadEventoImageToCloudinary(file);
+
+      setObraImagenUrl(imageUrl);
+      setObraImagenPreview(imageUrl);
+
+      setMessage("Imagen de la obra subida correctamente ✅");
+    } catch (error) {
+      console.error(error);
+      setMessage(getErrorMessage(error));
+    }
   };
 
   const saveArtistaInvitado = () => {
@@ -2223,7 +2252,7 @@ function EventosManager() {
                 type="file"
                 accept="image/*"
                 onChange={(event) =>
-                  handleArtistaImageFile(event.target.files?.[0] ?? null)
+                  void handleArtistaImageFile(event.target.files?.[0] ?? null)
                 }
                 className="block w-full min-w-0 text-sm text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-verdeEsmeralda file:px-3 file:py-2 file:text-sm file:font-semibold file:text-black"
               />
@@ -2388,7 +2417,7 @@ function EventosManager() {
                   type="file"
                   accept="image/*"
                   onChange={(event) =>
-                    handleObraImageFile(event.target.files?.[0] ?? null)
+                    void handleObraImageFile(event.target.files?.[0] ?? null)
                   }
                   className="block w-full min-w-0 text-sm text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-verdeEsmeralda file:px-3 file:py-2 file:text-sm file:font-semibold file:text-black"
                 />
