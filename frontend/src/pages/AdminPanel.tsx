@@ -22,6 +22,11 @@ type Artist = {
   descripcion: string;
   fotoUrl?: string | null;
   foto?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
+  tiktok?: string | null;
+  correo?: string | null;
+  web?: string | null;
 };
 
 type Work = {
@@ -482,12 +487,18 @@ function ArtistsManager() {
 
     try {
       const data = new FormData();
-      data.append("nombre", formData.nombre);
-      data.append("descripcion", formData.descripcion);
+data.append("nombre", formData.nombre);
+data.append("descripcion", formData.descripcion);
+data.append("instagram", formData.instagram ?? "");
+data.append("facebook", formData.facebook ?? "");
+data.append("tiktok", formData.tiktok ?? "");
+data.append("correo", formData.correo ?? "");
+data.append("web", formData.web ?? "");
+data.append("fotoUrl", formData.fotoUrl ?? "");
 
-      if (formData.foto instanceof File) {
-        data.append("foto", formData.foto, formData.foto.name);
-      }
+if (formData.foto instanceof File) {
+  data.append("foto", formData.foto, formData.foto.name);
+}
 
       const url = editingArtist
         ? `${API}/artistas/${editingArtist.id}`
@@ -523,12 +534,17 @@ function ArtistsManager() {
   };
 
   const initialValues: NewArtist | undefined = editingArtist
-    ? {
-        nombre: editingArtist.nombre,
-        descripcion: editingArtist.descripcion,
-        fotoUrl: editingArtist.fotoUrl ?? editingArtist.foto ?? undefined,
-      }
-    : undefined;
+  ? {
+      nombre: editingArtist.nombre,
+      descripcion: editingArtist.descripcion,
+      instagram: editingArtist.instagram ?? undefined,
+      facebook: editingArtist.facebook ?? undefined,
+      tiktok: editingArtist.tiktok ?? undefined,
+      correo: editingArtist.correo ?? undefined,
+      web: editingArtist.web ?? undefined,
+      fotoUrl: editingArtist.fotoUrl ?? editingArtist.foto ?? undefined,
+    }
+  : undefined;
 
   return (
     <div>
