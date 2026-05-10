@@ -9,8 +9,10 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-
 import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import * as fs from 'fs';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 
 import { EventosService } from './eventos.service';
@@ -24,6 +26,28 @@ type EventoBody = {
   activo?: string | boolean;
   artistasInvitados?: string;
 };
+
+type EventoFile = {
+  filename: string;
+};
+
+const uploadsPath = join(process.cwd(), 'uploads');
+
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
+
+const flyerStorage = diskStorage({
+  destination: uploadsPath,
+  filename: (_req, file, callback) => {
+    const fileExt = extname(file.originalname);
+    const fileName = `evento-${Date.now()}-${Math.round(
+      Math.random() * 1000000,
+    )}${fileExt}`;
+
+    callback(null, fileName);
+  },
+});
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -122,21 +146,16 @@ export class EventosController {
   }
 
   @Post()
-  @UseInterceptors(FileInterceptor('flyer'))
-  async create(
+  @UseInterceptors(
+    FileInterceptor('flyer', {
+      storage: flyerStorage,
+    }),
+  )
+  create(
     @Body() body: EventoBody,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFile() file?: EventoFile,
   ): Promise<Evento> {
-    let flyer: string | undefined;
-
-    if (file) {
-      const result = await uploadToCloudinary(
-        file,
-        'crisalida-market/eventos/flyers',
-      );
-
-      flyer = result.secure_url;
-    }
+    const flyer = file?.filename ?? null;
 
     const data: Partial<Evento> = {
       titulo: body.titulo ?? '',
@@ -145,7 +164,7 @@ export class EventosController {
       lugar: body.lugar ?? '',
       activo: body.activo === 'false' ? false : true,
       flyer: flyer ?? undefined,
-      flyerUrl: flyer ?? undefined,
+      flyerUrl: flyer ? `/uploads/${flyer}` : undefined,
       artistasInvitados: parseArtistasInvitados(body.artistasInvitados),
     };
 
@@ -153,22 +172,17 @@ export class EventosController {
   }
 
   @Patch(':id')
-  @UseInterceptors(FileInterceptor('flyer'))
-  async update(
+  @UseInterceptors(
+    FileInterceptor('flyer', {
+      storage: flyerStorage,
+    }),
+  )
+  update(
     @Param('id') id: string,
     @Body() body: EventoBody,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFile() file?: EventoFile,
   ): Promise<Evento> {
-    let flyer: string | undefined;
-
-    if (file) {
-      const result = await uploadToCloudinary(
-        file,
-        'crisalida-market/eventos/flyers',
-      );
-
-      flyer = result.secure_url;
-    }
+    const flyer = file?.filename ?? null;
 
     const data: Partial<Evento> = {
       titulo: body.titulo ?? '',
@@ -181,7 +195,7 @@ export class EventosController {
 
     if (flyer) {
       data.flyer = flyer;
-      data.flyerUrl = flyer;
+      data.flyerUrl = `/uploads/${flyer}`;
     }
 
     return this.eventosService.update(Number(id), data);
