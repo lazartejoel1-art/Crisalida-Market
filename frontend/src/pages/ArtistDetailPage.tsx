@@ -84,13 +84,9 @@ function buildArtistInfo(artist: ArtistDetail): {
   description: string;
   links: SocialLink[];
 } {
-  const rawDescription = artist.descripcion || "";
-  const lines = rawDescription
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const description =
+    artist.descripcion?.trim() || "Artista de la colectiva Crisálida.";
 
-  const descriptionLines: string[] = [];
   const links: SocialLink[] = [];
 
   const pushLink = (link: SocialLink) => {
@@ -99,7 +95,7 @@ function buildArtistInfo(artist: ArtistDetail): {
     }
   };
 
-  if (artist.instagram) {
+  if (artist.instagram?.trim()) {
     pushLink({
       label: "Instagram",
       value: artist.instagram,
@@ -108,7 +104,7 @@ function buildArtistInfo(artist: ArtistDetail): {
     });
   }
 
-  if (artist.facebook) {
+  if (artist.facebook?.trim()) {
     pushLink({
       label: "Facebook",
       value: artist.facebook,
@@ -117,7 +113,7 @@ function buildArtistInfo(artist: ArtistDetail): {
     });
   }
 
-  if (artist.tiktok) {
+  if (artist.tiktok?.trim()) {
     pushLink({
       label: "TikTok",
       value: artist.tiktok,
@@ -126,7 +122,7 @@ function buildArtistInfo(artist: ArtistDetail): {
     });
   }
 
-  if (artist.correo) {
+  if (artist.correo?.trim()) {
     pushLink({
       label: "Correo",
       value: artist.correo,
@@ -135,7 +131,7 @@ function buildArtistInfo(artist: ArtistDetail): {
     });
   }
 
-  if (artist.web) {
+  if (artist.web?.trim()) {
     pushLink({
       label: "Web",
       value: artist.web,
@@ -144,69 +140,8 @@ function buildArtistInfo(artist: ArtistDetail): {
     });
   }
 
-  lines.forEach((line) => {
-    const instagramMatch = line.match(/(?:instagram|ig)\s*:?\s*(@?[\w.]+)/i);
-    const facebookMatch = line.match(/facebook\s*:?\s*([^\n]+)/i);
-    const tiktokMatch = line.match(/(?:tiktok|tik tok)\s*:?\s*(@?[\w.]+)/i);
-    const emailMatch = line.match(/[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}/);
-    const urlMatch = line.match(/https?:\/\/[^\s]+|www\.[^\s]+/i);
-
-    if (instagramMatch?.[1]) {
-      pushLink({
-        label: "Instagram",
-        value: instagramMatch[1],
-        href: normalizeInstagram(instagramMatch[1]),
-        icon: "📸",
-      });
-      return;
-    }
-
-    if (facebookMatch?.[1]) {
-      pushLink({
-        label: "Facebook",
-        value: facebookMatch[1].trim(),
-        href: normalizeFacebook(facebookMatch[1].trim()),
-        icon: "📘",
-      });
-      return;
-    }
-
-    if (tiktokMatch?.[1]) {
-      pushLink({
-        label: "TikTok",
-        value: tiktokMatch[1],
-        href: normalizeTikTok(tiktokMatch[1]),
-        icon: "🎵",
-      });
-      return;
-    }
-
-    if (emailMatch?.[0]) {
-      pushLink({
-        label: "Correo",
-        value: emailMatch[0],
-        href: normalizeEmail(emailMatch[0]),
-        icon: "✉️",
-      });
-      return;
-    }
-
-    if (urlMatch?.[0]) {
-      pushLink({
-        label: "Enlace",
-        value: urlMatch[0],
-        href: normalizeExternalUrl(urlMatch[0]),
-        icon: "🔗",
-      });
-      return;
-    }
-
-    descriptionLines.push(line);
-  });
-
   return {
-    description:
-      descriptionLines.join("\n\n") || "Artista de la colectiva Crisálida.",
+    description,
     links: uniqueLinks(links),
   };
 }
