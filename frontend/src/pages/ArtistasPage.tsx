@@ -23,9 +23,9 @@ export default function ArtistasPage() {
   }, []);
 
   return (
-    <div className="bg-negroSuave min-h-screen text-blancoPuro px-6 py-10">
+    <div className="bg-negroSuave min-h-screen text-blancoPuro px-3 lg:px-5 py-10 w-full">
       <motion.h2
-        className="text-3xl font-bold mb-6 text-verdeEsmeralda"
+        className="text-4xl font-black mb-8 text-verdeEsmeralda tracking-tight"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -33,19 +33,35 @@ export default function ArtistasPage() {
         Artistas de Crisálida
       </motion.h2>
 
-      {loading && <p>Cargando artistas...</p>}
-      {error && <p className="text-red-400">{error}</p>}
+      {loading && (
+        <p className="text-gray-400 animate-pulse">
+          Cargando artistas...
+        </p>
+      )}
+
+      {error && (
+        <p className="text-red-400">
+          {error}
+        </p>
+      )}
 
       {!loading && !error && (
         <motion.div
-          className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+          className="
+            grid
+            gap-5
+            grid-cols-2
+            md:grid-cols-3
+            xl:grid-cols-4
+            2xl:grid-cols-5
+          "
           initial="hidden"
           animate="visible"
           variants={{
             hidden: {},
             visible: {
               transition: {
-                staggerChildren: 0.1,
+                staggerChildren: 0.08,
               },
             },
           }}
@@ -57,6 +73,7 @@ export default function ArtistasPage() {
                 hidden: { opacity: 0, y: 20 },
                 visible: { opacity: 1, y: 0 },
               }}
+              transition={{ duration: 0.35 }}
             >
               <ArtistaCard artista={artista} />
             </motion.div>
