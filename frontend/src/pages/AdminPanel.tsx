@@ -2705,8 +2705,8 @@ export default function AdminPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-negroSuave text-blancoPuro flex">
-      <aside className="w-56 bg-[#0d1117] border-r border-gray-800 p-6 flex flex-col justify-between">
+    <div className="min-h-screen w-full overflow-x-hidden bg-negroSuave text-blancoPuro flex">
+      <aside className="w-44 sm:w-56 shrink-0 bg-[#0d1117] border-r border-gray-800 p-4 sm:p-6 flex flex-col justify-between">
         <div>
           <h2 className="text-xl font-bold text-verdeEsmeralda mb-6">
             Crisálida
@@ -2775,7 +2775,7 @@ export default function AdminPanel() {
         </button>
       </aside>
 
-      <main className="flex-1 p-10">
+      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-10 overflow-x-hidden">
         {screen === "dashboard" && (
           <DashboardHome
             artistsCount={stats.artistsCount}

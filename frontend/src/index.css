@@ -1,18 +1,42 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-:root{
+
+:root {
   --c-bg: #0b0f1a;
   --c-panel: #050816;
-  --c-border: rgba(255,255,255,0.10);
-  --c-text: rgba(255,255,255,0.92);
-  --c-muted: rgba(255,255,255,0.55);
-  --c-soft: rgba(255,255,255,0.08);
+  --c-border: rgba(255, 255, 255, 0.1);
+  --c-text: rgba(255, 255, 255, 0.92);
+  --c-muted: rgba(255, 255, 255, 0.55);
+  --c-soft: rgba(255, 255, 255, 0.08);
   --c-accent: #21c55d;
 
   /* Navbar (arriba) */
   --c-topbar-bg: #ffffff;
   --c-topbar-text: #0b0f1a;
-  --c-topbar-border: rgba(0,0,0,0.10);
-  --c-topbar-hover: rgba(0,0,0,0.05);
+  --c-topbar-border: rgba(0, 0, 0, 0.1);
+  --c-topbar-hover: rgba(0, 0, 0, 0.05);
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  background: var(--c-bg);
+  overflow-x: hidden;
+}
+
+body {
+  color: var(--c-text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+img,
+video {
+  max-width: 100%;
 }
