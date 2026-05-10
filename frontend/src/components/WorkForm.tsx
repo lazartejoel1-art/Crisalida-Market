@@ -27,6 +27,22 @@ function getInitialArtistId(artists: ArtistOption[], initialValues?: NewWork) {
   return initialValues?.artistaId ?? artists[0]?.id ?? 0;
 }
 
+function extraerCampo(texto: string, etiqueta: string): string {
+  const regex = new RegExp(`${etiqueta}\\s*[:.]?\\s*([^\\n]+)`, "i");
+  const match = texto.match(regex);
+  return match?.[1]?.trim() ?? "";
+}
+
+function limpiarDescripcion(texto: string): string {
+  return texto
+    .replace(/Técnica\s*[:.]?\s*[^\n]+/gi, "")
+    .replace(/Tecnica\s*[:.]?\s*[^\n]+/gi, "")
+    .replace(/Dimensiones\s*[:.]?\s*[^\n]+/gi, "")
+    .replace(/Año\s*[:.]?\s*[^\n]+/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export default function WorkForm({
   onSave,
   artists,
@@ -41,8 +57,19 @@ export default function WorkForm({
 
   const [titulo, setTitulo] = useState(initialValues?.titulo ?? "");
   const [descripcion, setDescripcion] = useState(
-    initialValues?.descripcion ?? "",
+    limpiarDescripcion(initialValues?.descripcion ?? ""),
   );
+  const [tecnica, setTecnica] = useState(
+    extraerCampo(initialValues?.descripcion ?? "", "Técnica") ||
+      extraerCampo(initialValues?.descripcion ?? "", "Tecnica"),
+  );
+  const [dimensiones, setDimensiones] = useState(
+    extraerCampo(initialValues?.descripcion ?? "", "Dimensiones"),
+  );
+  const [anio, setAnio] = useState(
+    extraerCampo(initialValues?.descripcion ?? "", "Año"),
+  );
+
   const [precio, setPrecio] = useState<number>(initialValues?.precio ?? 0);
   const [imagenUrlInput, setImagenUrlInput] = useState(
     initialValues?.imagenUrl ?? "",
@@ -58,7 +85,15 @@ export default function WorkForm({
     const timer = window.setTimeout(() => {
       if (initialValues) {
         setTitulo(initialValues.titulo ?? "");
-        setDescripcion(initialValues.descripcion ?? "");
+        setDescripcion(limpiarDescripcion(initialValues.descripcion ?? ""));
+        setTecnica(
+          extraerCampo(initialValues.descripcion ?? "", "Técnica") ||
+            extraerCampo(initialValues.descripcion ?? "", "Tecnica"),
+        );
+        setDimensiones(
+          extraerCampo(initialValues.descripcion ?? "", "Dimensiones"),
+        );
+        setAnio(extraerCampo(initialValues.descripcion ?? "", "Año"));
         setPrecio(Number(initialValues.precio ?? 0));
         setImagenUrlInput(initialValues.imagenUrl ?? "");
         setStock(Number(initialValues.stock ?? 1));
@@ -68,6 +103,9 @@ export default function WorkForm({
       } else {
         setTitulo("");
         setDescripcion("");
+        setTecnica("");
+        setDimensiones("");
+        setAnio("");
         setPrecio(0);
         setImagenUrlInput("");
         setStock(1);
@@ -120,6 +158,9 @@ export default function WorkForm({
     try {
       const tituloLimpio = titulo.trim();
       const descripcionLimpia = descripcion.trim();
+      const tecnicaLimpia = tecnica.trim();
+      const dimensionesLimpias = dimensiones.trim();
+      const anioLimpio = anio.trim();
       const imagenUrlLimpia = imagenUrlInput.trim();
 
       if (!tituloLimpio) {
@@ -142,9 +183,18 @@ export default function WorkForm({
         throw new Error("Selecciona una imagen o pega una URL de imagen.");
       }
 
+      const descripcionFinal = [
+        descripcionLimpia,
+        tecnicaLimpia ? `Técnica: ${tecnicaLimpia}` : "",
+        dimensionesLimpias ? `Dimensiones: ${dimensionesLimpias}` : "",
+        anioLimpio ? `Año: ${anioLimpio}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
       await onSave({
         titulo: tituloLimpio,
-        descripcion: descripcionLimpia,
+        descripcion: descripcionFinal,
         precio,
         imagen: file ?? undefined,
         imagenUrl: imagenUrlLimpia || undefined,
@@ -161,6 +211,9 @@ export default function WorkForm({
       if (mode === "create") {
         setTitulo("");
         setDescripcion("");
+        setTecnica("");
+        setDimensiones("");
+        setAnio("");
         setPrecio(0);
         setImagenUrlInput("");
         setStock(1);
@@ -224,11 +277,48 @@ export default function WorkForm({
       <div>
         <label className="block text-gray-300 text-sm mb-1">Descripción</label>
         <textarea
-          className="w-full px-3 py-2 rounded bg-[#050816] border border-gray-700 text-gray-200 focus:ring-2 focus:ring-verdeEsmeralda text-sm min-h-[90px]"
+          className="w-full px-3 py-2 rounded bg-[#050816] border border-gray-700 text-gray-200 focus:ring-2 focus:ring-verdeEsmeralda text-sm min-h-[120px]"
           value={descripcion}
           onChange={(event) => setDescripcion(event.target.value)}
           placeholder="Descripción conceptual de la obra..."
         />
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-gray-300 text-sm mb-1">Técnica</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 rounded bg-[#050816] border border-gray-700 text-gray-200 focus:ring-2 focus:ring-verdeEsmeralda text-sm"
+            value={tecnica}
+            onChange={(event) => setTecnica(event.target.value)}
+            placeholder="Ej: Óleo sobre lienzo"
+          />
+        </div>
+
+        <div>
+          <label className="block text-gray-300 text-sm mb-1">
+            Dimensiones
+          </label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 rounded bg-[#050816] border border-gray-700 text-gray-200 focus:ring-2 focus:ring-verdeEsmeralda text-sm"
+            value={dimensiones}
+            onChange={(event) => setDimensiones(event.target.value)}
+            placeholder="Ej: 80 x 100 cm"
+          />
+        </div>
+
+        <div>
+          <label className="block text-gray-300 text-sm mb-1">Año</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 rounded bg-[#050816] border border-gray-700 text-gray-200 focus:ring-2 focus:ring-verdeEsmeralda text-sm"
+            value={anio}
+            onChange={(event) => setAnio(event.target.value)}
+            placeholder="Ej: 2026"
+          />
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
