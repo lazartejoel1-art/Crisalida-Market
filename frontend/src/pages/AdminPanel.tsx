@@ -531,7 +531,7 @@ function ArtistsManager() {
     : undefined;
 
   return (
-    <div>
+    <div className="w-full overflow-x-hidden">
       <ArtistForm
         onSave={handleSave}
         initialValues={initialValues}
@@ -555,7 +555,7 @@ function ArtistsManager() {
         </p>
       )}
 
-      <div className="space-y-3 mt-2">
+      <div className="grid grid-cols-1 gap-4 mt-2 w-full">
         {artists.map((artist) => {
           const imageUrl = normalizeArtistImage(artist);
 
@@ -2132,7 +2132,7 @@ function EventosManager() {
     selectedArtistaIndex !== null ? artistasInvitados[selectedArtistaIndex] : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full overflow-x-hidden">
       <div>
         <h1 className="text-2xl font-bold text-verdeEsmeralda mb-2">
           Eventos y exposiciones 🗓
@@ -2143,37 +2143,37 @@ function EventosManager() {
         </p>
       </div>
 
-      <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-5 space-y-4">
+      <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-4 sm:p-5 space-y-4 w-full overflow-hidden">
         <h2 className="text-lg font-bold text-gray-100">
           {editingEvento ? "Editar evento" : "Agregar evento"}
         </h2>
 
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0">
           <input
             value={titulo}
             onChange={(event) => setTitulo(event.target.value)}
             placeholder="Título del evento"
-            className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+            className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
           />
 
           <input
             value={fecha}
             onChange={(event) => setFecha(event.target.value)}
             placeholder="Fecha. Ej: 13 de mayo de 2026"
-            className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+            className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
           />
 
           <input
             value={lugar}
             onChange={(event) => setLugar(event.target.value)}
             placeholder="Lugar. Ej: Museo Costumbrista Juan de Vargas"
-            className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+            className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
           />
 
           <select
             value={activo ? "true" : "false"}
             onChange={(event) => setActivo(event.target.value === "true")}
-            className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+            className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
           >
             <option value="true">Activo / visible en la web</option>
             <option value="false">Inactivo / oculto</option>
@@ -2185,27 +2185,27 @@ function EventosManager() {
           onChange={(event) => setDescripcion(event.target.value)}
           placeholder="Descripción breve del evento"
           rows={3}
-          className="w-full px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+          className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
         />
 
-        <div className="bg-[#0b1220] border border-gray-800 rounded-xl p-4 space-y-4">
+        <div className="bg-[#0b1220] border border-gray-800 rounded-xl p-4 space-y-4 w-full min-w-0 overflow-hidden">
           <h3 className="text-sm font-bold text-verdeEsmeralda">
             Artistas invitados
           </h3>
 
-          <div className="grid md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full min-w-0">
             <input
               value={artistaNombre}
               onChange={(event) => setArtistaNombre(event.target.value)}
               placeholder="Nombre del artista"
-              className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+              className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
             />
 
             <input
               value={artistaEspecialidad}
               onChange={(event) => setArtistaEspecialidad(event.target.value)}
               placeholder="Especialidad. Ej: Pintura, grabado, fotografía"
-              className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+              className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
             />
 
             <div className="md:col-span-2 space-y-2">
@@ -2216,7 +2216,7 @@ function EventosManager() {
                   setArtistaImagenPreview(event.target.value);
                 }}
                 placeholder="URL de imagen del artista opcional"
-                className="w-full px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+                className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
               />
 
               <input
@@ -2225,7 +2225,7 @@ function EventosManager() {
                 onChange={(event) =>
                   handleArtistaImageFile(event.target.files?.[0] ?? null)
                 }
-                className="block w-full text-sm text-gray-300 file:mr-4 file:rounded-lg file:border-0 file:bg-verdeEsmeralda file:px-4 file:py-2 file:text-sm file:font-semibold file:text-black"
+                className="block w-full min-w-0 text-sm text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-verdeEsmeralda file:px-3 file:py-2 file:text-sm file:font-semibold file:text-black"
               />
 
               {artistaImagenPreview && (
@@ -2243,7 +2243,7 @@ function EventosManager() {
             onChange={(event) => setArtistaDescripcion(event.target.value)}
             placeholder="Descripción breve del artista invitado"
             rows={2}
-            className="w-full px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+            className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
           />
 
           <div className="flex flex-wrap gap-2">
@@ -2278,14 +2278,14 @@ function EventosManager() {
                     key={`${artista.nombre}-${index}`}
                     className="rounded-lg border border-gray-800 bg-[#0e1624] p-3"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 min-w-0">
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedArtistaIndex(index);
                           resetObraForm();
                         }}
-                        className="flex gap-3 text-left flex-1"
+                        className="flex gap-3 text-left flex-1 min-w-0"
                       >
                         {imageUrl ? (
                           <img
@@ -2301,7 +2301,7 @@ function EventosManager() {
                         )}
 
                         <div>
-                          <p className="text-sm font-bold text-gray-100">
+                          <p className="text-sm font-bold text-gray-100 break-words">
                             {artista.nombre}
                           </p>
                           <p className="text-xs text-verdeEsmeralda">
@@ -2339,38 +2339,38 @@ function EventosManager() {
         </div>
 
         {selectedArtista && (
-          <div className="bg-[#0b1220] border border-gray-800 rounded-xl p-4 space-y-4">
+          <div className="bg-[#0b1220] border border-gray-800 rounded-xl p-4 space-y-4 w-full min-w-0 overflow-hidden">
             <h3 className="text-sm font-bold text-verdeEsmeralda">
               Obras de {selectedArtista.nombre}
             </h3>
 
-            <div className="grid md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full min-w-0">
               <input
                 value={obraTitulo}
                 onChange={(event) => setObraTitulo(event.target.value)}
                 placeholder="Título de la obra"
-                className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+                className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
               />
 
               <input
                 value={obraTecnica}
                 onChange={(event) => setObraTecnica(event.target.value)}
                 placeholder="Técnica. Ej: óleo, acrílico, xilografía"
-                className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+                className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
               />
 
               <input
                 value={obraAnio}
                 onChange={(event) => setObraAnio(event.target.value)}
                 placeholder="Año. Ej: 2026"
-                className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+                className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
               />
 
               <input
                 value={obraPrecio}
                 onChange={(event) => setObraPrecio(event.target.value)}
                 placeholder="Precio opcional"
-                className="px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+                className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
               />
 
               <div className="md:col-span-2 space-y-2">
@@ -2381,7 +2381,7 @@ function EventosManager() {
                     setObraImagenPreview(event.target.value);
                   }}
                   placeholder="URL de imagen de la obra opcional"
-                  className="w-full px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+                  className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
                 />
 
                 <input
@@ -2390,7 +2390,7 @@ function EventosManager() {
                   onChange={(event) =>
                     handleObraImageFile(event.target.files?.[0] ?? null)
                   }
-                  className="block w-full text-sm text-gray-300 file:mr-4 file:rounded-lg file:border-0 file:bg-verdeEsmeralda file:px-4 file:py-2 file:text-sm file:font-semibold file:text-black"
+                  className="block w-full min-w-0 text-sm text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-verdeEsmeralda file:px-3 file:py-2 file:text-sm file:font-semibold file:text-black"
                 />
 
                 {obraImagenPreview && (
@@ -2408,7 +2408,7 @@ function EventosManager() {
               onChange={(event) => setObraDescripcion(event.target.value)}
               placeholder="Descripción breve de la obra"
               rows={2}
-              className="w-full px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
+              className="w-full min-w-0 px-3 py-2 rounded-lg bg-[#0e1624] border border-gray-800 text-sm text-white"
             />
 
             <button
@@ -2420,14 +2420,14 @@ function EventosManager() {
             </button>
 
             {selectedArtista.obras && selectedArtista.obras.length > 0 && (
-              <div className="grid md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full min-w-0">
                 {selectedArtista.obras.map((obra, obraIndex) => {
                   const obraImg = getInvitadoImageUrl(obra.imagenUrl);
 
                   return (
                     <div
                       key={`${obra.titulo}-${obraIndex}`}
-                      className="bg-[#0e1624] border border-gray-800 rounded-xl p-3 flex gap-3"
+                      className="bg-[#0e1624] border border-gray-800 rounded-xl p-3 flex flex-col sm:flex-row gap-3 w-full overflow-hidden"
                     >
                       {obraImg && (
                         <img
@@ -2437,15 +2437,15 @@ function EventosManager() {
                         />
                       )}
 
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-gray-100">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-100 break-words">
                           {obra.titulo}
                         </p>
                         <p className="text-xs text-verdeEsmeralda">
                           {obra.tecnica || "Sin técnica"}
                           {obra.anio ? ` · ${obra.anio}` : ""}
                         </p>
-                        <p className="text-xs text-gray-400 line-clamp-2">
+                        <p className="text-xs text-gray-400 line-clamp-2 break-words">
                           {obra.descripcion || "Sin descripción"}
                         </p>
 
@@ -2484,7 +2484,7 @@ function EventosManager() {
             type="file"
             accept="image/*"
             onChange={(event) => setFlyer(event.target.files?.[0] ?? null)}
-            className="block w-full text-sm text-gray-300 file:mr-4 file:rounded-lg file:border-0 file:bg-verdeEsmeralda file:px-4 file:py-2 file:text-sm file:font-semibold file:text-black"
+            className="block w-full min-w-0 text-sm text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-verdeEsmeralda file:px-3 file:py-2 file:text-sm file:font-semibold file:text-black"
           />
 
           {editingEvento && (
@@ -2537,7 +2537,7 @@ function EventosManager() {
             Aún no hay eventos registrados.
           </p>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
             {eventos.map((evento) => {
               const flyerUrl = getAdminImageUrl(evento.flyerUrl, evento.flyer);
               const invitados = Array.isArray(evento.artistasInvitados)
@@ -2693,7 +2693,7 @@ export default function AdminPanel() {
   };
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-negroSuave text-blancoPuro flex">
+    <div className="min-h-screen w-full overflow-x-hidden bg-negroSuave text-blancoPuro flex flex-col lg:flex-row">
       <aside className="w-32 sm:w-56 shrink-0 bg-[#0d1117] border-r border-gray-800 p-3 sm:p-6 flex flex-col justify-between">
         <div>
           <h2 className="text-base sm:text-xl font-bold text-verdeEsmeralda mb-6 break-words">
@@ -2763,7 +2763,7 @@ export default function AdminPanel() {
         </button>
       </aside>
 
-      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-10 overflow-x-hidden">
+      <main className="w-full flex-1 min-w-0 p-4 sm:p-6 lg:p-10 overflow-x-hidden">
         {screen === "dashboard" && (
           <DashboardHome
             artistsCount={stats.artistsCount}
