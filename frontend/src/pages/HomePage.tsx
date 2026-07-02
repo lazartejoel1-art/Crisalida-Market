@@ -40,6 +40,46 @@ function getWorkImage(work: Work): string | null {
   return buildImageUrl(work.imagenUrl || work.imagen);
 }
 
+function SafeImage({
+  src,
+  alt,
+  className = "",
+  eager = false,
+}: {
+  src: string | null;
+  alt: string;
+  className?: string;
+  eager?: boolean;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  if (!src || failed) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-white/5 text-xs text-white/45">
+        Sin imagen
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {!loaded && <div className="absolute inset-0 animate-pulse bg-white/10" />}
+
+      <img
+        src={src}
+        alt={alt}
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={() => setFailed(true)}
+        className={`${className} ${loaded ? "opacity-100" : "opacity-0"}`}
+        draggable={false}
+      />
+    </>
+  );
+}
+
 function Shell({
   children,
   className = "",
@@ -65,10 +105,7 @@ function EventosProSection() {
     async function loadEventos() {
       try {
         const res = await fetch(`${API}/eventos/activos`);
-
-        if (!res.ok) {
-          throw new Error("No se pudieron cargar los eventos.");
-        }
+        if (!res.ok) throw new Error("No se pudieron cargar los eventos.");
 
         const data = (await res.json()) as Evento[];
         const clean = Array.isArray(data)
@@ -131,9 +168,6 @@ function EventosProSection() {
           border: "1px solid var(--c-border)",
         }}
       >
-        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/5 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-white/5 blur-3xl pointer-events-none" />
-
         <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-5">
           <div>
             <p
@@ -142,9 +176,11 @@ function EventosProSection() {
             >
               Agenda Crisálida
             </p>
+
             <h2 className="mt-2 text-2xl sm:text-3xl font-extrabold text-white">
               Eventos y exposiciones
             </h2>
+
             <p className="mt-1 text-sm" style={{ color: "var(--c-muted)" }}>
               Flyers, inauguraciones y actividades artísticas destacadas.
             </p>
@@ -194,17 +230,16 @@ function EventosProSection() {
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeEvento.id}
-                  className="relative h-[420px] sm:h-[520px]"
+                  className="relative aspect-[4/5] sm:aspect-[16/10] lg:aspect-auto lg:h-[520px] overflow-hidden"
                   initial={{ opacity: 0, scale: 1.015 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.99 }}
                   transition={{ duration: 0.6, ease: "easeInOut" }}
                 >
-                  <img
+                  <SafeImage
                     src={activeFlyer}
                     alt={activeEvento.titulo}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.025]"
-                    loading="lazy"
                   />
 
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
@@ -258,16 +293,13 @@ function EventosProSection() {
                         : "1px solid var(--c-border)",
                     }}
                   >
-                    {flyerUrl ? (
-                      <img
+                    <div className="relative w-24 h-28 sm:w-28 sm:h-32 rounded-2xl overflow-hidden bg-white/5 shrink-0">
+                      <SafeImage
                         src={flyerUrl}
                         alt={evento.titulo}
-                        className="w-24 h-28 sm:w-28 sm:h-32 object-cover rounded-2xl"
-                        loading="lazy"
+                        className="w-full h-full object-cover"
                       />
-                    ) : (
-                      <div className="w-24 h-28 sm:w-28 sm:h-32 rounded-2xl bg-white/5" />
-                    )}
+                    </div>
 
                     <div className="flex-1">
                       <p
@@ -298,30 +330,6 @@ function EventosProSection() {
                   </button>
                 );
               })}
-
-              <div className="flex gap-2 pt-1">
-                {eventos.slice(0, Math.min(eventos.length, 6)).map((evento) => (
-                  <button
-                    key={evento.id}
-                    type="button"
-                    onClick={() => {
-                      const nextIndex = eventos.findIndex(
-                        (item) => item.id === evento.id,
-                      );
-                      if (nextIndex >= 0) setEventoIndex(nextIndex);
-                    }}
-                    className="h-1.5 rounded-full transition-all"
-                    style={{
-                      width: evento.id === activeEvento.id ? 34 : 12,
-                      background:
-                        evento.id === activeEvento.id
-                          ? "var(--c-accent)"
-                          : "rgba(255,255,255,0.25)",
-                    }}
-                    aria-label={`Ver evento ${evento.titulo}`}
-                  />
-                ))}
-              </div>
             </div>
           </div>
         )}
@@ -337,29 +345,6 @@ function WorksGrid({
   works: Work[];
   onOpen: (id: number) => void;
 }) {
-  const metaById = useMemo(() => {
-    const m = new Map<
-      number,
-      { r: number; x: number; y: number; d: number; s: number; t: number }
-    >();
-
-    works.forEach((w, idx) => {
-      const seed = (w.id * 9301 + 49297) % 233280;
-      const rnd = seed / 233280;
-
-      const r = rnd * 12 - 6;
-      const x = rnd * 10 - 5;
-      const y = (((seed * 7) % 233280) / 233280) * 10 - 5;
-      const d = 0.04 * (idx % 10);
-      const s = 1 + (((seed * 13) % 233280) / 233280) * 0.02;
-      const t = 12 + (idx % 3) * 1.2;
-
-      m.set(w.id, { r, x, y, d, s, t });
-    });
-
-    return m;
-  }, [works]);
-
   return (
     <motion.div
       layout
@@ -368,17 +353,7 @@ function WorksGrid({
     >
       <AnimatePresence mode="popLayout">
         {works.map((w) => {
-          const meta = metaById.get(w.id) ?? {
-            r: 0,
-            x: 0,
-            y: 0,
-            d: 0,
-            s: 1,
-            t: 7,
-          };
-
           const imageUrl = getWorkImage(w);
-
           if (!imageUrl) return null;
 
           return (
@@ -395,38 +370,17 @@ function WorksGrid({
               initial={{ opacity: 0, scale: 0.985, y: 18 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.985, y: -18 }}
-              transition={{ duration: 0.45, delay: meta.d }}
-              whileHover={{ scale: 1.012 }}
+              transition={{ duration: 0.35 }}
               whileTap={{ scale: 0.988 }}
             >
-              <motion.div
-                className="relative w-full h-72 sm:h-80"
-                animate={{
-                  rotate: [meta.r, meta.r + 1.5, meta.r],
-                  x: [meta.x, meta.x + 3, meta.x],
-                  y: [meta.y, meta.y - 4, meta.y],
-                  scale: [1, meta.s, 1],
-                }}
-                transition={{
-                  duration: meta.t,
-                  ease: "easeInOut",
-                  repeat: Infinity,
-                  repeatType: "mirror",
-                }}
-              >
-                <img
+              <div className="relative w-full aspect-[4/5] overflow-hidden">
+                <SafeImage
                   src={imageUrl}
                   alt={w.titulo}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
+                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-[1.03]"
                 />
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute -inset-1 opacity-[0.10] blur-2xl bg-white/10" />
-                  <div className="absolute inset-0 border border-white/10 rounded-[28px]" />
-                </div>
 
                 <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-3">
                   <div className="bg-black/45 backdrop-blur px-3 py-2 rounded-2xl border border-white/10">
@@ -436,6 +390,7 @@ function WorksGrid({
                     >
                       {w.artista?.nombre ?? "Colectiva Crisálida"}
                     </p>
+
                     <p className="text-sm font-bold leading-tight text-white">
                       {w.titulo}
                     </p>
@@ -443,17 +398,19 @@ function WorksGrid({
 
                   <div className="bg-black/45 backdrop-blur px-3 py-2 rounded-2xl border border-white/10 text-right">
                     <p className="text-[10px] text-white/70">Bs</p>
+
                     <p className="text-sm font-extrabold text-white">
                       {toNumber(w.precio).toFixed(2)}
                     </p>
                   </div>
                 </div>
-              </motion.div>
+              </div>
 
               <div className="px-4 py-3 flex items-center justify-between">
                 <p className="text-xs text-white/70 line-clamp-1">
                   {w.descripcion ?? "—"}
                 </p>
+
                 <span className="text-[11px] text-white/55">
                   Stock: {Number(w.stock ?? 0)}
                 </span>
@@ -480,7 +437,7 @@ export default function HomePage() {
       const data = await fetchObras();
 
       const clean = (Array.isArray(data) ? data : []).filter((w) =>
-        Boolean(w.imagenUrl || w.imagen)
+        Boolean(w.imagenUrl || w.imagen),
       );
 
       setWorks(clean);
@@ -500,11 +457,11 @@ export default function HomePage() {
   useEffect(() => {
     if (!works.length) return;
 
-    const t = setInterval(() => {
+    const t = window.setInterval(() => {
       setIndex((prev) => (prev + 1) % works.length);
     }, 7000);
 
-    return () => clearInterval(t);
+    return () => window.clearInterval(t);
   }, [works.length]);
 
   const active = useMemo(() => {
@@ -532,18 +489,15 @@ export default function HomePage() {
           <div className="grid lg:grid-cols-12 gap-6 items-stretch">
             <div className="lg:col-span-8">
               <div
-                className="relative overflow-hidden rounded-3xl"
+                className="relative overflow-hidden rounded-3xl aspect-[4/5] sm:aspect-[16/10] lg:aspect-auto lg:h-[66vh] lg:min-h-[460px] lg:max-h-[720px]"
                 style={{
                   background: "var(--c-panel)",
                   border: "1px solid var(--c-border)",
-                  height: "66vh",
-                  minHeight: 460,
-                  maxHeight: 720,
                 }}
               >
                 {loading ? (
                   <div
-                    className="h-full flex items-center justify-center text-sm"
+                    className="h-full flex items-center justify-center text-sm animate-pulse"
                     style={{ color: "var(--c-muted)" }}
                   >
                     Cargando obras...
@@ -566,29 +520,24 @@ export default function HomePage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      transition={{ duration: 0.45 }}
+                      transition={{ duration: 0.35 }}
                     >
-                      <motion.img
-                        src={activeImage}
-                        alt={active.titulo}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        initial={{ opacity: 0, scale: 1.03, y: 10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.99, y: -10 }}
-                        transition={{ duration: 0.9, ease: "easeInOut" }}
-                      />
+                      <motion.div
+                        className="absolute inset-0"
+                        initial={{ opacity: 0, scale: 1.02 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.99 }}
+                        transition={{ duration: 0.7, ease: "easeInOut" }}
+                      >
+                        <SafeImage
+                          src={activeImage}
+                          alt={active.titulo}
+                          eager
+                          className="w-full h-full object-cover"
+                        />
+                      </motion.div>
 
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-
-                      <div
-                        className="absolute inset-0 opacity-[0.10] pointer-events-none"
-                        style={{
-                          backgroundImage:
-                            "radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1px)",
-                          backgroundSize: "3px 3px",
-                        }}
-                      />
 
                       <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
                         <p
@@ -603,6 +552,7 @@ export default function HomePage() {
                             <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight">
                               {active.titulo}
                             </h1>
+
                             {active.descripcion ? (
                               <p className="mt-2 text-sm text-white/80 line-clamp-2">
                                 {active.descripcion}
@@ -612,6 +562,7 @@ export default function HomePage() {
 
                           <div className="text-right">
                             <p className="text-xs text-white/70">Precio</p>
+
                             <p className="text-xl sm:text-2xl font-extrabold">
                               {toNumber(active.precio).toFixed(2)} Bs
                             </p>
@@ -621,6 +572,7 @@ export default function HomePage() {
                         <div className="mt-5 flex items-center gap-2">
                           {works.slice(0, Math.min(works.length, 6)).map((w) => {
                             const isActive = w.id === active.id;
+
                             return (
                               <div
                                 key={w.id}
@@ -637,7 +589,7 @@ export default function HomePage() {
                         </div>
 
                         <p className="mt-3 text-[11px] text-white/70">
-                          (Click para ver la obra completa)
+                          Click para ver la obra completa
                         </p>
                       </div>
                     </motion.button>
@@ -658,6 +610,7 @@ export default function HomePage() {
                   <p className="font-semibold text-white">
                     Tu viaje con Crisálida comienza ahora
                   </p>
+
                   <span className="text-xs" style={{ color: "var(--c-accent)" }}>
                     Online Gallery
                   </span>
@@ -679,9 +632,11 @@ export default function HomePage() {
                     <p className="text-xs" style={{ color: "var(--c-accent)" }}>
                       Galería
                     </p>
+
                     <p className="text-sm font-bold text-white">
-                      Ver obras completas (galería)
+                      Ver obras completas
                     </p>
+
                     <p className="text-xs mt-1" style={{ color: "var(--c-muted)" }}>
                       Navega como exposición.
                     </p>
@@ -698,9 +653,11 @@ export default function HomePage() {
                     <p className="text-xs" style={{ color: "var(--c-accent)" }}>
                       Tienda
                     </p>
+
                     <p className="text-sm font-bold text-white">
                       Comprar prints / obras
                     </p>
+
                     <p className="text-xs mt-1" style={{ color: "var(--c-muted)" }}>
                       Ordena y paga.
                     </p>
@@ -717,9 +674,11 @@ export default function HomePage() {
                     <p className="text-xs" style={{ color: "var(--c-accent)" }}>
                       Artistas
                     </p>
+
                     <p className="text-sm font-bold text-white">
                       Conoce la colectiva
                     </p>
+
                     <p className="text-xs mt-1" style={{ color: "var(--c-muted)" }}>
                       Biografías y estilo.
                     </p>
@@ -764,6 +723,7 @@ export default function HomePage() {
                 <h2 className="text-xl sm:text-2xl font-extrabold text-white">
                   Encuentra tu obra ideal
                 </h2>
+
                 <p className="mt-1 text-sm" style={{ color: "var(--c-muted)" }}>
                   Busca por título o artista.
                 </p>
@@ -779,6 +739,7 @@ export default function HomePage() {
                   }}
                   placeholder="Ej: Metamorfosis, Antonella, Grabado..."
                 />
+
                 <button
                   type="button"
                   className="px-5 py-3 rounded-xl font-semibold"
@@ -798,8 +759,9 @@ export default function HomePage() {
               <h3 className="text-xl sm:text-2xl font-extrabold text-white">
                 Obras en movimiento
               </h3>
+
               <p className="text-sm mt-1" style={{ color: "var(--c-muted)" }}>
-                Un flujo continuo de piezas: sin botones, solo mirada.
+                Un flujo continuo de piezas: sin errores de carga.
               </p>
             </div>
 
@@ -851,8 +813,9 @@ export default function HomePage() {
               <h4 className="text-xl sm:text-2xl font-extrabold text-white">
                 Compra piezas y prints exclusivos de Crisálida
               </h4>
+
               <p className="mt-2 text-sm" style={{ color: "var(--c-muted)" }}>
-                Un bloque tipo “tienda” para darle fuerza comercial a la página.
+                Un bloque tipo tienda para darle fuerza comercial a la página.
               </p>
             </div>
 
@@ -864,6 +827,7 @@ export default function HomePage() {
               >
                 Ir a la Tienda
               </Link>
+
               <Link
                 to="/contacto"
                 className="px-5 py-3 rounded-xl font-semibold border"
@@ -885,6 +849,7 @@ export default function HomePage() {
             <p style={{ color: "var(--c-muted)" }}>
               © 2025 Colectiva de Arte Crisálida. Todos los derechos reservados.
             </p>
+
             <p style={{ color: "rgba(255,255,255,0.55)" }}>By Joel Lazarte</p>
           </div>
         </Shell>
