@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -16,6 +17,7 @@ import { ObrasService } from './obras.service';
 import { CreateObraDto } from './dto/create-obra.dto';
 import { Obra } from './obra.entity';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
+import sharp from 'sharp';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -23,26 +25,68 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const MAX_IMAGE_SIZE = 50 * 1024 * 1024; // 50 MB
+const MAX_IMAGE_SIZE = 50 * 1024 * 1024;
 
 const imageUploadOptions = {
   limits: {
     fileSize: MAX_IMAGE_SIZE,
   },
-};
+  fileFilter: (
+    req: any,
+    file: Express.Multer.File,
+    callback: (error: Error | null, acceptFile: boolean) => void,
+  ) => {
+    const allowedTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/heic',
+      'image/heif',
+    ];
 
-function uploadToCloudinary(
-  file: Express.Multer.File,
-): Promise<UploadApiResponse> {
-  return new Promise((resolve, reject) => {
-    if (!file) {
-      return reject(new Error('No se recibió ninguna imagen'));
+    if (!allowedTypes.includes(file.mimetype)) {
+      return callback(
+        new BadRequestException(
+          'Solo se permiten imágenes JPG, PNG, WEBP o HEIC',
+        ),
+        false,
+      );
     }
 
+    callback(null, true);
+  },
+};
+
+async function optimizeImageToWebp(file: Express.Multer.File): Promise<Buffer> {
+  if (!file) {
+    throw new BadRequestException('No se recibió ninguna imagen');
+  }
+
+  return sharp(file.buffer)
+    .rotate()
+    .resize({
+      width: 1800,
+      withoutEnlargement: true,
+    })
+    .webp({
+      quality: 82,
+      effort: 6,
+    })
+    .toBuffer();
+}
+
+async function uploadToCloudinary(
+  file: Express.Multer.File,
+): Promise<UploadApiResponse> {
+  const optimizedBuffer = await optimizeImageToWebp(file);
+
+  return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: 'crisalida-market/obras',
         resource_type: 'image',
+        format: 'webp',
       },
       (error, result) => {
         if (error) {
@@ -57,7 +101,7 @@ function uploadToCloudinary(
       },
     );
 
-    uploadStream.end(file.buffer);
+    uploadStream.end(optimizedBuffer);
   });
 }
 
