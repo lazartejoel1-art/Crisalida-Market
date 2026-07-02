@@ -279,7 +279,7 @@ export default function WorkDetailPage() {
 
       <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-10 items-start w-full">
         <div
-          className="relative bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden select-none min-h-[700px] cursor-zoom-in group touch-none"
+          className="relative w-full bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden select-none cursor-zoom-in group touch-none"
           onContextMenu={(e) => e.preventDefault()}
           onDragStart={(e) => e.preventDefault()}
           onMouseEnter={() => setZoomActive(true)}
@@ -295,8 +295,10 @@ export default function WorkDetailPage() {
               <img
                 src={imageUrl}
                 alt={obra.titulo}
-                className={`w-full h-full object-cover pointer-events-none transition-transform duration-300 ${
-                  zoomActive ? "scale-[4.0]" : "scale-100"
+                loading="eager"
+                decoding="async"
+                className={`block w-full h-auto object-contain pointer-events-none transition-transform duration-300 ${
+                  zoomActive ? "scale-[2.8]" : "scale-100"
                 }`}
                 style={{
                   transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
