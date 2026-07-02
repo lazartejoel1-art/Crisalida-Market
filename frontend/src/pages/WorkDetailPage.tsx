@@ -62,9 +62,7 @@ function extraerCampo(texto: string, etiquetas: string[]): string {
 
     const match = texto.match(regex);
 
-    if (match?.[1]) {
-      return match[1].trim();
-    }
+    if (match?.[1]) return match[1].trim();
   }
 
   return "";
@@ -146,9 +144,7 @@ export default function WorkDetailPage() {
 
         setError("No se pudo cargar la obra. Inténtalo más tarde.");
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
@@ -229,7 +225,6 @@ export default function WorkDetailPage() {
     }
 
     saveCart(cart);
-
     setAddedMessage("Obra agregada al carrito 🛒");
     setTimeout(() => setAddedMessage(null), 2000);
   };
@@ -268,7 +263,7 @@ export default function WorkDetailPage() {
   const imageUrl = getImageUrl(obra.imagenUrl || obra.imagen);
 
   return (
-    <section className="w-full px-4 lg:px-10 py-10">
+    <section className="w-full px-4 lg:px-10 py-8 lg:py-10">
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -277,9 +272,9 @@ export default function WorkDetailPage() {
         ← Volver
       </button>
 
-      <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-10 items-start w-full">
+      <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-8 lg:gap-10 items-start w-full">
         <div
-          className="relative w-full bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden select-none cursor-zoom-in group touch-none"
+          className="relative w-full h-fit bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden select-none cursor-zoom-in group touch-none"
           onContextMenu={(e) => e.preventDefault()}
           onDragStart={(e) => e.preventDefault()}
           onMouseEnter={() => setZoomActive(true)}
@@ -292,19 +287,21 @@ export default function WorkDetailPage() {
         >
           {imageUrl ? (
             <>
-              <img
-                src={imageUrl}
-                alt={obra.titulo}
-                loading="eager"
-                decoding="async"
-                className={`block w-full h-auto object-contain pointer-events-none transition-transform duration-300 ${
-                  zoomActive ? "scale-[2.8]" : "scale-100"
-                }`}
-                style={{
-                  transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
-                }}
-                draggable={false}
-              />
+              <div className="relative w-full h-fit overflow-hidden">
+                <img
+                  src={imageUrl}
+                  alt={obra.titulo}
+                  loading="eager"
+                  decoding="async"
+                  className={`block w-full h-auto max-h-none object-contain pointer-events-none transition-transform duration-300 ${
+                    zoomActive ? "scale-[2.4]" : "scale-100"
+                  }`}
+                  style={{
+                    transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                  }}
+                  draggable={false}
+                />
+              </div>
 
               <div className="absolute top-3 left-3 z-30 text-[10px] text-white/70 bg-black/40 border border-white/10 rounded-full px-3 py-1 backdrop-blur-sm">
                 {zoomActive ? "Zoom activo" : "desliza para ampliar"}
@@ -315,8 +312,6 @@ export default function WorkDetailPage() {
               Sin imagen
             </div>
           )}
-
-          <div className="absolute inset-0 z-10 pointer-events-none" />
 
           <div className="absolute bottom-3 right-3 text-[10px] text-white/40 uppercase tracking-widest pointer-events-none">
             Crisálida · Arte
