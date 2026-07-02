@@ -338,7 +338,7 @@ function EventosProSection() {
   );
 }
 
-function WorksGrid({
+function WorksCarousel({
   works,
   onOpen,
 }: {
@@ -346,32 +346,22 @@ function WorksGrid({
   onOpen: (id: number) => void;
 }) {
   return (
-    <motion.div
-      layout
-      className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-      transition={{ type: "spring", stiffness: 200, damping: 20 }}
-    >
-      <AnimatePresence mode="popLayout">
+    <div className="-mx-4 sm:mx-0">
+      <div className="flex gap-4 overflow-x-auto px-4 sm:px-0 pb-4 snap-x snap-mandatory scroll-smooth">
         {works.map((w) => {
           const imageUrl = getWorkImage(w);
           if (!imageUrl) return null;
 
           return (
-            <motion.button
+            <button
               key={w.id}
-              layout
               type="button"
               onClick={() => onOpen(w.id)}
-              className="relative rounded-[28px] overflow-hidden text-left select-none"
+              className="min-w-[82%] sm:min-w-[360px] lg:min-w-[320px] snap-start rounded-[28px] overflow-hidden text-left select-none"
               style={{
                 background: "var(--c-panel)",
                 border: "1px solid var(--c-border)",
               }}
-              initial={{ opacity: 0, scale: 0.985, y: 18 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.985, y: -18 }}
-              transition={{ duration: 0.35 }}
-              whileTap={{ scale: 0.988 }}
             >
               <div className="relative w-full aspect-[4/5] overflow-hidden">
                 <SafeImage
@@ -415,11 +405,11 @@ function WorksGrid({
                   Stock: {Number(w.stock ?? 0)}
                 </span>
               </div>
-            </motion.button>
+            </button>
           );
         })}
-      </AnimatePresence>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
@@ -761,7 +751,7 @@ export default function HomePage() {
               </h3>
 
               <p className="text-sm mt-1" style={{ color: "var(--c-muted)" }}>
-                Un flujo continuo de piezas: sin errores de carga.
+                Desliza las obras y explora la colección.
               </p>
             </div>
 
@@ -797,7 +787,7 @@ export default function HomePage() {
               No hay obras con imagen todavía. Sube obras desde Admin.
             </div>
           ) : (
-            <WorksGrid works={cascadeWorks} onOpen={goToWork} />
+            <WorksCarousel works={cascadeWorks} onOpen={goToWork} />
           )}
         </Shell>
 
