@@ -6,9 +6,22 @@ import { motion } from "framer-motion";
 
 const API_URL = "http://localhost:3000";
 
+function getImageUrl(obra: Obra) {
+  const imagen = obra.imagenUrl || obra.imagen;
+
+  if (!imagen) return "/placeholder.jpg";
+
+  if (imagen.startsWith("http")) return imagen;
+
+  if (imagen.startsWith("/uploads")) return `${API_URL}${imagen}`;
+
+  return `${API_URL}/uploads/${imagen}`;
+}
+
 export default function ObraDetalle() {
   const { id } = useParams<{ id: string }>();
   const [obra, setObra] = useState<Obra | null>(null);
+  const [imagenCargada, setImagenCargada] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -28,22 +41,33 @@ export default function ObraDetalle() {
   }
 
   return (
-    <div className="bg-negroSuave min-h-screen text-blancoPuro px-6 py-10">
-      <div className="flex flex-col md:flex-row gap-8">
+    <div className="bg-negroSuave min-h-screen text-blancoPuro px-4 md:px-6 py-8 md:py-10">
+      <div className="flex flex-col md:flex-row gap-8 items-start">
         <motion.div
-          className="flex-1"
+          className="w-full md:flex-1"
           initial={{ opacity: 0, x: -40 }}
           animate={{ opacity: 1, x: 0 }}
         >
-         <img
-  src={obra.imagen ? `${API_URL}/uploads/${obra.imagen}` : "/placeholder.jpg"}
-  alt={obra.titulo}
-  className="w-full rounded-2xl object-cover shadow-lg"
-/>
+          <div className="w-full rounded-2xl overflow-hidden bg-black/30 shadow-lg">
+            {!imagenCargada && (
+              <div className="w-full h-64 md:h-96 animate-pulse bg-white/10 rounded-2xl" />
+            )}
+
+            <img
+              src={getImageUrl(obra)}
+              alt={obra.titulo}
+              loading="lazy"
+              decoding="async"
+              onLoad={() => setImagenCargada(true)}
+              className={`w-full h-auto max-h-[80vh] object-contain rounded-2xl transition-opacity duration-300 ${
+                imagenCargada ? "opacity-100" : "opacity-0 absolute"
+              }`}
+            />
+          </div>
         </motion.div>
 
         <motion.div
-          className="flex-1 flex flex-col justify-between"
+          className="w-full md:flex-1 flex flex-col justify-between"
           initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
         >
@@ -52,9 +76,7 @@ export default function ObraDetalle() {
               {obra.titulo}
             </h1>
 
-            <p className="mt-3 text-gray-300">
-              {obra.descripcion}
-            </p>
+            <p className="mt-3 text-gray-300">{obra.descripcion}</p>
 
             <p className="mt-2 text-sm text-gray-400">
               Artista: {obra.artista?.nombre}
