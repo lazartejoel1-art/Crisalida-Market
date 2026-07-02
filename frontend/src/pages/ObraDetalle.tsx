@@ -10,9 +10,7 @@ function getImageUrl(obra: Obra) {
   const imagen = obra.imagenUrl || obra.imagen;
 
   if (!imagen) return "/placeholder.jpg";
-
   if (imagen.startsWith("http")) return imagen;
-
   if (imagen.startsWith("/uploads")) return `${API_URL}${imagen}`;
 
   return `${API_URL}/uploads/${imagen}`;
@@ -26,10 +24,15 @@ export default function ObraDetalle() {
   useEffect(() => {
     if (!id) return;
 
+    // defer resetting imagenCargada to avoid calling setState synchronously in the effect
+    const t = window.setTimeout(() => setImagenCargada(false), 0);
+
     fetchObras().then((data: Obra[]) => {
       const encontrada = data.find((o) => o.id === Number(id));
       setObra(encontrada ?? null);
     });
+
+    return () => clearTimeout(t);
   }, [id]);
 
   if (!obra) {
@@ -48,7 +51,7 @@ export default function ObraDetalle() {
           initial={{ opacity: 0, x: -40 }}
           animate={{ opacity: 1, x: 0 }}
         >
-          <div className="w-full rounded-2xl overflow-hidden bg-black/30 shadow-lg">
+          <div className="relative w-full inline-block rounded-2xl overflow-hidden bg-black/30 shadow-lg">
             {!imagenCargada && (
               <div className="w-full h-64 md:h-96 animate-pulse bg-white/10 rounded-2xl" />
             )}
@@ -56,11 +59,11 @@ export default function ObraDetalle() {
             <img
               src={getImageUrl(obra)}
               alt={obra.titulo}
-              loading="lazy"
+              loading="eager"
               decoding="async"
               onLoad={() => setImagenCargada(true)}
-              className={`w-full h-auto max-h-[80vh] object-contain rounded-2xl transition-opacity duration-300 ${
-                imagenCargada ? "opacity-100" : "opacity-0 absolute"
+              className={`block w-full h-auto object-contain rounded-2xl transition-opacity duration-300 ${
+                imagenCargada ? "opacity-100" : "opacity-0 absolute inset-0"
               }`}
             />
           </div>
