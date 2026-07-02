@@ -1,14 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchObras } from "../services/api";
-
-function getImageUrl(imagePath: string | null | undefined): string | null {
-  if (!imagePath) return null;
-
-  return imagePath.startsWith("http")
-    ? imagePath
-    : `/images/${imagePath}`;
-}
+import { buildImageUrl, fetchObras } from "../services/api";
 
 type Work = {
   id: number;
@@ -35,11 +27,15 @@ type CartItem = {
 
 const CART_KEY = "crisalida_cart";
 
+function getImageUrl(imagePath: string | null | undefined): string | null {
+  if (!imagePath) return null;
+  return buildImageUrl(imagePath);
+}
+
 function readCart(): CartItem[] {
   try {
     const raw = localStorage.getItem(CART_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
-
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -47,27 +43,69 @@ function readCart(): CartItem[] {
 }
 
 function readCartCount() {
-  const items = readCart();
-
-  return items.reduce((acc, it) => acc + (it.cantidad ?? 0), 0);
+  return readCart().reduce((acc, it) => acc + (it.cantidad ?? 0), 0);
 }
 
 function saveCart(cart: CartItem[]) {
   localStorage.setItem(CART_KEY, JSON.stringify(cart));
-
   window.dispatchEvent(new Event("crisalida_cart_updated"));
+}
+
+function WorkImage({
+  src,
+  title,
+}: {
+  src: string | null;
+  title: string;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  if (!src || failed) {
+    return (
+      <div
+        className="w-full aspect-[4/3] flex items-center justify-center text-sm"
+        style={{ color: "var(--c-muted)" }}
+      >
+        Sin imagen
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full aspect-[4/3] overflow-hidden bg-black/20">
+      {!loaded && (
+        <div className="absolute inset-0 animate-pulse bg-white/10" />
+      )}
+
+      <img
+        src={src}
+        alt={title}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={() => setFailed(true)}
+        className={`block w-full h-full object-cover transition-all duration-500 hover:scale-[1.03] ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
+        draggable={false}
+      />
+
+      <div className="absolute inset-0 z-10 pointer-events-none" />
+
+      <div className="absolute bottom-3 right-3 text-[10px] text-white/40 uppercase tracking-widest pointer-events-none">
+        Crisálida · Gallery
+      </div>
+    </div>
+  );
 }
 
 export default function StorePage() {
   const [works, setWorks] = useState<Work[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [toast, setToast] = useState<string | null>(null);
-
-  const [cartCount, setCartCount] = useState<number>(() =>
-    readCartCount(),
-  );
+  const [cartCount, setCartCount] = useState<number>(() => readCartCount());
 
   const loadWorks = async () => {
     setLoading(true);
@@ -75,11 +113,9 @@ export default function StorePage() {
 
     try {
       const data = await fetchObras();
-
       setWorks(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
-
       setError("No se pudo cargar la tienda.");
     } finally {
       setLoading(false);
@@ -94,36 +130,22 @@ export default function StorePage() {
     const updateCount = () => setCartCount(readCartCount());
 
     window.addEventListener("storage", updateCount);
-
-    window.addEventListener(
-      "crisalida_cart_updated",
-      updateCount,
-    );
+    window.addEventListener("crisalida_cart_updated", updateCount);
 
     return () => {
       window.removeEventListener("storage", updateCount);
-
-      window.removeEventListener(
-        "crisalida_cart_updated",
-        updateCount,
-      );
+      window.removeEventListener("crisalida_cart_updated", updateCount);
     };
   }, []);
 
   const addToCart = (w: Work) => {
     const precioNum =
-      typeof w.precio === "number"
-        ? w.precio
-        : Number(w.precio ?? 0);
+      typeof w.precio === "number" ? w.precio : Number(w.precio ?? 0);
 
-    const safePrice = Number.isFinite(precioNum)
-      ? precioNum
-      : 0;
-
+    const safePrice = Number.isFinite(precioNum) ? precioNum : 0;
     const imageUrl = getImageUrl(w.imagenUrl || w.imagen);
 
     const cart = readCart();
-
     const idx = cart.findIndex((x) => x.id === w.id);
 
     if (idx >= 0) {
@@ -143,7 +165,6 @@ export default function StorePage() {
     }
 
     saveCart(cart);
-
     setCartCount(readCartCount());
 
     setToast("Agregado al carrito 🛒");
@@ -156,10 +177,7 @@ export default function StorePage() {
   if (loading) {
     return (
       <section className="w-full px-4 lg:px-10 py-10">
-        <p
-          className="text-sm animate-pulse"
-          style={{ color: "var(--c-muted)" }}
-        >
+        <p className="text-sm animate-pulse" style={{ color: "var(--c-muted)" }}>
           Cargando tienda...
         </p>
       </section>
@@ -169,10 +187,7 @@ export default function StorePage() {
   if (error) {
     return (
       <section className="w-full px-4 lg:px-10 py-10">
-        <p
-          className="text-sm mb-3"
-          style={{ color: "#f87171" }}
-        >
+        <p className="text-sm mb-3" style={{ color: "#f87171" }}>
           {error}
         </p>
 
@@ -199,10 +214,7 @@ export default function StorePage() {
             Tienda Crisálida
           </h1>
 
-          <p
-            className="text-sm mt-2"
-            style={{ color: "var(--c-muted)" }}
-          >
+          <p className="text-sm mt-2" style={{ color: "var(--c-muted)" }}>
             Explora las obras disponibles y arma tu colección.
           </p>
         </div>
@@ -231,20 +243,13 @@ export default function StorePage() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
+      <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-8">
         {works.map((w) => {
           const price =
-            typeof w.precio === "number"
-              ? w.precio
-              : Number(w.precio ?? 0);
+            typeof w.precio === "number" ? w.precio : Number(w.precio ?? 0);
 
-          const safePrice = Number.isFinite(price)
-            ? price
-            : 0;
-
-          const imageUrl = getImageUrl(
-            w.imagenUrl || w.imagen,
-          );
+          const safePrice = Number.isFinite(price) ? price : 0;
+          const imageUrl = getImageUrl(w.imagenUrl || w.imagen);
 
           return (
             <article
@@ -256,31 +261,7 @@ export default function StorePage() {
               }}
               onContextMenu={(e) => e.preventDefault()}
             >
-              <div className="relative h-[360px] overflow-hidden">
-                {imageUrl ? (
-                  <>
-                    <img
-                      src={imageUrl}
-                      alt={w.titulo}
-                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-[1.03]"
-                      draggable={false}
-                    />
-
-                    <div className="absolute inset-0 z-10 pointer-events-none" />
-
-                    <div className="absolute bottom-3 right-3 text-[10px] text-white/40 uppercase tracking-widest pointer-events-none">
-                      Crisálida · Gallery
-                    </div>
-                  </>
-                ) : (
-                  <div
-                    className="h-full flex items-center justify-center text-sm"
-                    style={{ color: "var(--c-muted)" }}
-                  >
-                    Sin imagen
-                  </div>
-                )}
-              </div>
+              <WorkImage src={imageUrl} title={w.titulo} />
 
               <div className="p-5 flex-1 flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-4">
@@ -296,8 +277,7 @@ export default function StorePage() {
                       className="text-sm mt-1"
                       style={{ color: "var(--c-accent)" }}
                     >
-                      {w.artista?.nombre ??
-                        "Artista Crisálida"}
+                      {w.artista?.nombre ?? "Artista Crisálida"}
                     </p>
                   </div>
 
@@ -338,22 +318,13 @@ export default function StorePage() {
                       color: "#07110a",
                     }}
                   >
-                    {w.stock <= 0
-                      ? "Sin stock"
-                      : "Agregar"}
+                    {w.stock <= 0 ? "Sin stock" : "Agregar"}
                   </button>
                 </div>
 
-                <p
-                  className="text-xs"
-                  style={{ color: "var(--c-muted)" }}
-                >
+                <p className="text-xs" style={{ color: "var(--c-muted)" }}>
                   Stock:{" "}
-                  <span
-                    style={{ color: "var(--c-text)" }}
-                  >
-                    {w.stock}
-                  </span>
+                  <span style={{ color: "var(--c-text)" }}>{w.stock}</span>
                 </p>
               </div>
             </article>
