@@ -1,11 +1,7 @@
-// src/App.tsx
 import { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
-import ThemeMiniPanel from "./components/ThemeMiniPanel";
-
-import { applyThemeToCssVars, loadTheme } from "./theme/theme";
 
 // Páginas
 import HomePage from "./pages/HomePage";
@@ -22,15 +18,60 @@ import MuseosPage from "./pages/MuseosPage";
 import EventoDetailPage from "./pages/EventoDetailPage";
 import EventosPage from "./pages/EventosPage";
 
+type ThemeMode = "system" | "light" | "dark";
+
+const THEME_KEY = "crisalida_theme_mode";
+
+function getSavedTheme(): ThemeMode {
+  try {
+    const saved = localStorage.getItem(THEME_KEY) as ThemeMode | null;
+
+    if (saved === "system" || saved === "light" || saved === "dark") {
+      return saved;
+    }
+
+    return "system";
+  } catch {
+    return "system";
+  }
+}
+
+function applyTheme(mode: ThemeMode) {
+  const root = document.documentElement;
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+  const useDark = mode === "dark" || (mode === "system" && prefersDark);
+
+  root.classList.toggle("dark", useDark);
+  root.setAttribute("data-theme", useDark ? "dark" : "light");
+  root.style.colorScheme = useDark ? "dark" : "light";
+}
+
 export default function App() {
   useEffect(() => {
-    const t = loadTheme();
-    applyThemeToCssVars(t);
+    const savedTheme = getSavedTheme();
+    applyTheme(savedTheme);
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const onSystemThemeChange = () => {
+      const currentTheme = getSavedTheme();
+
+      if (currentTheme === "system") {
+        applyTheme("system");
+      }
+    };
+
+    media.addEventListener("change", onSystemThemeChange);
+
+    return () => {
+      media.removeEventListener("change", onSystemThemeChange);
+    };
   }, []);
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col transition-colors duration-300"
       style={{
         background: "var(--c-bg)",
         color: "var(--c-text)",
@@ -57,13 +98,12 @@ export default function App() {
           <Route path="/contacto" element={<ContactPage />} />
           <Route path="/museo" element={<MuseosPage />} />
           <Route path="/eventos" element={<EventosPage />} />
+
           {/* Admin */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminPanel />} />
         </Routes>
       </main>
-
-      <ThemeMiniPanel />
     </div>
   );
 }

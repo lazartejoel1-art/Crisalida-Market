@@ -3,19 +3,35 @@
 @tailwind utilities;
 
 :root {
-  --c-bg: #0b0f1a;
-  --c-panel: #050816;
-  --c-border: rgba(255, 255, 255, 0.1);
-  --c-text: rgba(255, 255, 255, 0.92);
-  --c-muted: rgba(255, 255, 255, 0.55);
-  --c-soft: rgba(255, 255, 255, 0.08);
-  --c-accent: #21c55d;
+  --c-bg: #f4f5f5;
+  --c-panel: #ffffff;
+  --c-panel-soft: #f8fafc;
+  --c-border: rgba(15, 23, 42, 0.12);
+  --c-text: #0a0a0a;
+  --c-muted: rgba(15, 23, 42, 0.58);
+  --c-soft: rgba(15, 23, 42, 0.06);
+  --c-accent: #10b981;
 
-  /* Navbar (arriba) */
-  --c-topbar-bg: #ffffff;
-  --c-topbar-text: #0b0f1a;
-  --c-topbar-border: rgba(0, 0, 0, 0.1);
-  --c-topbar-hover: rgba(0, 0, 0, 0.05);
+  --c-topbar-bg: #000000;
+  --c-topbar-text: #ffffff;
+  --c-topbar-border: rgba(255, 255, 255, 0.1);
+  --c-topbar-hover: rgba(255, 255, 255, 0.1);
+}
+
+html.dark {
+  --c-bg: #050816;
+  --c-panel: #0b1020;
+  --c-panel-soft: #111827;
+  --c-border: rgba(255, 255, 255, 0.12);
+  --c-text: rgba(255, 255, 255, 0.94);
+  --c-muted: rgba(255, 255, 255, 0.6);
+  --c-soft: rgba(255, 255, 255, 0.08);
+  --c-accent: #34d399;
+
+  --c-topbar-bg: #000000;
+  --c-topbar-text: #ffffff;
+  --c-topbar-border: rgba(255, 255, 255, 0.1);
+  --c-topbar-hover: rgba(255, 255, 255, 0.1);
 }
 
 html,
@@ -30,6 +46,10 @@ body,
 
 body {
   color: var(--c-text);
+  background: var(--c-bg);
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
 * {
@@ -39,4 +59,17 @@ body {
 img,
 video {
   max-width: 100%;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: var(--c-accent);
+  color: #020617;
 }
