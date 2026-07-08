@@ -559,7 +559,7 @@ export default function HomePage() {
                         />
                       </motion.div>
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/5" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
 
                       <div className="absolute left-5 top-5 sm:left-7 sm:top-7">
                         <span className="inline-flex rounded-full bg-white/95 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-neutral-950 shadow-sm">
@@ -568,12 +568,12 @@ export default function HomePage() {
                       </div>
 
                       <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7">
-                        <div className="max-w-[92%] rounded-[26px] border border-white/15 bg-black/30 px-5 py-4 text-left backdrop-blur-md sm:max-w-xl sm:px-6 sm:py-5">
-                          <p className="mb-2 max-w-full truncate text-[11px] font-black uppercase tracking-[0.16em] text-emerald-300">
+                        <div className="max-w-[92%] rounded-[24px] border border-white/20 bg-white/85 px-5 py-4 text-left shadow-lg backdrop-blur-md dark:bg-neutral-950/70 sm:max-w-xl sm:px-6 sm:py-5">
+                          <p className="mb-2 max-w-full truncate text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
                             {active.artista?.nombre ?? "Colectiva Crisálida"}
                           </p>
 
-                          <h1 className="line-clamp-2 text-[22px] font-black leading-[1.08] tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.95)] sm:text-3xl lg:text-4xl">
+                          <h1 className="line-clamp-2 text-[22px] font-black leading-[1.08] tracking-tight text-neutral-950 dark:text-white sm:text-3xl lg:text-4xl">
                             {active.titulo}
                           </h1>
                         </div>
@@ -588,7 +588,7 @@ export default function HomePage() {
                                 className={`h-1.5 rounded-full transition-all ${
                                   isActive
                                     ? "w-9 bg-emerald-400"
-                                    : "w-3 bg-white/45"
+                                    : "w-3 bg-white/55 dark:bg-white/35"
                                 }`}
                               />
                             );
@@ -603,8 +603,8 @@ export default function HomePage() {
 
             <div className="lg:col-span-4">
               <div className="h-full rounded-[38px] border border-neutral-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-neutral-900 sm:p-7">
-                <div className="rounded-[28px] bg-neutral-950 p-6 text-white dark:bg-black">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
+                <div className="rounded-[28px] border border-emerald-200 bg-emerald-50 p-6 text-neutral-950 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-white">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
                     Crisálida Market
                   </p>
 
@@ -612,7 +612,7 @@ export default function HomePage() {
                     Tu viaje con Crisálida comienza ahora
                   </h2>
 
-                  <p className="mt-3 text-sm text-white/65">
+                  <p className="mt-3 text-sm text-neutral-600 dark:text-white/65">
                     Explora piezas, visita la galería o compra desde la tienda.
                   </p>
                 </div>
@@ -620,51 +620,51 @@ export default function HomePage() {
                 <div className="mt-4 grid gap-3">
                   <Link
                     to="/museo"
-                    className="group rounded-[24px] border border-neutral-200 bg-neutral-50 px-5 py-4 transition hover:bg-neutral-950 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white"
+                    className="group rounded-[24px] border border-neutral-200 bg-neutral-50 px-5 py-4 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-white/10 dark:bg-white/5 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
                   >
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700 group-hover:text-emerald-300 dark:text-emerald-300 dark:group-hover:text-emerald-700">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
                       Galería
                     </p>
 
-                    <p className="mt-1 text-base font-black text-neutral-950 group-hover:text-white dark:text-white dark:group-hover:text-black">
+                    <p className="mt-1 text-base font-black text-neutral-950 dark:text-white">
                       Ver obras completas
                     </p>
 
-                    <p className="mt-1 text-xs text-neutral-500 group-hover:text-white/60 dark:text-white/55 dark:group-hover:text-black/55">
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-white/55">
                       Navega como exposición.
                     </p>
                   </Link>
 
                   <Link
                     to="/tienda"
-                    className="group rounded-[24px] border border-neutral-200 bg-neutral-50 px-5 py-4 transition hover:bg-neutral-950 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white"
+                    className="group rounded-[24px] border border-neutral-200 bg-neutral-50 px-5 py-4 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-white/10 dark:bg-white/5 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
                   >
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700 group-hover:text-emerald-300 dark:text-emerald-300 dark:group-hover:text-emerald-700">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
                       Tienda
                     </p>
 
-                    <p className="mt-1 text-base font-black text-neutral-950 group-hover:text-white dark:text-white dark:group-hover:text-black">
+                    <p className="mt-1 text-base font-black text-neutral-950 dark:text-white">
                       Comprar prints / obras
                     </p>
 
-                    <p className="mt-1 text-xs text-neutral-500 group-hover:text-white/60 dark:text-white/55 dark:group-hover:text-black/55">
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-white/55">
                       Ordena y consulta disponibilidad.
                     </p>
                   </Link>
 
                   <Link
                     to="/artistas"
-                    className="group rounded-[24px] border border-neutral-200 bg-neutral-50 px-5 py-4 transition hover:bg-neutral-950 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white"
+                    className="group rounded-[24px] border border-neutral-200 bg-neutral-50 px-5 py-4 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-white/10 dark:bg-white/5 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
                   >
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700 group-hover:text-emerald-300 dark:text-emerald-300 dark:group-hover:text-emerald-700">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
                       Artistas
                     </p>
 
-                    <p className="mt-1 text-base font-black text-neutral-950 group-hover:text-white dark:text-white dark:group-hover:text-black">
+                    <p className="mt-1 text-base font-black text-neutral-950 dark:text-white">
                       Conoce la colectiva
                     </p>
 
-                    <p className="mt-1 text-xs text-neutral-500 group-hover:text-white/60 dark:text-white/55 dark:group-hover:text-black/55">
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-white/55">
                       Biografías, obras y estilos.
                     </p>
                   </Link>
@@ -674,14 +674,14 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => void loadWorks()}
-                    className="flex-1 rounded-full bg-neutral-950 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-600 dark:bg-white dark:text-black dark:hover:bg-emerald-400"
+                    className="flex-1 rounded-full bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
                   >
                     Actualizar
                   </button>
 
                   <Link
                     to="/contacto"
-                    className="flex-1 rounded-full border border-neutral-300 px-5 py-3 text-center text-sm font-black text-neutral-950 transition hover:bg-neutral-950 hover:text-white dark:border-white/10 dark:text-white dark:hover:bg-white dark:hover:text-black"
+                    className="flex-1 rounded-full border border-neutral-300 px-5 py-3 text-center text-sm font-black text-neutral-950 transition hover:border-emerald-400 hover:bg-emerald-50 dark:border-white/10 dark:text-white dark:hover:bg-emerald-400/10"
                   >
                     Contacto
                   </Link>
@@ -738,13 +738,13 @@ export default function HomePage() {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="w-full rounded-full border border-neutral-300 bg-neutral-50 px-5 py-4 text-sm text-neutral-950 outline-none transition focus:border-neutral-950 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/35 dark:focus:border-emerald-400"
+                  className="w-full rounded-full border border-neutral-300 bg-neutral-50 px-5 py-4 text-sm text-neutral-950 outline-none transition focus:border-emerald-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/35 dark:focus:border-emerald-400"
                   placeholder="Ej: Metamorfosis, Antonella, Grabado..."
                 />
 
                 <button
                   type="button"
-                  className="rounded-full bg-neutral-950 px-6 py-4 text-sm font-black text-white transition hover:bg-emerald-600 dark:bg-white dark:text-black dark:hover:bg-emerald-400"
+                  className="rounded-full bg-emerald-600 px-6 py-4 text-sm font-black text-white transition hover:bg-emerald-700 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
                   onClick={() => navigate("/museo")}
                 >
                   Ir a galería
@@ -776,7 +776,7 @@ export default function HomePage() {
             action={
               <Link
                 to="/museo"
-                className="inline-flex items-center justify-center rounded-full bg-neutral-950 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-600 dark:bg-white dark:text-black dark:hover:bg-emerald-400"
+                className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
               >
                 Ver todo →
               </Link>
@@ -821,13 +821,13 @@ export default function HomePage() {
         </Shell>
 
         <Shell className="pb-16">
-          <div className="relative overflow-hidden rounded-[38px] bg-neutral-950 p-7 text-white shadow-sm dark:bg-black sm:p-10">
+          <div className="relative overflow-hidden rounded-[38px] border border-emerald-200 bg-emerald-50 p-7 text-neutral-950 shadow-sm dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-white sm:p-10">
             <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-400/20 blur-3xl" />
-            <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+            <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-white/40 blur-3xl dark:bg-white/5" />
 
             <div className="relative flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-2xl">
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-300">
                   Crisálida Market
                 </p>
 
@@ -835,7 +835,7 @@ export default function HomePage() {
                   Compra piezas y prints exclusivos de la colectiva.
                 </h4>
 
-                <p className="mt-3 text-sm text-white/65 sm:text-base">
+                <p className="mt-3 text-sm text-neutral-600 dark:text-white/65 sm:text-base">
                   Un bloque comercial más fuerte para que la página se sienta
                   como una tienda artística moderna.
                 </p>
@@ -844,14 +844,14 @@ export default function HomePage() {
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Link
                   to="/tienda"
-                  className="rounded-full bg-white px-6 py-4 text-center text-sm font-black text-neutral-950 transition hover:bg-emerald-400"
+                  className="rounded-full bg-emerald-600 px-6 py-4 text-center text-sm font-black text-white transition hover:bg-emerald-700 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
                 >
                   Ir a la Tienda
                 </Link>
 
                 <Link
                   to="/contacto"
-                  className="rounded-full border border-white/25 px-6 py-4 text-center text-sm font-black text-white transition hover:bg-white hover:text-neutral-950"
+                  className="rounded-full border border-emerald-300 px-6 py-4 text-center text-sm font-black text-neutral-950 transition hover:bg-white dark:border-emerald-400/30 dark:text-white dark:hover:bg-white/10"
                 >
                   Pedidos personalizados
                 </Link>
