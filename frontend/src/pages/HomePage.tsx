@@ -559,7 +559,7 @@ export default function HomePage() {
                         />
                       </motion.div>
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
 
                       <div className="absolute left-5 top-5 sm:left-7 sm:top-7">
                         <span className="inline-flex rounded-full bg-white/95 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-neutral-950 shadow-sm">
@@ -568,12 +568,12 @@ export default function HomePage() {
                       </div>
 
                       <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7">
-                        <div className="max-w-[92%] rounded-[24px] border border-white/20 bg-white/85 px-5 py-4 text-left shadow-lg backdrop-blur-md dark:bg-neutral-950/70 sm:max-w-xl sm:px-6 sm:py-5">
-                          <p className="mb-2 max-w-full truncate text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
+                        <div className="max-w-[88%] rounded-[24px] border border-white/15 bg-black/45 px-5 py-4 text-left shadow-lg backdrop-blur-md sm:max-w-xl sm:px-6 sm:py-5">
+                          <p className="mb-2 max-w-full truncate text-[11px] font-black uppercase tracking-[0.16em] text-emerald-300">
                             {active.artista?.nombre ?? "Colectiva Crisálida"}
                           </p>
 
-                          <h1 className="line-clamp-2 text-[22px] font-black leading-[1.08] tracking-tight text-neutral-950 dark:text-white sm:text-3xl lg:text-4xl">
+                          <h1 className="line-clamp-2 text-[22px] font-black leading-[1.08] tracking-tight text-white drop-shadow-[0_3px_10px_rgba(0,0,0,0.75)] sm:text-3xl lg:text-4xl">
                             {active.titulo}
                           </h1>
                         </div>
