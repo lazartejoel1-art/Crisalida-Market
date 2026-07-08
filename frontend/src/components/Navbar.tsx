@@ -14,6 +14,8 @@ type NavbarProps = {
   cartTo?: string;
 };
 
+type ThemeMode = "system" | "light" | "dark";
+
 const NAV: NavItem[] = [
   { label: "Inicio", to: "/" },
   { label: "Tienda", to: "/tienda" },
@@ -26,6 +28,7 @@ const NAV: NavItem[] = [
 ];
 
 const CART_KEY = "crisalida_cart";
+const THEME_KEY = "crisalida_theme_mode";
 
 function readCartCount() {
   try {
@@ -40,6 +43,87 @@ function readCartCount() {
   }
 }
 
+function getInitialTheme(): ThemeMode {
+  try {
+    const saved = localStorage.getItem(THEME_KEY) as ThemeMode | null;
+
+    if (saved === "system" || saved === "light" || saved === "dark") {
+      return saved;
+    }
+
+    return "system";
+  } catch {
+    return "system";
+  }
+}
+
+function applyTheme(mode: ThemeMode) {
+  const root = document.documentElement;
+
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const useDark = mode === "dark" || (mode === "system" && prefersDark);
+
+  root.classList.toggle("dark", useDark);
+  root.setAttribute("data-theme", useDark ? "dark" : "light");
+  root.style.colorScheme = useDark ? "dark" : "light";
+}
+
+function ThemeToggle() {
+  const [mode, setMode] = useState<ThemeMode>(() => getInitialTheme());
+
+  useEffect(() => {
+    applyTheme(mode);
+
+    try {
+      localStorage.setItem(THEME_KEY, mode);
+    } catch {
+      // Ignorar si localStorage no está disponible
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const onChange = () => {
+      if (mode === "system") {
+        applyTheme("system");
+      }
+    };
+
+    media.addEventListener("change", onChange);
+
+    return () => {
+      media.removeEventListener("change", onChange);
+    };
+  }, [mode]);
+
+  const changeTheme = () => {
+    setMode((current) => {
+      if (current === "system") return "light";
+      if (current === "light") return "dark";
+      return "system";
+    });
+  };
+
+  const label =
+    mode === "system" ? "Auto" : mode === "light" ? "Claro" : "Oscuro";
+
+  const icon = mode === "system" ? "◐" : mode === "light" ? "☀️" : "🌙";
+
+  return (
+    <button
+      type="button"
+      onClick={changeTheme}
+      className="flex h-11 items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 text-xs font-black text-white transition hover:bg-white hover:text-black sm:px-4"
+      title="Cambiar tema"
+      aria-label="Cambiar tema"
+    >
+      <span>{icon}</span>
+      <span className="hidden sm:inline">{label}</span>
+    </button>
+  );
+}
+
 export default function Navbar({
   title = "Crisálida",
   logoSrc = "/uploads/crisalida.png",
@@ -49,12 +133,19 @@ export default function Navbar({
   const [cartCount, setCartCount] = useState(() => readCartCount());
 
   useEffect(() => {
+    applyTheme(getInitialTheme());
+  }, []);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
 
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   useEffect(() => {
@@ -105,19 +196,23 @@ export default function Navbar({
             </div>
           </Link>
 
-          <Link
-            to={cartTo}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white transition hover:bg-white hover:text-black"
-            aria-label="Abrir carrito"
-          >
-            <span className="text-xl leading-none">🛒</span>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
 
-            {cartCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-400 px-1 text-[11px] font-black text-black ring-2 ring-black">
-                {cartCount}
-              </span>
-            )}
-          </Link>
+            <Link
+              to={cartTo}
+              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white transition hover:bg-white hover:text-black"
+              aria-label="Abrir carrito"
+            >
+              <span className="text-xl leading-none">🛒</span>
+
+              {cartCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-400 px-1 text-[11px] font-black text-black ring-2 ring-black">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+          </div>
         </div>
 
         <div className="hidden border-t border-white/10 bg-black/95 lg:block">
@@ -142,8 +237,8 @@ export default function Navbar({
             onClick={() => setOpen(false)}
           />
 
-          <aside className="absolute left-0 top-0 flex h-full w-[310px] max-w-[85vw] flex-col border-r border-neutral-200 bg-white text-neutral-950 shadow-2xl">
-            <div className="border-b border-neutral-200 p-5">
+          <aside className="absolute left-0 top-0 flex h-full w-[310px] max-w-[85vw] flex-col border-r border-neutral-200 bg-white text-neutral-950 shadow-2xl dark:border-white/10 dark:bg-neutral-950 dark:text-white">
+            <div className="border-b border-neutral-200 p-5 dark:border-white/10">
               <div className="flex items-center justify-between gap-4">
                 <Link
                   to="/"
@@ -168,7 +263,7 @@ export default function Navbar({
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-xl font-bold text-neutral-900 transition hover:bg-black hover:text-white"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-xl font-bold text-neutral-900 transition hover:bg-black hover:text-white dark:bg-white/10 dark:text-white dark:hover:bg-white dark:hover:text-black"
                   aria-label="Cerrar menú"
                 >
                   ✕
@@ -182,7 +277,7 @@ export default function Navbar({
                   key={it.to}
                   to={it.to}
                   onClick={() => setOpen(false)}
-                  className="group flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-bold text-neutral-700 transition hover:bg-black hover:text-white"
+                  className="group flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-bold text-neutral-700 transition hover:bg-black hover:text-white dark:text-white/75 dark:hover:bg-white dark:hover:text-black"
                 >
                   <span>{it.label}</span>
 
@@ -191,7 +286,7 @@ export default function Navbar({
                       {cartCount}
                     </span>
                   ) : (
-                    <span className="text-neutral-300 transition group-hover:text-white/60">
+                    <span className="text-neutral-300 transition group-hover:text-white/60 dark:text-white/25 dark:group-hover:text-black/60">
                       →
                     </span>
                   )}
@@ -199,14 +294,18 @@ export default function Navbar({
               ))}
             </nav>
 
-            <div className="border-t border-neutral-200 p-5">
+            <div className="border-t border-neutral-200 p-5 dark:border-white/10">
               <Link
                 to="/tienda"
                 onClick={() => setOpen(false)}
-                className="flex w-full items-center justify-center rounded-full bg-black px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-600"
+                className="flex w-full items-center justify-center rounded-full bg-black px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-600 dark:bg-white dark:text-black dark:hover:bg-emerald-400"
               >
                 Ir a la tienda
               </Link>
+
+              <div className="mt-3 flex justify-center">
+                <ThemeToggle />
+              </div>
 
               <p className="mt-4 text-center text-[11px] text-neutral-400">
                 © 2025 Colectiva Crisálida
