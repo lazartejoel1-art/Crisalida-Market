@@ -56,7 +56,7 @@ function SafeImage({
 
   if (!src || failed) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-white/5 text-xs text-white/45">
+      <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-xs text-neutral-400">
         Sin imagen
       </div>
     );
@@ -64,7 +64,9 @@ function SafeImage({
 
   return (
     <>
-      {!loaded && <div className="absolute inset-0 animate-pulse bg-white/10" />}
+      {!loaded && (
+        <div className="absolute inset-0 animate-pulse bg-neutral-200" />
+      )}
 
       <img
         src={src}
@@ -91,6 +93,121 @@ function Shell({
     <section className={`w-full px-4 sm:px-6 lg:px-10 2xl:px-16 ${className}`}>
       <div className="mx-auto w-full max-w-[1480px]">{children}</div>
     </section>
+  );
+}
+
+function SectionTitle({
+  eyebrow,
+  title,
+  description,
+  action,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        {eyebrow ? (
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">
+            {eyebrow}
+          </p>
+        ) : null}
+
+        <h2 className="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-neutral-950">
+          {title}
+        </h2>
+
+        {description ? (
+          <p className="mt-2 max-w-2xl text-sm sm:text-base text-neutral-600">
+            {description}
+          </p>
+        ) : null}
+      </div>
+
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
+  );
+}
+
+function ProductCard({
+  work,
+  onOpen,
+}: {
+  work: Work;
+  onOpen: (id: number) => void;
+}) {
+  const imageUrl = getWorkImage(work);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(work.id)}
+      className="group w-full text-left rounded-[26px] bg-white border border-neutral-200 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+    >
+      <div className="relative aspect-[4/5] bg-neutral-100 overflow-hidden">
+        <SafeImage
+          src={imageUrl}
+          alt={work.titulo}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.045]"
+        />
+
+        <div className="absolute left-3 top-3 rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[11px] font-bold text-neutral-800 shadow-sm">
+          Stock: {Number(work.stock ?? 0)}
+        </div>
+
+        <div className="absolute right-3 top-3 rounded-full bg-black text-white px-3 py-1 text-[11px] font-bold shadow-sm">
+          Bs {toNumber(work.precio).toFixed(2)}
+        </div>
+      </div>
+
+      <div className="p-4 sm:p-5">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 line-clamp-1">
+          {work.artista?.nombre ?? "Colectiva Crisálida"}
+        </p>
+
+        <h3 className="mt-2 text-base sm:text-lg font-black text-neutral-950 leading-tight line-clamp-2">
+          {work.titulo}
+        </h3>
+
+        <p className="mt-2 text-sm text-neutral-500 line-clamp-2">
+          {work.descripcion || "Obra disponible en Crisálida Market."}
+        </p>
+
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <span className="text-sm font-bold text-neutral-950">Ver detalle</span>
+
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-neutral-950 text-white transition group-hover:bg-emerald-600">
+            →
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function WorksCarousel({
+  works,
+  onOpen,
+}: {
+  works: Work[];
+  onOpen: (id: number) => void;
+}) {
+  return (
+    <div className="-mx-4 sm:mx-0">
+      <div className="flex gap-4 overflow-x-auto px-4 sm:px-0 pb-5 snap-x snap-mandatory scroll-smooth">
+        {works.map((work) => (
+          <div
+            key={work.id}
+            className="min-w-[82%] sm:min-w-[330px] lg:min-w-[310px] snap-start"
+          >
+            <ProductCard work={work} onOpen={onOpen} />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -159,257 +276,138 @@ function EventosProSection() {
   }, [eventos, eventoIndex]);
 
   return (
-    <Shell className="pb-10">
-      <div
-        className="relative overflow-hidden rounded-[34px] p-5 sm:p-7"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02))",
-          border: "1px solid var(--c-border)",
-        }}
-      >
-        <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-5">
-          <div>
-            <p
-              className="text-xs font-semibold uppercase tracking-[0.24em]"
-              style={{ color: "var(--c-accent)" }}
-            >
-              Agenda Crisálida
-            </p>
-
-            <h2 className="mt-2 text-2xl sm:text-3xl font-extrabold text-white">
-              Eventos y exposiciones
-            </h2>
-
-            <p className="mt-1 text-sm" style={{ color: "var(--c-muted)" }}>
-              Flyers, inauguraciones y actividades artísticas destacadas.
-            </p>
-          </div>
-
+    <Shell className="py-12">
+      <SectionTitle
+        eyebrow="Agenda Crisálida"
+        title="Eventos y exposiciones"
+        description="Flyers, inauguraciones y actividades destacadas de la colectiva."
+        action={
           <Link
             to="/contacto"
-            className="text-sm font-semibold underline underline-offset-4"
-            style={{ color: "var(--c-accent)" }}
+            className="inline-flex items-center justify-center rounded-full border border-neutral-300 bg-white px-5 py-3 text-sm font-bold text-neutral-950 hover:bg-neutral-950 hover:text-white transition"
           >
-            Consultar próximos eventos →
+            Consultar eventos →
           </Link>
+        }
+      />
+
+      {loadingEventos ? (
+        <div className="rounded-[30px] border border-neutral-200 bg-white p-8 text-sm text-neutral-500 shadow-sm">
+          Cargando eventos...
         </div>
-
-        {loadingEventos ? (
-          <div
-            className="relative rounded-3xl p-8 text-sm"
-            style={{
-              background: "var(--c-panel)",
-              border: "1px solid var(--c-border)",
-              color: "var(--c-muted)",
-            }}
+      ) : !activeEvento || !activeFlyer ? (
+        <div className="rounded-[30px] border border-neutral-200 bg-white p-8 text-sm text-neutral-500 shadow-sm">
+          Próximamente anunciaremos nuevos eventos.
+        </div>
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-12">
+          <Link
+            to={`/eventos/${activeEvento.id}`}
+            className="group block overflow-hidden rounded-[34px] bg-white border border-neutral-200 shadow-sm lg:col-span-8"
           >
-            Cargando eventos...
-          </div>
-        ) : !activeEvento || !activeFlyer ? (
-          <div
-            className="relative rounded-3xl p-8 text-sm"
-            style={{
-              background: "var(--c-panel)",
-              border: "1px solid var(--c-border)",
-              color: "var(--c-muted)",
-            }}
-          >
-            Próximamente anunciaremos nuevos eventos.
-          </div>
-        ) : (
-          <div className="relative grid lg:grid-cols-12 gap-5">
-            <Link
-              to={`/eventos/${activeEvento.id}`}
-              className="lg:col-span-7 group rounded-[30px] overflow-hidden block"
-              style={{
-                background: "var(--c-panel)",
-                border: "1px solid var(--c-border)",
-              }}
-            >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeEvento.id}
-                  className="relative aspect-[4/5] sm:aspect-[16/10] lg:aspect-auto lg:h-[520px] overflow-hidden"
-                  initial={{ opacity: 0, scale: 1.015 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.99 }}
-                  transition={{ duration: 0.6, ease: "easeInOut" }}
-                >
-                  <SafeImage
-                    src={activeFlyer}
-                    alt={activeEvento.titulo}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.025]"
-                  />
-
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-
-                  <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7">
-                    <p
-                      className="text-xs font-semibold"
-                      style={{ color: "var(--c-accent)" }}
-                    >
-                      {activeEvento.fecha || "Fecha por confirmar"}
-                    </p>
-
-                    <h3 className="mt-1 text-2xl sm:text-4xl font-extrabold text-white leading-tight">
-                      {activeEvento.titulo}
-                    </h3>
-
-                    <p className="mt-2 text-sm text-white/75 line-clamp-2">
-                      {activeEvento.lugar || "Lugar por confirmar"}
-                    </p>
-
-                    <p className="mt-4 text-xs text-white/70">
-                      Click para ver detalle del evento
-                    </p>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            </Link>
-
-            <div className="lg:col-span-5 grid gap-3">
-              {previewEventos.map((evento, idx) => {
-                const flyerUrl = buildImageUrl(evento.flyerUrl || evento.flyer);
-                const isActive = evento.id === activeEvento.id;
-
-                return (
-                  <button
-                    key={evento.id}
-                    type="button"
-                    onClick={() => {
-                      const nextIndex = eventos.findIndex(
-                        (item) => item.id === evento.id,
-                      );
-                      if (nextIndex >= 0) setEventoIndex(nextIndex);
-                    }}
-                    className="text-left rounded-3xl p-3 flex gap-3 items-center transition"
-                    style={{
-                      background: isActive
-                        ? "rgba(255,255,255,0.075)"
-                        : "var(--c-panel)",
-                      border: isActive
-                        ? "1px solid var(--c-accent)"
-                        : "1px solid var(--c-border)",
-                    }}
-                  >
-                    <div className="relative w-24 h-28 sm:w-28 sm:h-32 rounded-2xl overflow-hidden bg-white/5 shrink-0">
-                      <SafeImage
-                        src={flyerUrl}
-                        alt={evento.titulo}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-
-                    <div className="flex-1">
-                      <p
-                        className="text-[11px] font-semibold"
-                        style={{ color: "var(--c-accent)" }}
-                      >
-                        {idx === 0 ? "Destacado" : "Evento"}
-                      </p>
-
-                      <h4 className="text-sm sm:text-base font-bold text-white line-clamp-2">
-                        {evento.titulo}
-                      </h4>
-
-                      <p
-                        className="mt-1 text-xs line-clamp-1"
-                        style={{ color: "var(--c-muted)" }}
-                      >
-                        {evento.fecha || "Fecha por confirmar"}
-                      </p>
-
-                      <p
-                        className="mt-1 text-xs line-clamp-1"
-                        style={{ color: "rgba(255,255,255,0.55)" }}
-                      >
-                        {evento.lugar || "Lugar por confirmar"}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-    </Shell>
-  );
-}
-
-function WorksCarousel({
-  works,
-  onOpen,
-}: {
-  works: Work[];
-  onOpen: (id: number) => void;
-}) {
-  return (
-    <div className="-mx-4 sm:mx-0">
-      <div className="flex gap-4 overflow-x-auto px-4 sm:px-0 pb-4 snap-x snap-mandatory scroll-smooth">
-        {works.map((w) => {
-          const imageUrl = getWorkImage(w);
-          if (!imageUrl) return null;
-
-          return (
-            <button
-              key={w.id}
-              type="button"
-              onClick={() => onOpen(w.id)}
-              className="min-w-[82%] sm:min-w-[360px] lg:min-w-[320px] snap-start rounded-[28px] overflow-hidden text-left select-none"
-              style={{
-                background: "var(--c-panel)",
-                border: "1px solid var(--c-border)",
-              }}
-            >
-              <div className="relative w-full aspect-[4/5] overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeEvento.id}
+                className="relative aspect-[4/5] sm:aspect-[16/9] lg:h-[540px] lg:aspect-auto overflow-hidden"
+                initial={{ opacity: 0, scale: 1.015 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.99 }}
+                transition={{ duration: 0.55, ease: "easeInOut" }}
+              >
                 <SafeImage
-                  src={imageUrl}
-                  alt={w.titulo}
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-[1.03]"
+                  src={activeFlyer}
+                  alt={activeEvento.titulo}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.025]"
                 />
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
 
-                <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-3">
-                  <div className="bg-black/45 backdrop-blur px-3 py-2 rounded-2xl border border-white/10">
-                    <p
-                      className="text-[11px] font-semibold"
-                      style={{ color: "var(--c-accent)" }}
-                    >
-                      {w.artista?.nombre ?? "Colectiva Crisálida"}
-                    </p>
+                <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">
+                    {activeEvento.fecha || "Fecha por confirmar"}
+                  </p>
 
-                    <p className="text-sm font-bold leading-tight text-white">
-                      {w.titulo}
-                    </p>
-                  </div>
+                  <h3 className="mt-2 max-w-3xl text-2xl sm:text-4xl font-black text-white leading-tight">
+                    {activeEvento.titulo}
+                  </h3>
 
-                  <div className="bg-black/45 backdrop-blur px-3 py-2 rounded-2xl border border-white/10 text-right">
-                    <p className="text-[10px] text-white/70">Bs</p>
+                  <p className="mt-3 text-sm sm:text-base text-white/75 line-clamp-2">
+                    {activeEvento.lugar || "Lugar por confirmar"}
+                  </p>
 
-                    <p className="text-sm font-extrabold text-white">
-                      {toNumber(w.precio).toFixed(2)}
-                    </p>
-                  </div>
+                  <p className="mt-5 inline-flex rounded-full bg-white px-5 py-3 text-sm font-bold text-neutral-950">
+                    Ver detalle del evento
+                  </p>
                 </div>
-              </div>
+              </motion.div>
+            </AnimatePresence>
+          </Link>
 
-              <div className="px-4 py-3 flex items-center justify-between">
-                <p className="text-xs text-white/70 line-clamp-1">
-                  {w.descripcion ?? "—"}
-                </p>
+          <div className="grid gap-3 lg:col-span-4">
+            {previewEventos.map((evento, idx) => {
+              const flyerUrl = buildImageUrl(evento.flyerUrl || evento.flyer);
+              const isActive = evento.id === activeEvento.id;
 
-                <span className="text-[11px] text-white/55">
-                  Stock: {Number(w.stock ?? 0)}
-                </span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
+              return (
+                <button
+                  key={evento.id}
+                  type="button"
+                  onClick={() => {
+                    const nextIndex = eventos.findIndex(
+                      (item) => item.id === evento.id,
+                    );
+                    if (nextIndex >= 0) setEventoIndex(nextIndex);
+                  }}
+                  className={`text-left rounded-[26px] p-3 flex gap-3 items-center transition border shadow-sm ${
+                    isActive
+                      ? "bg-neutral-950 border-neutral-950 text-white"
+                      : "bg-white border-neutral-200 text-neutral-950 hover:border-neutral-400"
+                  }`}
+                >
+                  <div className="relative w-24 h-28 sm:w-28 sm:h-32 rounded-[20px] overflow-hidden bg-neutral-100 shrink-0">
+                    <SafeImage
+                      src={flyerUrl}
+                      alt={evento.titulo}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className={`text-[11px] font-bold uppercase tracking-[0.14em] ${
+                        isActive ? "text-emerald-300" : "text-emerald-700"
+                      }`}
+                    >
+                      {idx === 0 ? "Destacado" : "Evento"}
+                    </p>
+
+                    <h4 className="mt-1 text-sm sm:text-base font-black line-clamp-2">
+                      {evento.titulo}
+                    </h4>
+
+                    <p
+                      className={`mt-1 text-xs line-clamp-1 ${
+                        isActive ? "text-white/70" : "text-neutral-500"
+                      }`}
+                    >
+                      {evento.fecha || "Fecha por confirmar"}
+                    </p>
+
+                    <p
+                      className={`mt-1 text-xs line-clamp-1 ${
+                        isActive ? "text-white/55" : "text-neutral-400"
+                      }`}
+                    >
+                      {evento.lugar || "Lugar por confirmar"}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </Shell>
   );
 }
 
@@ -419,6 +417,7 @@ export default function HomePage() {
   const [works, setWorks] = useState<Work[]>([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
+  const [query, setQuery] = useState("");
 
   const loadWorks = async () => {
     setLoading(true);
@@ -467,36 +466,88 @@ export default function HomePage() {
     return rotated.slice(0, 12);
   }, [works, index]);
 
+  const filteredWorks = useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    if (!q) return works.slice(0, 8);
+
+    return works
+      .filter((work) => {
+        const title = work.titulo?.toLowerCase() || "";
+        const artist = work.artista?.nombre?.toLowerCase() || "";
+        const description = work.descripcion?.toLowerCase() || "";
+
+        return title.includes(q) || artist.includes(q) || description.includes(q);
+      })
+      .slice(0, 8);
+  }, [works, query]);
+
   const goToWork = (id: number) => navigate(`/obra/${id}`);
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{ background: "var(--c-bg)", color: "var(--c-text)" }}
-    >
+    <div className="min-h-screen flex flex-col bg-[#f4f5f5] text-neutral-950">
       <main className="flex-1">
-        <Shell className="pt-8 pb-10">
-          <div className="grid lg:grid-cols-12 gap-6 items-stretch">
+        <Shell className="pt-5">
+          <div className="rounded-[30px] bg-neutral-950 text-white overflow-hidden shadow-sm">
+            <div className="flex flex-col gap-4 px-5 py-4 sm:px-7 lg:flex-row lg:items-center lg:justify-between">
+              <Link to="/" className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-white text-neutral-950 flex items-center justify-center font-black">
+                  C
+                </div>
+
+                <div>
+                  <p className="text-sm font-black leading-none">
+                    Crisálida Market
+                  </p>
+                  <p className="mt-1 text-[11px] text-white/55">
+                    Arte · Galería · Tienda
+                  </p>
+                </div>
+              </Link>
+
+              <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                <Link
+                  to="/museo"
+                  className="rounded-full px-4 py-2 text-white/75 hover:bg-white hover:text-neutral-950 transition"
+                >
+                  Galería
+                </Link>
+
+                <Link
+                  to="/tienda"
+                  className="rounded-full px-4 py-2 text-white/75 hover:bg-white hover:text-neutral-950 transition"
+                >
+                  Tienda
+                </Link>
+
+                <Link
+                  to="/artistas"
+                  className="rounded-full px-4 py-2 text-white/75 hover:bg-white hover:text-neutral-950 transition"
+                >
+                  Artistas
+                </Link>
+
+                <Link
+                  to="/contacto"
+                  className="rounded-full bg-white px-4 py-2 font-bold text-neutral-950 hover:bg-emerald-400 transition"
+                >
+                  Contacto
+                </Link>
+              </div>
+            </div>
+          </div>
+        </Shell>
+
+        <Shell className="pt-6 pb-10">
+          <div className="grid lg:grid-cols-12 gap-5 items-stretch">
             <div className="lg:col-span-8">
-              <div
-                className="relative overflow-hidden rounded-3xl aspect-[4/5] sm:aspect-[16/10] lg:aspect-auto lg:h-[66vh] lg:min-h-[460px] lg:max-h-[720px]"
-                style={{
-                  background: "var(--c-panel)",
-                  border: "1px solid var(--c-border)",
-                }}
-              >
+              <div className="relative overflow-hidden rounded-[38px] bg-white border border-neutral-200 shadow-sm aspect-[4/5] sm:aspect-[16/10] lg:aspect-auto lg:h-[68vh] lg:min-h-[480px] lg:max-h-[720px]">
                 {loading ? (
-                  <div
-                    className="h-full flex items-center justify-center text-sm animate-pulse"
-                    style={{ color: "var(--c-muted)" }}
-                  >
+                  <div className="h-full flex items-center justify-center text-sm animate-pulse text-neutral-500">
                     Cargando obras...
                   </div>
                 ) : !active || !activeImage ? (
-                  <div
-                    className="h-full flex items-center justify-center text-sm"
-                    style={{ color: "var(--c-muted)" }}
-                  >
+                  <div className="h-full flex items-center justify-center text-sm text-neutral-500">
                     No hay obras con imagen aún. Sube obras desde Admin.
                   </div>
                 ) : (
@@ -527,60 +578,69 @@ export default function HomePage() {
                         />
                       </motion.div>
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
 
-                      <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
-                        <p
-                          className="text-xs font-semibold tracking-wide"
-                          style={{ color: "var(--c-accent)" }}
-                        >
+                      <div className="absolute left-5 top-5 sm:left-7 sm:top-7">
+                        <span className="inline-flex rounded-full bg-white/95 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-neutral-950 shadow-sm">
+                          Obra destacada
+                        </span>
+                      </div>
+
+                      <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8 lg:p-10">
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">
                           {active.artista?.nombre ?? "Colectiva Crisálida"}
                         </p>
 
-                        <div className="mt-1 flex items-end justify-between gap-6">
-                          <div className="max-w-[70%]">
-                            <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight">
+                        <div className="mt-3 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                          <div className="max-w-3xl">
+                            <h1 className="text-3xl sm:text-5xl font-black leading-[0.95] tracking-tight text-white">
                               {active.titulo}
                             </h1>
 
                             {active.descripcion ? (
-                              <p className="mt-2 text-sm text-white/80 line-clamp-2">
+                              <p className="mt-4 max-w-2xl text-sm sm:text-base text-white/78 line-clamp-2">
                                 {active.descripcion}
                               </p>
                             ) : null}
+
+                            <div className="mt-6 flex flex-wrap gap-3">
+                              <span className="rounded-full bg-white px-5 py-3 text-sm font-black text-neutral-950">
+                                Ver obra
+                              </span>
+
+                              <span className="rounded-full border border-white/25 bg-white/10 backdrop-blur px-5 py-3 text-sm font-bold text-white">
+                                Stock: {Number(active.stock ?? 0)}
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="text-right">
-                            <p className="text-xs text-white/70">Precio</p>
+                          <div className="sm:text-right">
+                            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/60">
+                              Precio
+                            </p>
 
-                            <p className="text-xl sm:text-2xl font-extrabold">
+                            <p className="mt-1 text-3xl sm:text-4xl font-black text-white">
                               {toNumber(active.precio).toFixed(2)} Bs
                             </p>
                           </div>
                         </div>
 
-                        <div className="mt-5 flex items-center gap-2">
+                        <div className="mt-7 flex items-center gap-2">
                           {works.slice(0, Math.min(works.length, 6)).map((w) => {
                             const isActive = w.id === active.id;
 
                             return (
                               <div
                                 key={w.id}
-                                className="h-1.5 rounded-full transition-all"
-                                style={{
-                                  width: isActive ? 34 : 12,
-                                  background: isActive
-                                    ? "var(--c-accent)"
-                                    : "rgba(255,255,255,0.25)",
-                                }}
+                                className={`h-1.5 rounded-full transition-all ${
+                                  isActive
+                                    ? "w-10 bg-emerald-400"
+                                    : "w-3 bg-white/35"
+                                }`}
                               />
                             );
                           })}
                         </div>
-
-                        <p className="mt-3 text-[11px] text-white/70">
-                          Click para ver la obra completa
-                        </p>
                       </div>
                     </motion.button>
                   </AnimatePresence>
@@ -589,106 +649,86 @@ export default function HomePage() {
             </div>
 
             <div className="lg:col-span-4">
-              <div
-                className="rounded-3xl p-6 h-full"
-                style={{
-                  background: "var(--c-panel)",
-                  border: "1px solid var(--c-border)",
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-white">
-                    Tu viaje con Crisálida comienza ahora
+              <div className="h-full rounded-[38px] bg-white border border-neutral-200 p-5 sm:p-7 shadow-sm">
+                <div className="rounded-[28px] bg-neutral-950 text-white p-6">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">
+                    Online Gallery
                   </p>
 
-                  <span className="text-xs" style={{ color: "var(--c-accent)" }}>
-                    Online Gallery
-                  </span>
+                  <h2 className="mt-3 text-2xl sm:text-3xl font-black leading-tight">
+                    Tu viaje con Crisálida comienza ahora
+                  </h2>
+
+                  <p className="mt-3 text-sm text-white/65">
+                    Explora piezas, visita la galería o compra desde la tienda.
+                  </p>
                 </div>
 
-                <p className="mt-2 text-sm" style={{ color: "var(--c-muted)" }}>
-                  Explora piezas, entra a la galería o compra en la Tienda.
-                </p>
-
-                <div className="mt-5 grid gap-3">
+                <div className="mt-4 grid gap-3">
                   <Link
                     to="/museo"
-                    className="rounded-2xl px-4 py-4 border hover:opacity-95 transition"
-                    style={{
-                      borderColor: "var(--c-border)",
-                      background: "rgba(255,255,255,0.03)",
-                    }}
+                    className="group rounded-[24px] border border-neutral-200 bg-neutral-50 px-5 py-4 hover:bg-neutral-950 transition"
                   >
-                    <p className="text-xs" style={{ color: "var(--c-accent)" }}>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 group-hover:text-emerald-300">
                       Galería
                     </p>
 
-                    <p className="text-sm font-bold text-white">
+                    <p className="mt-1 text-base font-black text-neutral-950 group-hover:text-white">
                       Ver obras completas
                     </p>
 
-                    <p className="text-xs mt-1" style={{ color: "var(--c-muted)" }}>
+                    <p className="mt-1 text-xs text-neutral-500 group-hover:text-white/60">
                       Navega como exposición.
                     </p>
                   </Link>
 
                   <Link
                     to="/tienda"
-                    className="rounded-2xl px-4 py-4 border hover:opacity-95 transition"
-                    style={{
-                      borderColor: "var(--c-border)",
-                      background: "rgba(255,255,255,0.03)",
-                    }}
+                    className="group rounded-[24px] border border-neutral-200 bg-neutral-50 px-5 py-4 hover:bg-neutral-950 transition"
                   >
-                    <p className="text-xs" style={{ color: "var(--c-accent)" }}>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 group-hover:text-emerald-300">
                       Tienda
                     </p>
 
-                    <p className="text-sm font-bold text-white">
+                    <p className="mt-1 text-base font-black text-neutral-950 group-hover:text-white">
                       Comprar prints / obras
                     </p>
 
-                    <p className="text-xs mt-1" style={{ color: "var(--c-muted)" }}>
-                      Ordena y paga.
+                    <p className="mt-1 text-xs text-neutral-500 group-hover:text-white/60">
+                      Ordena y consulta disponibilidad.
                     </p>
                   </Link>
 
                   <Link
                     to="/artistas"
-                    className="rounded-2xl px-4 py-4 border hover:opacity-95 transition"
-                    style={{
-                      borderColor: "var(--c-border)",
-                      background: "rgba(255,255,255,0.03)",
-                    }}
+                    className="group rounded-[24px] border border-neutral-200 bg-neutral-50 px-5 py-4 hover:bg-neutral-950 transition"
                   >
-                    <p className="text-xs" style={{ color: "var(--c-accent)" }}>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 group-hover:text-emerald-300">
                       Artistas
                     </p>
 
-                    <p className="text-sm font-bold text-white">
+                    <p className="mt-1 text-base font-black text-neutral-950 group-hover:text-white">
                       Conoce la colectiva
                     </p>
 
-                    <p className="text-xs mt-1" style={{ color: "var(--c-muted)" }}>
-                      Biografías y estilo.
+                    <p className="mt-1 text-xs text-neutral-500 group-hover:text-white/60">
+                      Biografías, obras y estilos.
                     </p>
                   </Link>
                 </div>
 
-                <div className="mt-6 flex gap-3">
+                <div className="mt-5 flex flex-col sm:flex-row gap-3">
                   <button
                     type="button"
                     onClick={() => void loadWorks()}
-                    className="px-4 py-2 rounded-lg font-semibold"
-                    style={{ background: "var(--c-accent)", color: "#07110a" }}
+                    className="flex-1 rounded-full bg-neutral-950 px-5 py-3 text-sm font-black text-white hover:bg-emerald-600 transition"
                   >
                     Actualizar
                   </button>
 
                   <Link
                     to="/contacto"
-                    className="px-4 py-2 rounded-lg font-semibold border"
-                    style={{ borderColor: "var(--c-border)", color: "white" }}
+                    className="flex-1 rounded-full border border-neutral-300 px-5 py-3 text-center text-sm font-black text-neutral-950 hover:bg-neutral-950 hover:text-white transition"
                   >
                     Contacto
                   </Link>
@@ -698,92 +738,99 @@ export default function HomePage() {
           </div>
         </Shell>
 
+        <Shell className="pb-8">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["Galería online", "Obras disponibles para explorar"],
+              ["Compra directa", "Consulta piezas y prints"],
+              ["Artistas locales", "Talento visual desde Bolivia"],
+              ["Eventos", "Exposiciones y actividades"],
+            ].map(([title, text]) => (
+              <div
+                key={title}
+                className="rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm"
+              >
+                <p className="text-base font-black text-neutral-950">{title}</p>
+                <p className="mt-1 text-sm text-neutral-500">{text}</p>
+              </div>
+            ))}
+          </div>
+        </Shell>
+
         <EventosProSection />
 
-        <Shell className="pb-10">
-          <div
-            className="rounded-3xl p-6 sm:p-8"
-            style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid var(--c-border)",
-            }}
-          >
-            <div className="flex flex-col lg:flex-row gap-6 lg:items-center lg:justify-between">
+        <Shell className="pb-12">
+          <div className="rounded-[34px] bg-white border border-neutral-200 p-5 sm:p-8 shadow-sm">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 className="text-xl sm:text-2xl font-extrabold text-white">
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">
+                  Buscar arte
+                </p>
+
+                <h2 className="mt-2 text-2xl sm:text-3xl font-black text-neutral-950">
                   Encuentra tu obra ideal
                 </h2>
 
-                <p className="mt-1 text-sm" style={{ color: "var(--c-muted)" }}>
-                  Busca por título o artista.
+                <p className="mt-2 text-sm text-neutral-500">
+                  Busca por título, artista o descripción.
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-[520px]">
+              <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-[620px]">
                 <input
-                  className="w-full px-4 py-3 rounded-xl outline-none"
-                  style={{
-                    background: "var(--c-panel)",
-                    border: "1px solid var(--c-border)",
-                    color: "white",
-                  }}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="w-full rounded-full border border-neutral-300 bg-neutral-50 px-5 py-4 text-sm text-neutral-950 outline-none focus:border-neutral-950"
                   placeholder="Ej: Metamorfosis, Antonella, Grabado..."
                 />
 
                 <button
                   type="button"
-                  className="px-5 py-3 rounded-xl font-semibold"
-                  style={{ background: "var(--c-accent)", color: "#07110a" }}
+                  className="rounded-full bg-neutral-950 px-6 py-4 text-sm font-black text-white hover:bg-emerald-600 transition"
                   onClick={() => navigate("/museo")}
                 >
-                  Ir a la galería
+                  Ir a galería
                 </button>
               </div>
             </div>
+
+            {query.trim() ? (
+              <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {filteredWorks.length > 0 ? (
+                  filteredWorks.map((work) => (
+                    <ProductCard key={work.id} work={work} onOpen={goToWork} />
+                  ))
+                ) : (
+                  <div className="sm:col-span-2 lg:col-span-4 rounded-[24px] bg-neutral-50 border border-neutral-200 p-6 text-sm text-neutral-500">
+                    No se encontraron obras con esa búsqueda.
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
         </Shell>
 
         <Shell className="pb-12">
-          <div className="flex items-end justify-between gap-4 mb-5">
-            <div>
-              <h3 className="text-xl sm:text-2xl font-extrabold text-white">
-                Obras en movimiento
-              </h3>
-
-              <p className="text-sm mt-1" style={{ color: "var(--c-muted)" }}>
-                Desliza las obras y explora la colección.
-              </p>
-            </div>
-
-            <Link
-              to="/museo"
-              className="text-sm font-semibold underline underline-offset-4"
-              style={{ color: "var(--c-accent)" }}
-            >
-              Ver todo en Galería →
-            </Link>
-          </div>
+          <SectionTitle
+            eyebrow="Colección"
+            title="Obras en movimiento"
+            description="Desliza horizontalmente y explora las piezas destacadas de Crisálida Market."
+            action={
+              <Link
+                to="/museo"
+                className="inline-flex items-center justify-center rounded-full bg-neutral-950 px-5 py-3 text-sm font-black text-white hover:bg-emerald-600 transition"
+              >
+                Ver todo →
+              </Link>
+            }
+          />
 
           {loading ? (
-            <div
-              className="rounded-3xl p-8 text-sm"
-              style={{
-                background: "var(--c-panel)",
-                border: "1px solid var(--c-border)",
-                color: "var(--c-muted)",
-              }}
-            >
+            <div className="rounded-[30px] border border-neutral-200 bg-white p-8 text-sm text-neutral-500 shadow-sm">
               Cargando galería...
             </div>
           ) : works.length === 0 ? (
-            <div
-              className="rounded-3xl p-8 text-sm"
-              style={{
-                background: "var(--c-panel)",
-                border: "1px solid var(--c-border)",
-                color: "var(--c-muted)",
-              }}
-            >
+            <div className="rounded-[30px] border border-neutral-200 bg-white p-8 text-sm text-neutral-500 shadow-sm">
               No hay obras con imagen todavía. Sube obras desde Admin.
             </div>
           ) : (
@@ -792,55 +839,78 @@ export default function HomePage() {
         </Shell>
 
         <Shell className="pb-14">
-          <div
-            className="rounded-3xl p-7 sm:p-10 flex flex-col lg:flex-row gap-6 lg:items-center lg:justify-between"
-            style={{
-              background: "var(--c-panel)",
-              border: "1px solid var(--c-border)",
-            }}
-          >
-            <div className="max-w-2xl">
-              <h4 className="text-xl sm:text-2xl font-extrabold text-white">
-                Compra piezas y prints exclusivos de Crisálida
-              </h4>
+          <SectionTitle
+            eyebrow="Tienda"
+            title="Piezas recomendadas"
+            description="Una vista tipo catálogo para que la página se sienta más comercial, limpia y moderna."
+          />
 
-              <p className="mt-2 text-sm" style={{ color: "var(--c-muted)" }}>
-                Un bloque tipo tienda para darle fuerza comercial a la página.
-              </p>
+          {loading ? (
+            <div className="rounded-[30px] border border-neutral-200 bg-white p-8 text-sm text-neutral-500 shadow-sm">
+              Cargando piezas recomendadas...
             </div>
+          ) : works.length === 0 ? (
+            <div className="rounded-[30px] border border-neutral-200 bg-white p-8 text-sm text-neutral-500 shadow-sm">
+              No hay obras disponibles.
+            </div>
+          ) : (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {works.slice(0, 8).map((work) => (
+                <ProductCard key={work.id} work={work} onOpen={goToWork} />
+              ))}
+            </div>
+          )}
+        </Shell>
 
-            <div className="flex gap-3">
-              <Link
-                to="/tienda"
-                className="px-5 py-3 rounded-xl font-semibold"
-                style={{ background: "var(--c-accent)", color: "#07110a" }}
-              >
-                Ir a la Tienda
-              </Link>
+        <Shell className="pb-16">
+          <div className="relative overflow-hidden rounded-[38px] bg-neutral-950 p-7 sm:p-10 text-white shadow-sm">
+            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-400/20 blur-3xl" />
+            <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
 
-              <Link
-                to="/contacto"
-                className="px-5 py-3 rounded-xl font-semibold border"
-                style={{ borderColor: "var(--c-border)", color: "white" }}
-              >
-                Pedidos personalizados
-              </Link>
+            <div className="relative flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-300">
+                  Crisálida Market
+                </p>
+
+                <h4 className="mt-3 text-2xl sm:text-4xl font-black leading-tight">
+                  Compra piezas y prints exclusivos de la colectiva.
+                </h4>
+
+                <p className="mt-3 text-sm sm:text-base text-white/65">
+                  Un bloque comercial más fuerte para que la página se sienta
+                  como una tienda artística moderna.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link
+                  to="/tienda"
+                  className="rounded-full bg-white px-6 py-4 text-center text-sm font-black text-neutral-950 hover:bg-emerald-400 transition"
+                >
+                  Ir a la Tienda
+                </Link>
+
+                <Link
+                  to="/contacto"
+                  className="rounded-full border border-white/25 px-6 py-4 text-center text-sm font-black text-white hover:bg-white hover:text-neutral-950 transition"
+                >
+                  Pedidos personalizados
+                </Link>
+              </div>
             </div>
           </div>
         </Shell>
       </main>
 
-      <footer
-        className="border-t"
-        style={{ borderColor: "var(--c-border)", background: "var(--c-panel)" }}
-      >
-        <Shell className="py-5">
-          <div className="text-xs flex flex-col sm:flex-row items-center justify-between gap-2">
-            <p style={{ color: "var(--c-muted)" }}>
+      <footer className="border-t border-neutral-200 bg-white">
+        <Shell className="py-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-neutral-500">
+            <p>
               © 2025 Colectiva de Arte Crisálida. Todos los derechos reservados.
             </p>
 
-            <p style={{ color: "rgba(255,255,255,0.55)" }}>By Joel Lazarte</p>
+            <p>By Joel Lazarte</p>
           </div>
         </Shell>
       </footer>
