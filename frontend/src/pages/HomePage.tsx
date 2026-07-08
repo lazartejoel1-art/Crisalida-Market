@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, PanInfo } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { buildImageUrl, fetchObras } from "../services/api";
 
@@ -492,6 +492,29 @@ export default function HomePage() {
 
   const goToWork = (id: number) => navigate(`/obra/${id}`);
 
+  const nextWork = () => {
+    if (!works.length) return;
+    setIndex((prev) => (prev + 1) % works.length);
+  };
+
+  const prevWork = () => {
+    if (!works.length) return;
+    setIndex((prev) => (prev - 1 + works.length) % works.length);
+  };
+
+  const handleHeroDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const offset = info.offset.x;
+    const velocity = info.velocity.x;
+
+    if (offset < -55 || velocity < -450) {
+      nextWork();
+    }
+
+    if (offset > 55 || velocity > 450) {
+      prevWork();
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f5f5] text-neutral-950 transition-colors duration-300 dark:bg-neutral-950 dark:text-white">
       <main className="flex-1">
@@ -512,21 +535,19 @@ export default function HomePage() {
                     <motion.button
                       key={active.id}
                       type="button"
-                      className="absolute inset-0 text-left"
+                      className="absolute inset-0 cursor-grab touch-pan-y active:cursor-grabbing"
                       onClick={() => goToWork(active.id)}
                       aria-label={`Abrir obra: ${active.titulo}`}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.35 }}
+                      drag="x"
+                      dragConstraints={{ left: 0, right: 0 }}
+                      dragElastic={0.18}
+                      onDragEnd={handleHeroDragEnd}
+                      initial={{ opacity: 0, x: 35 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -35 }}
+                      transition={{ duration: 0.32, ease: "easeOut" }}
                     >
-                      <motion.div
-                        className="absolute inset-0"
-                        initial={{ opacity: 0, scale: 1.02 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.99 }}
-                        transition={{ duration: 0.7, ease: "easeInOut" }}
-                      >
+                      <motion.div className="absolute inset-0">
                         <SafeImage
                           src={activeImage}
                           alt={active.titulo}
@@ -535,7 +556,7 @@ export default function HomePage() {
                         />
                       </motion.div>
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/45 to-black/10" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-black/5" />
 
                       <div className="absolute left-5 top-5 sm:left-7 sm:top-7">
                         <span className="inline-flex rounded-full bg-white/95 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-neutral-950 shadow-sm">
@@ -543,44 +564,18 @@ export default function HomePage() {
                         </span>
                       </div>
 
-                      <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8 lg:p-10">
-                        <p className="max-w-full truncate text-[11px] font-black uppercase tracking-[0.16em] text-emerald-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] sm:text-xs">
-                          {active.artista?.nombre ?? "Colectiva Crisálida"}
-                        </p>
-
-                        <div className="mt-3 max-w-3xl">
-                          <h1 className="max-w-2xl text-[24px] font-black leading-[1.05] tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.95)] sm:text-3xl lg:text-4xl">
-                            {active.titulo}
-                          </h1>
-
-                          {active.descripcion ? (
-                            <p className="mt-3 max-w-2xl line-clamp-3 text-[14px] leading-relaxed text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-[15px] lg:text-base">
-                              {active.descripcion}
-                            </p>
-                          ) : null}
-
-                          <div className="mt-5 flex flex-wrap gap-3">
-                            <span className="rounded-full bg-white px-5 py-3 text-sm font-black text-neutral-950">
-                              Ver obra
-                            </span>
-
-                            <span className="rounded-full border border-white/25 bg-white/10 px-5 py-3 text-sm font-bold text-white backdrop-blur">
-                              Stock: {Number(active.stock ?? 0)}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="mt-7 flex items-center gap-2">
-                          {works.slice(0, Math.min(works.length, 6)).map((w) => {
+                      <div className="absolute bottom-5 left-0 right-0 flex justify-center sm:bottom-7">
+                        <div className="flex items-center gap-2 rounded-full bg-black/25 px-4 py-2 backdrop-blur">
+                          {works.slice(0, Math.min(works.length, 8)).map((w) => {
                             const isActive = w.id === active.id;
 
                             return (
-                              <div
+                              <span
                                 key={w.id}
                                 className={`h-1.5 rounded-full transition-all ${
                                   isActive
-                                    ? "w-10 bg-emerald-400"
-                                    : "w-3 bg-white/35"
+                                    ? "w-9 bg-emerald-400"
+                                    : "w-3 bg-white/45"
                                 }`}
                               />
                             );
