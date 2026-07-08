@@ -377,7 +377,9 @@ function EventosProSection() {
                   <div className="min-w-0 flex-1">
                     <p
                       className={`text-[11px] font-black uppercase tracking-[0.14em] ${
-                        isActive ? "text-emerald-300" : "text-emerald-700 dark:text-emerald-300"
+                        isActive
+                          ? "text-emerald-300"
+                          : "text-emerald-700 dark:text-emerald-300"
                       }`}
                     >
                       {idx === 0 ? "Destacado" : "Evento"}
@@ -389,7 +391,9 @@ function EventosProSection() {
 
                     <p
                       className={`mt-1 line-clamp-1 text-xs ${
-                        isActive ? "text-white/70" : "text-neutral-500 dark:text-white/55"
+                        isActive
+                          ? "text-white/70"
+                          : "text-neutral-500 dark:text-white/55"
                       }`}
                     >
                       {evento.fecha || "Fecha por confirmar"}
@@ -397,7 +401,9 @@ function EventosProSection() {
 
                     <p
                       className={`mt-1 line-clamp-1 text-xs ${
-                        isActive ? "text-white/55" : "text-neutral-400 dark:text-white/40"
+                        isActive
+                          ? "text-white/55"
+                          : "text-neutral-400 dark:text-white/40"
                       }`}
                     >
                       {evento.lugar || "Lugar por confirmar"}
@@ -538,41 +544,29 @@ export default function HomePage() {
                       </div>
 
                       <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8 lg:p-10">
-                        <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
+                        <p className="max-w-full truncate text-[11px] font-black uppercase tracking-[0.16em] text-emerald-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] sm:text-xs">
                           {active.artista?.nombre ?? "Colectiva Crisálida"}
                         </p>
 
-                        <div className="mt-3 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-                          <div className="max-w-3xl">
-                            <h1 className="max-w-2xl text-2xl font-black leading-tight tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.95)] sm:text-3xl lg:text-4xl">
-                              {active.titulo}
-                            </h1>
+                        <div className="mt-3 max-w-3xl">
+                          <h1 className="max-w-2xl text-[24px] font-black leading-[1.05] tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.95)] sm:text-3xl lg:text-4xl">
+                            {active.titulo}
+                          </h1>
 
-                            {active.descripcion ? (
-                              <p className="mt-3 max-w-2xl line-clamp-3 text-sm leading-relaxed text-white/95 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-[15px]">
-                                {active.descripcion}
-                              </p>
-                            ) : null}
-
-                            <div className="mt-6 flex flex-wrap gap-3">
-                              <span className="rounded-full bg-white px-5 py-3 text-sm font-black text-neutral-950">
-                                Ver obra
-                              </span>
-
-                              <span className="rounded-full border border-white/25 bg-white/10 px-5 py-3 text-sm font-bold text-white backdrop-blur">
-                                Stock: {Number(active.stock ?? 0)}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="sm:text-right">
-                            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">
-                              Precio
+                          {active.descripcion ? (
+                            <p className="mt-3 max-w-2xl line-clamp-3 text-[14px] leading-relaxed text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-[15px] lg:text-base">
+                              {active.descripcion}
                             </p>
+                          ) : null}
 
-                            <p className="mt-1 text-2xl font-black text-white drop-shadow-[0_3px_10px_rgba(0,0,0,0.85)] sm:text-3xl">
-                              {toNumber(active.precio).toFixed(2)} Bs
-                            </p>
+                          <div className="mt-5 flex flex-wrap gap-3">
+                            <span className="rounded-full bg-white px-5 py-3 text-sm font-black text-neutral-950">
+                              Ver obra
+                            </span>
+
+                            <span className="rounded-full border border-white/25 bg-white/10 px-5 py-3 text-sm font-bold text-white backdrop-blur">
+                              Stock: {Number(active.stock ?? 0)}
+                            </span>
                           </div>
                         </div>
 
