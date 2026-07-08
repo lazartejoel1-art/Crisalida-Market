@@ -502,7 +502,10 @@ export default function HomePage() {
     setIndex((prev) => (prev - 1 + works.length) % works.length);
   };
 
-  const handleHeroDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  const handleHeroDragEnd = (
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo,
+  ) => {
     const offset = info.offset.x;
     const velocity = info.velocity.x;
 
@@ -556,7 +559,7 @@ export default function HomePage() {
                         />
                       </motion.div>
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-black/5" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/5" />
 
                       <div className="absolute left-5 top-5 sm:left-7 sm:top-7">
                         <span className="inline-flex rounded-full bg-white/95 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-neutral-950 shadow-sm">
@@ -564,8 +567,18 @@ export default function HomePage() {
                         </span>
                       </div>
 
-                      <div className="absolute bottom-5 left-0 right-0 flex justify-center sm:bottom-7">
-                        <div className="flex items-center gap-2 rounded-full bg-black/25 px-4 py-2 backdrop-blur">
+                      <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7">
+                        <div className="max-w-[92%] rounded-[26px] border border-white/15 bg-black/30 px-5 py-4 text-left backdrop-blur-md sm:max-w-xl sm:px-6 sm:py-5">
+                          <p className="mb-2 max-w-full truncate text-[11px] font-black uppercase tracking-[0.16em] text-emerald-300">
+                            {active.artista?.nombre ?? "Colectiva Crisálida"}
+                          </p>
+
+                          <h1 className="line-clamp-2 text-[22px] font-black leading-[1.08] tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.95)] sm:text-3xl lg:text-4xl">
+                            {active.titulo}
+                          </h1>
+                        </div>
+
+                        <div className="mt-4 flex items-center gap-2">
                           {works.slice(0, Math.min(works.length, 8)).map((w) => {
                             const isActive = w.id === active.id;
 
