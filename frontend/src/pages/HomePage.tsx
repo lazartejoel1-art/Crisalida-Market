@@ -286,7 +286,7 @@ function EventosProSection() {
         action={
           <Link
             to="/contacto"
-            className="inline-flex items-center justify-center rounded-full border border-neutral-300 bg-white px-5 py-3 text-sm font-black text-neutral-950 transition hover:bg-neutral-950 hover:text-white dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:hover:bg-white dark:hover:text-black"
+            className="inline-flex items-center justify-center rounded-full border border-neutral-300 bg-white px-5 py-3 text-sm font-black text-neutral-950 transition hover:border-emerald-400 hover:bg-emerald-50 dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:hover:bg-emerald-400/10"
           >
             Consultar eventos →
           </Link>
@@ -362,8 +362,8 @@ function EventosProSection() {
                   }}
                   className={`flex items-center gap-3 rounded-[26px] border p-3 text-left shadow-sm transition ${
                     isActive
-                      ? "border-neutral-950 bg-neutral-950 text-white dark:border-emerald-400/60"
-                      : "border-neutral-200 bg-white text-neutral-950 hover:border-neutral-400 dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:hover:border-emerald-400/50"
+                      ? "border-emerald-300 bg-emerald-50 text-neutral-950 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-white"
+                      : "border-neutral-200 bg-white text-neutral-950 hover:border-emerald-300 hover:bg-emerald-50/60 dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
                   }`}
                 >
                   <div className="relative h-28 w-24 shrink-0 overflow-hidden rounded-[20px] bg-neutral-100 dark:bg-white/5 sm:h-32 sm:w-28">
@@ -375,13 +375,7 @@ function EventosProSection() {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p
-                      className={`text-[11px] font-black uppercase tracking-[0.14em] ${
-                        isActive
-                          ? "text-emerald-300"
-                          : "text-emerald-700 dark:text-emerald-300"
-                      }`}
-                    >
+                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
                       {idx === 0 ? "Destacado" : "Evento"}
                     </p>
 
@@ -389,23 +383,11 @@ function EventosProSection() {
                       {evento.titulo}
                     </h4>
 
-                    <p
-                      className={`mt-1 line-clamp-1 text-xs ${
-                        isActive
-                          ? "text-white/70"
-                          : "text-neutral-500 dark:text-white/55"
-                      }`}
-                    >
+                    <p className="mt-1 line-clamp-1 text-xs text-neutral-500 dark:text-white/55">
                       {evento.fecha || "Fecha por confirmar"}
                     </p>
 
-                    <p
-                      className={`mt-1 line-clamp-1 text-xs ${
-                        isActive
-                          ? "text-white/55"
-                          : "text-neutral-400 dark:text-white/40"
-                      }`}
-                    >
+                    <p className="mt-1 line-clamp-1 text-xs text-neutral-400 dark:text-white/40">
                       {evento.lugar || "Lugar por confirmar"}
                     </p>
                   </div>
