@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, PanInfo } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaTiktok,
+  FaEnvelope,
+} from "react-icons/fa";
 import { buildImageUrl, fetchObras } from "../services/api";
 
 type Work = {
@@ -30,6 +36,29 @@ type Evento = {
 
 const API =
   import.meta.env.VITE_API_URL || "https://crisalida-market.onrender.com";
+
+const SOCIALS = [
+  {
+    label: "Instagram",
+    href: "https://instagram.com/crisalida.collective",
+    icon: <FaInstagram />,
+  },
+  {
+    label: "TikTok",
+    href: "https://www.tiktok.com/@crisalida_8?_r=1&_t=ZS-96EEFsBsywP",
+    icon: <FaTiktok />,
+  },
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/share/18RT8qmWAJ/",
+    icon: <FaFacebookF />,
+  },
+  {
+    label: "Gmail",
+    href: "mailto:crisalida.contact@gmail.com",
+    icon: <FaEnvelope />,
+  },
+];
 
 function toNumber(v: number | string) {
   const n = typeof v === "number" ? v : Number(v ?? 0);
@@ -93,6 +122,25 @@ function Shell({
     <section className={`w-full px-4 sm:px-6 lg:px-10 2xl:px-16 ${className}`}>
       <div className="mx-auto w-full max-w-[1480px]">{children}</div>
     </section>
+  );
+}
+
+function SocialIcons() {
+  return (
+    <div className="flex items-center gap-2">
+      {SOCIALS.map((social) => (
+        <a
+          key={social.label}
+          href={social.href}
+          target={social.href.startsWith("mailto:") ? undefined : "_blank"}
+          rel={social.href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
+          aria-label={social.label}
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-neutral-200 bg-white text-base text-neutral-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300"
+        >
+          {social.icon}
+        </a>
+      ))}
+    </div>
   );
 }
 
@@ -652,21 +700,34 @@ export default function HomePage() {
                   </Link>
                 </div>
 
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => void loadWorks()}
-                    className="flex-1 rounded-full bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
-                  >
-                    Actualizar
-                  </button>
+                <div className="mt-5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <SocialIcons />
 
-                  <Link
-                    to="/contacto"
-                    className="flex-1 rounded-full border border-neutral-300 px-5 py-3 text-center text-sm font-black text-neutral-950 transition hover:border-emerald-400 hover:bg-emerald-50 dark:border-white/10 dark:text-white dark:hover:bg-emerald-400/10"
-                  >
-                    Contacto
-                  </Link>
+                    <Link
+                      to="/tienda"
+                      className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
+                    >
+                      Tienda
+                    </Link>
+                  </div>
+
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => void loadWorks()}
+                      className="flex-1 rounded-full bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
+                    >
+                      Actualizar
+                    </button>
+
+                    <Link
+                      to="/contacto"
+                      className="flex-1 rounded-full border border-neutral-300 px-5 py-3 text-center text-sm font-black text-neutral-950 transition hover:border-emerald-400 hover:bg-emerald-50 dark:border-white/10 dark:text-white dark:hover:bg-emerald-400/10"
+                    >
+                      Contacto
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
@@ -675,25 +736,73 @@ export default function HomePage() {
 
         <Shell className="pb-8">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              ["Galería online", "Obras disponibles para explorar"],
-              ["Compra directa", "Consulta piezas y prints"],
-              ["Artistas locales", "Talento visual desde Bolivia"],
-              ["Eventos", "Exposiciones y actividades"],
-            ].map(([title, text]) => (
-              <div
-                key={title}
-                className="rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-neutral-900"
-              >
-                <p className="text-base font-black text-neutral-950 dark:text-white">
-                  {title}
-                </p>
+            <Link
+              to="/museo"
+              className="group rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg dark:border-white/10 dark:bg-neutral-900 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
+            >
+              <p className="text-base font-black text-neutral-950 dark:text-white">
+                Galería online
+              </p>
 
-                <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
-                  {text}
-                </p>
-              </div>
-            ))}
+              <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
+                Obras disponibles para explorar
+              </p>
+
+              <p className="mt-3 text-xs font-black text-emerald-700 opacity-0 transition group-hover:opacity-100 dark:text-emerald-300">
+                Ver galería →
+              </p>
+            </Link>
+
+            <Link
+              to="/tienda"
+              className="group rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg dark:border-white/10 dark:bg-neutral-900 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
+            >
+              <p className="text-base font-black text-neutral-950 dark:text-white">
+                Compra directa
+              </p>
+
+              <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
+                Consulta piezas y prints
+              </p>
+
+              <p className="mt-3 text-xs font-black text-emerald-700 opacity-0 transition group-hover:opacity-100 dark:text-emerald-300">
+                Ir a tienda →
+              </p>
+            </Link>
+
+            <Link
+              to="/artistas"
+              className="group rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg dark:border-white/10 dark:bg-neutral-900 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
+            >
+              <p className="text-base font-black text-neutral-950 dark:text-white">
+                Artistas locales
+              </p>
+
+              <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
+                Talento visual desde Bolivia
+              </p>
+
+              <p className="mt-3 text-xs font-black text-emerald-700 opacity-0 transition group-hover:opacity-100 dark:text-emerald-300">
+                Ver artistas →
+              </p>
+            </Link>
+
+            <Link
+              to="/eventos"
+              className="group rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg dark:border-white/10 dark:bg-neutral-900 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
+            >
+              <p className="text-base font-black text-neutral-950 dark:text-white">
+                Eventos
+              </p>
+
+              <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
+                Exposiciones y actividades
+              </p>
+
+              <p className="mt-3 text-xs font-black text-emerald-700 opacity-0 transition group-hover:opacity-100 dark:text-emerald-300">
+                Ver eventos →
+              </p>
+            </Link>
           </div>
         </Shell>
 
@@ -823,20 +932,33 @@ export default function HomePage() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Link
-                  to="/tienda"
-                  className="rounded-full bg-emerald-600 px-6 py-4 text-center text-sm font-black text-white transition hover:bg-emerald-700 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
-                >
-                  Ir a la Tienda
-                </Link>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-center gap-3 sm:justify-end">
+                  <SocialIcons />
 
-                <Link
-                  to="/contacto"
-                  className="rounded-full border border-emerald-300 px-6 py-4 text-center text-sm font-black text-neutral-950 transition hover:bg-white dark:border-emerald-400/30 dark:text-white dark:hover:bg-white/10"
-                >
-                  Pedidos personalizados
-                </Link>
+                  <Link
+                    to="/carrito"
+                    className="rounded-full border border-emerald-300 bg-white/60 px-5 py-3 text-sm font-black text-neutral-950 transition hover:bg-white dark:border-emerald-400/30 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                  >
+                    🛒 Carrito
+                  </Link>
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Link
+                    to="/tienda"
+                    className="rounded-full bg-emerald-600 px-6 py-4 text-center text-sm font-black text-white transition hover:bg-emerald-700 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
+                  >
+                    Ir a la Tienda
+                  </Link>
+
+                  <Link
+                    to="/contacto"
+                    className="rounded-full border border-emerald-300 px-6 py-4 text-center text-sm font-black text-neutral-950 transition hover:bg-white dark:border-emerald-400/30 dark:text-white dark:hover:bg-white/10"
+                  >
+                    Pedidos personalizados
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
