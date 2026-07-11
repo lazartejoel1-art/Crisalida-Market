@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import type { Artista } from "../services/types";
 import { fetchArtistas } from "../services/api";
 import ArtistaCard from "../components/ArtistaCard";
@@ -26,10 +27,24 @@ export default function ArtistasPage() {
   };
 
   useEffect(() => {
-    // avoid calling setState synchronously inside effect to prevent cascading renders
-    const id = setTimeout(() => loadArtistas(), 0);
+    // defer to avoid calling setState synchronously within the effect
+    const id = window.setTimeout(() => {
+      loadArtistas();
+    }, 0);
+
     return () => clearTimeout(id);
   }, []);
+
+  const scrollToArtists = () => {
+    const section = document.getElementById("lista-artistas");
+
+    if (section) {
+      section.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f4f5f5] text-neutral-950 transition-colors duration-300 dark:bg-neutral-950 dark:text-white">
@@ -70,39 +85,107 @@ export default function ArtistasPage() {
                   Actualizar
                 </button>
 
-                <a
-                  href="#lista-artistas"
+                <button
+                  type="button"
+                  onClick={scrollToArtists}
                   className="rounded-full border border-emerald-300 bg-white/60 px-6 py-3 text-sm font-black text-neutral-950 transition hover:bg-white dark:border-emerald-400/30 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
                 >
                   Ver artistas
-                </a>
+                </button>
               </div>
             </div>
           </motion.div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              ["Arte local", "Talento visual desde Bolivia"],
-              ["Colectiva activa", "Exposiciones y proyectos"],
-              ["Identidad visual", "Estilos diversos y auténticos"],
-              ["Crisálida Market", "Obras disponibles en tienda"],
-            ].map(([title, text]) => (
-              <motion.div
-                key={title}
-                className="rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-neutral-900"
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35 }}
+            <motion.button
+              type="button"
+              onClick={scrollToArtists}
+              className="group text-left rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg dark:border-white/10 dark:bg-neutral-900 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35 }}
+            >
+              <p className="text-base font-black text-neutral-950 dark:text-white">
+                Arte local
+              </p>
+
+              <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
+                Talento visual desde Bolivia
+              </p>
+
+              <p className="mt-3 text-xs font-black text-emerald-700 opacity-0 transition group-hover:opacity-100 dark:text-emerald-300">
+                Ver perfiles →
+              </p>
+            </motion.button>
+
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.05 }}
+            >
+              <Link
+                to="/eventos"
+                className="group block h-full rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg dark:border-white/10 dark:bg-neutral-900 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
               >
                 <p className="text-base font-black text-neutral-950 dark:text-white">
-                  {title}
+                  Colectiva activa
                 </p>
 
                 <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
-                  {text}
+                  Exposiciones y proyectos
                 </p>
-              </motion.div>
-            ))}
+
+                <p className="mt-3 text-xs font-black text-emerald-700 opacity-0 transition group-hover:opacity-100 dark:text-emerald-300">
+                  Ver eventos →
+                </p>
+              </Link>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.1 }}
+            >
+              <Link
+                to="/museo"
+                className="group block h-full rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg dark:border-white/10 dark:bg-neutral-900 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
+              >
+                <p className="text-base font-black text-neutral-950 dark:text-white">
+                  Identidad visual
+                </p>
+
+                <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
+                  Estilos diversos y auténticos
+                </p>
+
+                <p className="mt-3 text-xs font-black text-emerald-700 opacity-0 transition group-hover:opacity-100 dark:text-emerald-300">
+                  Ver galería →
+                </p>
+              </Link>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.15 }}
+            >
+              <Link
+                to="/tienda"
+                className="group block h-full rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg dark:border-white/10 dark:bg-neutral-900 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
+              >
+                <p className="text-base font-black text-neutral-950 dark:text-white">
+                  Crisálida Market
+                </p>
+
+                <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
+                  Obras disponibles en tienda
+                </p>
+
+                <p className="mt-3 text-xs font-black text-emerald-700 opacity-0 transition group-hover:opacity-100 dark:text-emerald-300">
+                  Ir a tienda →
+                </p>
+              </Link>
+            </motion.div>
           </div>
 
           <section
