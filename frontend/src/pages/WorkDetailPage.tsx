@@ -35,6 +35,7 @@ type FichaTecnica = {
 const CART_KEY = "crisalida_cart";
 
 function getImageUrl(imagePath: string | null | undefined): string | null {
+  if (!imagePath) return null;
   return buildImageUrl(imagePath);
 }
 
@@ -51,6 +52,11 @@ function readCart(): CartItem[] {
 function saveCart(cart: CartItem[]) {
   localStorage.setItem(CART_KEY, JSON.stringify(cart));
   window.dispatchEvent(new Event("crisalida_cart_updated"));
+}
+
+function toPrice(value: number | string) {
+  const n = typeof value === "number" ? value : Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
 }
 
 function extraerCampo(texto: string, etiquetas: string[]): string {
@@ -104,6 +110,36 @@ function obtenerFichaTecnica(descripcion: string): FichaTecnica {
     dimensiones: dimensiones || "No especificadas",
     anio: anioMatch?.[1] || "No especificado",
   };
+}
+
+function Shell({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`w-full px-4 sm:px-6 lg:px-10 2xl:px-16 ${className}`}>
+      <div className="mx-auto w-full max-w-[1480px]">{children}</div>
+    </section>
+  );
+}
+
+function InfoPanel({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-[30px] border border-neutral-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-neutral-900 sm:p-6 ${className}`}
+    >
+      {children}
+    </div>
+  );
 }
 
 export default function WorkDetailPage() {
@@ -197,12 +233,7 @@ export default function WorkDetailPage() {
   const handleAddToCart = () => {
     if (!obra) return;
 
-    const precioNum =
-      typeof obra.precio === "number"
-        ? obra.precio
-        : Number(obra.precio ?? 0);
-
-    const safePrice = Number.isFinite(precioNum) ? precioNum : 0;
+    const safePrice = toPrice(obra.precio);
     const imageUrl = getImageUrl(obra.imagenUrl || obra.imagen);
 
     const cart = readCart();
@@ -231,212 +262,242 @@ export default function WorkDetailPage() {
 
   if (loading) {
     return (
-      <section className="w-full px-4 lg:px-10 py-10">
-        <p className="text-sm text-gray-400 animate-pulse">Cargando obra...</p>
-      </section>
+      <div className="min-h-screen bg-[#f4f5f5] text-neutral-950 dark:bg-neutral-950 dark:text-white">
+        <Shell className="py-10">
+          <InfoPanel>
+            <p className="text-sm animate-pulse text-neutral-500 dark:text-white/55">
+              Cargando obra...
+            </p>
+          </InfoPanel>
+        </Shell>
+      </div>
     );
   }
 
   if (error || !obra) {
     return (
-      <section className="w-full px-4 lg:px-10 py-10">
-        <p className="text-sm text-red-400 mb-4">
-          {error ?? "Obra no encontrada."}
-        </p>
+      <div className="min-h-screen bg-[#f4f5f5] text-neutral-950 dark:bg-neutral-950 dark:text-white">
+        <Shell className="py-10">
+          <InfoPanel>
+            <p className="mb-4 text-sm font-semibold text-red-500">
+              {error ?? "Obra no encontrada."}
+            </p>
 
-        <Link
-          to="/tienda"
-          className="text-sm text-verdeEsmeralda hover:underline"
-        >
-          ← Volver a la tienda
-        </Link>
-      </section>
+            <Link
+              to="/tienda"
+              className="text-sm font-black text-emerald-700 hover:underline dark:text-emerald-300"
+            >
+              ← Volver a la tienda
+            </Link>
+          </InfoPanel>
+        </Shell>
+      </div>
     );
   }
 
-  const price =
-    typeof obra.precio === "number"
-      ? obra.precio
-      : Number(obra.precio ?? 0);
-
-  const safePrice = Number.isFinite(price) ? price : 0;
+  const safePrice = toPrice(obra.precio);
   const imageUrl = getImageUrl(obra.imagenUrl || obra.imagen);
+  const isOutOfStock = Number(obra.stock ?? 0) <= 0;
 
   return (
-    <section className="w-full px-4 lg:px-10 py-8 lg:py-10">
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="text-xs text-gray-400 hover:text-verdeEsmeralda mb-4"
-      >
-        ← Volver
-      </button>
-
-      <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-8 lg:gap-10 items-start w-full">
-        <div
-          className="relative w-full h-fit bg-[#050816] border border-gray-800 rounded-2xl overflow-hidden select-none cursor-zoom-in group touch-none"
-          onContextMenu={(e) => e.preventDefault()}
-          onDragStart={(e) => e.preventDefault()}
-          onMouseEnter={() => setZoomActive(true)}
-          onMouseLeave={() => setZoomActive(false)}
-          onMouseMove={handleMouseMove}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={() => setZoomActive(false)}
-          onClick={() => setZoomActive((prev) => !prev)}
+    <div className="min-h-screen bg-[#f4f5f5] text-neutral-950 transition-colors duration-300 dark:bg-neutral-950 dark:text-white">
+      <Shell className="py-8 lg:py-10">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="mb-5 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-black text-neutral-500 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 dark:border-white/10 dark:bg-neutral-900 dark:text-white/55 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300"
         >
-          {imageUrl ? (
-            <>
-              <div className="relative w-full h-fit overflow-hidden">
-                <img
-                  src={imageUrl}
-                  alt={obra.titulo}
-                  loading="eager"
-                  decoding="async"
-                  className={`block w-full h-auto max-h-none object-contain pointer-events-none transition-transform duration-300 ${
-                    zoomActive ? "scale-[2.4]" : "scale-100"
-                  }`}
-                  style={{
-                    transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
-                  }}
-                  draggable={false}
-                />
+          ← Volver
+        </button>
+
+        <div className="grid w-full items-start gap-6 xl:grid-cols-[1.15fr_0.85fr] lg:gap-8">
+          <div
+            className="group relative h-fit w-full cursor-zoom-in select-none overflow-hidden rounded-[34px] border border-neutral-200 bg-white shadow-sm touch-none dark:border-white/10 dark:bg-neutral-900"
+            onContextMenu={(e) => e.preventDefault()}
+            onDragStart={(e) => e.preventDefault()}
+            onMouseEnter={() => setZoomActive(true)}
+            onMouseLeave={() => setZoomActive(false)}
+            onMouseMove={handleMouseMove}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={() => setZoomActive(false)}
+            onClick={() => setZoomActive((prev) => !prev)}
+          >
+            {imageUrl ? (
+              <>
+                <div className="relative w-full overflow-hidden bg-neutral-100 dark:bg-white/5">
+                  <img
+                    src={imageUrl}
+                    alt={obra.titulo}
+                    loading="eager"
+                    decoding="async"
+                    className={`block h-auto max-h-none w-full object-contain transition-transform duration-300 ${
+                      zoomActive ? "scale-[2.35]" : "scale-100"
+                    }`}
+                    style={{
+                      transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                    }}
+                    draggable={false}
+                  />
+                </div>
+
+                <div className="absolute left-4 top-4 z-30 rounded-full border border-white/20 bg-black/45 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/85 backdrop-blur-sm">
+                  {zoomActive ? "Zoom activo" : "Toca para ampliar"}
+                </div>
+              </>
+            ) : (
+              <div className="flex min-h-[320px] items-center justify-center text-sm text-neutral-400 dark:text-white/35">
+                Sin imagen
               </div>
-
-              <div className="absolute top-3 left-3 z-30 text-[10px] text-white/70 bg-black/40 border border-white/10 rounded-full px-3 py-1 backdrop-blur-sm">
-                {zoomActive ? "Zoom activo" : "desliza para ampliar"}
-              </div>
-            </>
-          ) : (
-            <div className="min-h-[320px] flex items-center justify-center text-gray-500 text-sm">
-              Sin imagen
-            </div>
-          )}
-
-          <div className="absolute bottom-3 right-3 text-[10px] text-white/40 uppercase tracking-widest pointer-events-none">
-            Crisálida · Arte
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="bg-[#050816] border border-gray-800 rounded-2xl p-6">
-            <p className="text-xs uppercase tracking-[0.24em] text-verdeEsmeralda mb-3">
-              Obra de arte · Crisálida
-            </p>
-
-            <h1 className="text-3xl font-extrabold text-gray-100 mb-3">
-              {obra.titulo}
-            </h1>
-
-            <div className="text-sm text-gray-400 mb-5">
-              {obra.artista?.nombre && obra.artista?.id ? (
-                <>
-                  Por{" "}
-                  <Link
-                    to={`/artistas/${obra.artista.id}`}
-                    className="text-verdeEsmeralda font-semibold hover:underline underline-offset-4"
-                  >
-                    {obra.artista.nombre}
-                  </Link>
-                </>
-              ) : obra.artista?.nombre ? (
-                <>
-                  Por{" "}
-                  <span className="text-verdeEsmeralda font-semibold">
-                    {obra.artista.nombre}
-                  </span>
-                </>
-              ) : (
-                "Artista de Crisálida"
-              )}
-            </div>
-
-            <p className="text-4xl font-extrabold text-verdeEsmeralda">
-              {safePrice.toFixed(2)} Bs
-            </p>
-          </div>
-
-          <div className="bg-[#050816] border border-gray-800 rounded-2xl p-6">
-            <h2 className="text-lg font-bold text-verdeEsmeralda mb-3">
-              Descripción
-            </h2>
-
-            <p className="text-sm sm:text-base text-gray-300 leading-relaxed whitespace-pre-line">
-              {ficha.descripcionLimpia}
-            </p>
-          </div>
-
-          <div className="bg-[#050816] border border-gray-800 rounded-2xl p-6">
-            <h2 className="text-lg font-bold text-verdeEsmeralda mb-4">
-              Ficha técnica
-            </h2>
-
-            <div className="grid sm:grid-cols-2 gap-3 text-sm">
-              <div className="rounded-xl border border-gray-800 bg-[#0b1220] p-4">
-                <p className="text-xs uppercase tracking-widest text-gray-500">
-                  Técnica
-                </p>
-                <p className="mt-1 text-gray-100 font-semibold">
-                  {ficha.tecnica}
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-gray-800 bg-[#0b1220] p-4">
-                <p className="text-xs uppercase tracking-widest text-gray-500">
-                  Dimensiones
-                </p>
-                <p className="mt-1 text-gray-100 font-semibold">
-                  {ficha.dimensiones}
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-gray-800 bg-[#0b1220] p-4">
-                <p className="text-xs uppercase tracking-widest text-gray-500">
-                  Año
-                </p>
-                <p className="mt-1 text-gray-100 font-semibold">
-                  {ficha.anio}
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-gray-800 bg-[#0b1220] p-4">
-                <p className="text-xs uppercase tracking-widest text-gray-500">
-                  Stock disponible
-                </p>
-                <p className="mt-1 text-gray-100 font-semibold">
-                  {obra.stock}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-[#050816] border border-gray-800 rounded-2xl p-6">
-            <div className="flex flex-wrap gap-3 items-center">
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={obra.stock <= 0}
-                className="px-5 py-3 rounded-xl bg-verdeEsmeralda text-black text-sm font-bold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {obra.stock > 0 ? "Agregar al carrito" : "Sin stock"}
-              </button>
-
-              <Link
-                to="/carrito"
-                className="text-sm text-gray-300 hover:text-verdeEsmeralda"
-              >
-                Ver carrito →
-              </Link>
-            </div>
-
-            {addedMessage && (
-              <p className="mt-3 text-xs text-verdeEsmeralda">
-                {addedMessage}
-              </p>
             )}
+
+            <div className="pointer-events-none absolute bottom-4 right-4 rounded-full bg-black/45 px-3 py-1 text-[10px] uppercase tracking-widest text-white/60 backdrop-blur">
+              Crisálida · Arte
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            <InfoPanel className="border-emerald-200 bg-emerald-50 dark:border-emerald-400/20 dark:bg-emerald-400/10">
+              <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+                Obra de arte · Crisálida
+              </p>
+
+              <h1 className="text-3xl font-black leading-tight text-neutral-950 dark:text-white sm:text-4xl">
+                {obra.titulo}
+              </h1>
+
+              <div className="mt-4 text-sm text-neutral-600 dark:text-white/65">
+                {obra.artista?.nombre && obra.artista?.id ? (
+                  <>
+                    Por{" "}
+                    <Link
+                      to={`/artistas/${obra.artista.id}`}
+                      className="font-black text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-300"
+                    >
+                      {obra.artista.nombre}
+                    </Link>
+                  </>
+                ) : obra.artista?.nombre ? (
+                  <>
+                    Por{" "}
+                    <span className="font-black text-emerald-700 dark:text-emerald-300">
+                      {obra.artista.nombre}
+                    </span>
+                  </>
+                ) : (
+                  "Artista de Crisálida"
+                )}
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-end justify-between gap-4 rounded-[24px] bg-white/70 p-4 dark:bg-white/5">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-neutral-400 dark:text-white/40">
+                    Precio
+                  </p>
+
+                  <p className="mt-1 text-3xl font-black text-emerald-700 dark:text-emerald-300">
+                    {safePrice.toFixed(2)} Bs
+                  </p>
+                </div>
+
+                <span
+                  className={`rounded-full px-4 py-2 text-xs font-black ${
+                    isOutOfStock
+                      ? "bg-red-100 text-red-700 dark:bg-red-400/10 dark:text-red-300"
+                      : "bg-emerald-100 text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-300"
+                  }`}
+                >
+                  {isOutOfStock ? "Sin stock" : `Stock: ${obra.stock}`}
+                </span>
+              </div>
+            </InfoPanel>
+
+            <InfoPanel>
+              <h2 className="mb-3 text-lg font-black text-emerald-700 dark:text-emerald-300">
+                Descripción
+              </h2>
+
+              <p className="whitespace-pre-line text-sm leading-relaxed text-neutral-600 dark:text-white/65 sm:text-base">
+                {ficha.descripcionLimpia}
+              </p>
+            </InfoPanel>
+
+            <InfoPanel>
+              <h2 className="mb-4 text-lg font-black text-emerald-700 dark:text-emerald-300">
+                Ficha técnica
+              </h2>
+
+              <div className="grid gap-3 text-sm sm:grid-cols-2">
+                <div className="rounded-[20px] border border-neutral-200 bg-neutral-50 p-4 dark:border-white/10 dark:bg-white/5">
+                  <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 dark:text-white/40">
+                    Técnica
+                  </p>
+
+                  <p className="mt-1 font-black text-neutral-950 dark:text-white">
+                    {ficha.tecnica}
+                  </p>
+                </div>
+
+                <div className="rounded-[20px] border border-neutral-200 bg-neutral-50 p-4 dark:border-white/10 dark:bg-white/5">
+                  <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 dark:text-white/40">
+                    Dimensiones
+                  </p>
+
+                  <p className="mt-1 font-black text-neutral-950 dark:text-white">
+                    {ficha.dimensiones}
+                  </p>
+                </div>
+
+                <div className="rounded-[20px] border border-neutral-200 bg-neutral-50 p-4 dark:border-white/10 dark:bg-white/5">
+                  <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 dark:text-white/40">
+                    Año
+                  </p>
+
+                  <p className="mt-1 font-black text-neutral-950 dark:text-white">
+                    {ficha.anio}
+                  </p>
+                </div>
+
+                <div className="rounded-[20px] border border-neutral-200 bg-neutral-50 p-4 dark:border-white/10 dark:bg-white/5">
+                  <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 dark:text-white/40">
+                    Stock disponible
+                  </p>
+
+                  <p className="mt-1 font-black text-neutral-950 dark:text-white">
+                    {obra.stock}
+                  </p>
+                </div>
+              </div>
+            </InfoPanel>
+
+            <InfoPanel>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={obra.stock <= 0}
+                  className="rounded-full bg-emerald-600 px-6 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-500 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300 dark:disabled:bg-white/10 dark:disabled:text-white/35"
+                >
+                  {obra.stock > 0 ? "Agregar al carrito" : "Sin stock"}
+                </button>
+
+                <Link
+                  to="/carrito"
+                  className="rounded-full border border-neutral-300 px-6 py-3 text-sm font-black text-neutral-950 transition hover:border-emerald-400 hover:bg-emerald-50 dark:border-white/10 dark:text-white dark:hover:bg-emerald-400/10"
+                >
+                  Ver carrito →
+                </Link>
+              </div>
+
+              {addedMessage && (
+                <p className="mt-4 rounded-full bg-emerald-100 px-4 py-2 text-xs font-black text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-300">
+                  {addedMessage}
+                </p>
+              )}
+            </InfoPanel>
           </div>
         </div>
-      </div>
-    </section>
+      </Shell>
+    </div>
   );
 }
