@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  FaEnvelope,
+  FaFacebookF,
+  FaInstagram,
+  FaTiktok,
+} from "react-icons/fa";
 
 type NavItem = { label: string; to: string };
 
@@ -16,6 +22,12 @@ type NavbarProps = {
 
 type ThemeMode = "system" | "light" | "dark";
 
+type SocialItem = {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+};
+
 const NAV: NavItem[] = [
   { label: "Inicio", to: "/" },
   { label: "Tienda", to: "/tienda" },
@@ -25,6 +37,29 @@ const NAV: NavItem[] = [
   { label: "Artistas", to: "/artistas" },
   { label: "Contacto", to: "/contacto" },
   { label: "Admin", to: "/admin/login" },
+];
+
+const SOCIALS: SocialItem[] = [
+  {
+    label: "Instagram",
+    href: "https://instagram.com/crisalida.collective",
+    icon: <FaInstagram />,
+  },
+  {
+    label: "TikTok",
+    href: "https://www.tiktok.com/@crisalida_8?_r=1&_t=ZS-96EEFsBsywP",
+    icon: <FaTiktok />,
+  },
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/share/18RT8qmWAJ/",
+    icon: <FaFacebookF />,
+  },
+  {
+    label: "Gmail",
+    href: "mailto:crisalida.contact@gmail.com",
+    icon: <FaEnvelope />,
+  },
 ];
 
 const CART_KEY = "crisalida_cart";
@@ -124,6 +159,32 @@ function ThemeToggle() {
   );
 }
 
+function SocialLinks({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {SOCIALS.map((social) => (
+        <a
+          key={social.label}
+          href={social.href}
+          target={social.href.startsWith("mailto:") ? undefined : "_blank"}
+          rel={
+            social.href.startsWith("mailto:")
+              ? undefined
+              : "noopener noreferrer"
+          }
+          aria-label={social.label}
+          title={social.label}
+          className={`flex items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/75 transition hover:bg-white hover:text-black ${
+            compact ? "h-9 w-9 text-sm" : "h-10 w-10 text-base"
+          }`}
+        >
+          {social.icon}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 export default function Navbar({
   title = "Crisálida",
   logoSrc = "/uploads/crisalida.png",
@@ -165,39 +226,48 @@ export default function Navbar({
   return (
     <>
       <header className="sticky top-0 z-50 bg-black text-white border-b border-white/10 shadow-sm">
-        <div className="mx-auto flex h-16 w-full max-w-[1480px] items-center justify-between px-4 sm:px-6 lg:px-10 2xl:px-16">
+        <div className="mx-auto flex min-h-16 w-full max-w-[1480px] items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-10 2xl:px-16">
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white transition hover:bg-white hover:text-black"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white transition hover:bg-white hover:text-black"
             aria-label="Abrir menú"
           >
             <span className="text-2xl leading-none">☰</span>
           </button>
 
-          <Link
-            to="/"
-            className="absolute left-1/2 flex -translate-x-1/2 items-center gap-3"
-          >
-            <img
-              src={logoSrc}
-              alt="Logo"
-              className="h-9 w-9 rounded-full object-cover bg-white"
-            />
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-3 lg:gap-5">
+            <Link
+              to="/"
+              className="flex shrink-0 items-center gap-3"
+              aria-label="Ir al inicio"
+            >
+              <img
+                src={logoSrc}
+                alt="Logo"
+                className="h-9 w-9 rounded-full object-cover bg-white"
+              />
 
-            <div className="hidden sm:block text-center">
-              <span className="block text-sm font-black tracking-wide">
-                {title}
-              </span>
+              <div className="hidden sm:block text-center">
+                <span className="block text-sm font-black tracking-wide">
+                  {title}
+                </span>
 
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
-                Art Market
-              </span>
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+                  Art Market
+                </span>
+              </div>
+            </Link>
+
+            <div className="hidden md:flex">
+              <SocialLinks />
             </div>
-          </Link>
+          </div>
 
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="hidden sm:block">
+              <ThemeToggle />
+            </div>
 
             <Link
               to={cartTo}
@@ -215,18 +285,24 @@ export default function Navbar({
           </div>
         </div>
 
-        <div className="hidden border-t border-white/10 bg-black/95 lg:block">
-          <nav className="mx-auto flex h-11 w-full max-w-[1480px] items-center justify-center gap-1 px-10">
-            {NAV.filter((item) => item.label !== "Carrito").map((it) => (
-              <Link
-                key={it.to}
-                to={it.to}
-                className="rounded-full px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white hover:text-black"
-              >
-                {it.label}
-              </Link>
-            ))}
-          </nav>
+        <div className="border-t border-white/10 bg-black/95">
+          <div className="mx-auto flex min-h-11 w-full max-w-[1480px] items-center justify-center px-4 sm:px-6 lg:px-10">
+            <div className="flex md:hidden">
+              <SocialLinks compact />
+            </div>
+
+            <nav className="hidden h-11 items-center justify-center gap-1 lg:flex">
+              {NAV.filter((item) => item.label !== "Carrito").map((it) => (
+                <Link
+                  key={it.to}
+                  to={it.to}
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white hover:text-black"
+                >
+                  {it.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
         </div>
       </header>
 
@@ -268,6 +344,34 @@ export default function Navbar({
                 >
                   ✕
                 </button>
+              </div>
+
+              <div className="mt-5 rounded-[24px] border border-neutral-200 bg-neutral-50 p-3 dark:border-white/10 dark:bg-white/5">
+                <p className="mb-3 text-center text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                  Redes Crisálida
+                </p>
+
+                <div className="flex justify-center gap-2">
+                  {SOCIALS.map((social) => (
+                    <a
+                      key={social.label}
+                      href={social.href}
+                      target={
+                        social.href.startsWith("mailto:") ? undefined : "_blank"
+                      }
+                      rel={
+                        social.href.startsWith("mailto:")
+                          ? undefined
+                          : "noopener noreferrer"
+                      }
+                      aria-label={social.label}
+                      title={social.label}
+                      className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-white/10 dark:bg-neutral-950 dark:text-white/70 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300"
+                    >
+                      {social.icon}
+                    </a>
+                  ))}
+                </div>
               </div>
             </div>
 
