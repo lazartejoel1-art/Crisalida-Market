@@ -143,7 +143,7 @@ function ThemeToggle() {
   const label =
     mode === "system" ? "Auto" : mode === "light" ? "Claro" : "Oscuro";
 
-  const icon = mode === "system" ? "◐" : mode === "light" ? "☀️" : "🌙";
+  const icon = mode === "system" ? "◐" : mode === "light" ? "" : "☾";
 
   return (
     <button
