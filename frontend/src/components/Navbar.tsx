@@ -141,7 +141,7 @@ function ThemeToggle() {
   };
 
   const label =
-    mode === "system" ? "Auto" : mode === "light" ? "" : "";
+    mode === "system" ? "" : mode === "light" ? "" : "";
 
   const icon = mode === "system" ? "◐" : mode === "light" ? "○" : "●";
 
