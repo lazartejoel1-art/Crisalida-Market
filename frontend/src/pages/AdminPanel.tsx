@@ -738,6 +738,34 @@ function ObrasManager({
     setWorks(await fetchWorks());
   };
 
+  const handleQuickStockUpdate = async (
+    work: Work,
+    nextStock: number,
+    label: string,
+  ) => {
+    setWorkMessage(null);
+
+    try {
+      const data = new FormData();
+      data.append("stock", String(nextStock));
+
+      const res = await fetch(`${API}/obras/${work.id}`, {
+        method: "PATCH",
+        body: data,
+      });
+
+      if (!res.ok) {
+        throw new Error(await parseResponseError(res));
+      }
+
+      setWorks(await fetchWorks());
+      setWorkMessage(`Obra marcada como "${label}" ✅`);
+    } catch (error) {
+      console.error(error);
+      setWorkMessage(getErrorMessage(error));
+    }
+  };
+
   const initialValues: NewWork | undefined = effectiveEditingWork
     ? {
         titulo: effectiveEditingWork.titulo,
@@ -824,11 +852,62 @@ function ObrasManager({
                 </p>
               </div>
 
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="font-bold text-gray-100">
                   {formatPrecio(work.precio)} Bs
                 </span>
-                <span className="text-gray-400">Stock: {work.stock}</span>
+
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-black ${
+                    Number(work.stock ?? 0) > 0
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                      : "bg-red-500/15 text-red-700 dark:text-red-300"
+                  }`}
+                >
+                  {Number(work.stock ?? 0) > 0 ? "Disponible" : "No disponible"}
+                </span>
+              </div>
+
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3 dark:border-white/10 dark:bg-white/5">
+                <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-neutral-400">
+                  Estado rápido
+                </p>
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void handleQuickStockUpdate(work, 1, "Disponible")
+                    }
+                    className="rounded-full bg-emerald-600 px-3 py-2 text-xs font-black text-white transition hover:bg-emerald-700 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
+                  >
+                    Disponible
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void handleQuickStockUpdate(work, 0, "No disponible")
+                    }
+                    className="rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-black text-red-600 transition hover:bg-red-100 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300"
+                  >
+                    No disponible
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void handleQuickStockUpdate(work, 0, "No está a la venta")
+                    }
+                    className="rounded-full border border-neutral-300 bg-white px-3 py-2 text-xs font-black text-neutral-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300"
+                  >
+                    No venta
+                  </button>
+                </div>
+
+                <p className="mt-2 text-[11px] text-neutral-400">
+                  Stock actual: {work.stock}
+                </p>
               </div>
 
               <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end shrink-0">
