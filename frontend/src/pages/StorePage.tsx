@@ -66,7 +66,10 @@ function Shell({
   id?: string;
 }) {
   return (
-    <section id={id} className={`w-full px-4 sm:px-6 lg:px-10 2xl:px-16 ${className}`}>
+    <section
+      id={id}
+      className={`w-full px-4 sm:px-6 lg:px-10 2xl:px-16 ${className}`}
+    >
       <div className="mx-auto w-full max-w-[1480px]">{children}</div>
     </section>
   );
@@ -122,6 +125,7 @@ export default function StorePage() {
   const [filter, setFilter] = useState<"todos" | "disponibles" | "agotados">(
     "todos",
   );
+  const [featuredIndex, setFeaturedIndex] = useState(0);
 
   const loadWorks = async () => {
     setLoading(true);
@@ -130,6 +134,7 @@ export default function StorePage() {
     try {
       const data = await fetchObras();
       setWorks(Array.isArray(data) ? data : []);
+      setFeaturedIndex(0);
     } catch (err) {
       console.error(err);
       setError("No se pudo cargar la tienda.");
@@ -154,6 +159,28 @@ export default function StorePage() {
     };
   }, []);
 
+  const featuredWorks = useMemo(() => {
+    return works.filter((w) => Boolean(getImageUrl(w.imagenUrl || w.imagen)));
+  }, [works]);
+
+  useEffect(() => {
+    if (featuredWorks.length <= 1) return;
+
+    const timer = window.setInterval(() => {
+      setFeaturedIndex((prev) => (prev + 1) % featuredWorks.length);
+    }, 4500);
+
+    return () => window.clearInterval(timer);
+  }, [featuredWorks.length]);
+
+  const featuredWork = useMemo(() => {
+    if (featuredWorks.length > 0) {
+      return featuredWorks[Math.min(featuredIndex, featuredWorks.length - 1)];
+    }
+
+    return works[0];
+  }, [featuredWorks, featuredIndex, works]);
+
   const filteredWorks = useMemo(() => {
     const q = query.trim().toLowerCase();
 
@@ -173,9 +200,39 @@ export default function StorePage() {
     });
   }, [works, query, filter]);
 
-  const featuredWork = useMemo(() => {
-    return works.find((w) => getImageUrl(w.imagenUrl || w.imagen)) || works[0];
-  }, [works]);
+  const goToCatalog = () => {
+    const catalog = document.getElementById("catalogo");
+
+    if (catalog) {
+      catalog.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  };
+
+  const handleOriginales = () => {
+    setFilter("disponibles");
+    setQuery("");
+    window.setTimeout(goToCatalog, 100);
+  };
+
+  const handleCompraSegura = () => {
+    const catalog = document.getElementById("catalogo");
+
+    if (catalog) {
+      catalog.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+
+    setToast("Compra segura: agrega obras al carrito y confirma tu pedido 🛒");
+
+    window.setTimeout(() => {
+      setToast(null);
+    }, 2200);
+  };
 
   const addToCart = (w: Work) => {
     const safePrice = toPrice(w.precio);
@@ -268,12 +325,13 @@ export default function StorePage() {
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <a
-                  href="#catalogo"
+                <button
+                  type="button"
+                  onClick={goToCatalog}
                   className="rounded-full bg-emerald-600 px-6 py-4 text-center text-sm font-black text-white transition hover:bg-emerald-700 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
                 >
                   Ver catálogo
-                </a>
+                </button>
 
                 <Link
                   to="/carrito"
@@ -290,13 +348,35 @@ export default function StorePage() {
                   <>
                     <div className="relative aspect-[4/5] bg-neutral-100 dark:bg-white/5">
                       <WorkImage
-                        src={getImageUrl(featuredWork.imagenUrl || featuredWork.imagen)}
+                        src={getImageUrl(
+                          featuredWork.imagenUrl || featuredWork.imagen,
+                        )}
                         title={featuredWork.titulo}
                       />
 
                       <div className="absolute left-4 top-4 rounded-full bg-white px-4 py-2 text-xs font-black text-neutral-950 shadow-sm">
                         Destacado
                       </div>
+
+                      {featuredWorks.length > 1 && (
+                        <div className="absolute bottom-4 left-4 flex gap-1.5 rounded-full bg-black/35 px-3 py-2 backdrop-blur">
+                          {featuredWorks
+                            .slice(0, Math.min(featuredWorks.length, 7))
+                            .map((w, i) => (
+                              <button
+                                key={w.id}
+                                type="button"
+                                onClick={() => setFeaturedIndex(i)}
+                                className={`h-1.5 rounded-full transition-all ${
+                                  i === featuredIndex
+                                    ? "w-7 bg-emerald-400"
+                                    : "w-2 bg-white/55"
+                                }`}
+                                aria-label={`Ver obra destacada ${i + 1}`}
+                              />
+                            ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-5">
@@ -335,25 +415,75 @@ export default function StorePage() {
 
       <Shell className="pb-8">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            ["Obras originales", "Piezas únicas disponibles"],
-            ["Prints y encargos", "Consulta disponibilidad"],
-            ["Compra segura", "Carrito local y pedido simple"],
-            ["Arte boliviano", "Creado por artistas de Crisálida"],
-          ].map(([title, text]) => (
-            <div
-              key={title}
-              className="rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-neutral-900"
-            >
-              <p className="text-base font-black text-neutral-950 dark:text-white">
-                {title}
-              </p>
+          <button
+            type="button"
+            onClick={handleOriginales}
+            className="group text-left rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg dark:border-white/10 dark:bg-neutral-900 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
+          >
+            <p className="text-base font-black text-neutral-950 dark:text-white">
+              Obras originales
+            </p>
 
-              <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
-                {text}
-              </p>
-            </div>
-          ))}
+            <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
+              Piezas únicas disponibles
+            </p>
+
+            <p className="mt-3 text-xs font-black text-emerald-700 opacity-0 transition group-hover:opacity-100 dark:text-emerald-300">
+              Ver disponibles →
+            </p>
+          </button>
+
+          <Link
+            to="/contacto"
+            className="group block rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg dark:border-white/10 dark:bg-neutral-900 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
+          >
+            <p className="text-base font-black text-neutral-950 dark:text-white">
+              Prints y encargos
+            </p>
+
+            <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
+              Consulta disponibilidad
+            </p>
+
+            <p className="mt-3 text-xs font-black text-emerald-700 opacity-0 transition group-hover:opacity-100 dark:text-emerald-300">
+              Contactar →
+            </p>
+          </Link>
+
+          <button
+            type="button"
+            onClick={handleCompraSegura}
+            className="group text-left rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg dark:border-white/10 dark:bg-neutral-900 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
+          >
+            <p className="text-base font-black text-neutral-950 dark:text-white">
+              Compra segura
+            </p>
+
+            <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
+              Carrito local y pedido simple
+            </p>
+
+            <p className="mt-3 text-xs font-black text-emerald-700 opacity-0 transition group-hover:opacity-100 dark:text-emerald-300">
+              Ver cómo comprar →
+            </p>
+          </button>
+
+          <Link
+            to="/artistas"
+            className="group block rounded-[26px] border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg dark:border-white/10 dark:bg-neutral-900 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
+          >
+            <p className="text-base font-black text-neutral-950 dark:text-white">
+              Arte boliviano
+            </p>
+
+            <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
+              Creado por artistas de Crisálida
+            </p>
+
+            <p className="mt-3 text-xs font-black text-emerald-700 opacity-0 transition group-hover:opacity-100 dark:text-emerald-300">
+              Ver artistas →
+            </p>
+          </Link>
         </div>
       </Shell>
 
