@@ -40,6 +40,36 @@ function getEventoImageUrl(image?: string | null): string | null {
   return buildImageUrl(image);
 }
 
+function Shell({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`w-full px-4 sm:px-6 lg:px-10 2xl:px-16 ${className}`}>
+      <div className="mx-auto w-full max-w-[1480px]">{children}</div>
+    </section>
+  );
+}
+
+function Panel({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-[34px] border border-neutral-200 bg-white shadow-sm dark:border-white/10 dark:bg-neutral-900 ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function EventoDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -83,28 +113,36 @@ export default function EventoDetailPage() {
 
   if (loading) {
     return (
-      <section className="w-full min-h-screen px-3 lg:px-6 py-10 bg-gradient-to-b from-[#020617] via-[#040b1d] to-black">
-        <p className="text-sm text-gray-400 animate-pulse">
-          Cargando evento...
-        </p>
-      </section>
+      <div className="min-h-screen bg-[#f4f5f5] text-neutral-950 dark:bg-neutral-950 dark:text-white">
+        <Shell className="py-10">
+          <Panel className="p-8">
+            <p className="animate-pulse text-sm text-neutral-500 dark:text-white/55">
+              Cargando evento...
+            </p>
+          </Panel>
+        </Shell>
+      </div>
     );
   }
 
   if (error || !evento) {
     return (
-      <section className="w-full min-h-screen px-3 lg:px-6 py-10 bg-gradient-to-b from-[#020617] via-[#040b1d] to-black">
-        <p className="text-sm text-red-400 mb-3">
-          {error ?? "Evento no encontrado."}
-        </p>
+      <div className="min-h-screen bg-[#f4f5f5] text-neutral-950 dark:bg-neutral-950 dark:text-white">
+        <Shell className="py-10">
+          <Panel className="p-8">
+            <p className="mb-4 text-sm font-semibold text-red-500">
+              {error ?? "Evento no encontrado."}
+            </p>
 
-        <Link
-          to="/eventos"
-          className="text-sm text-verdeEsmeralda hover:underline"
-        >
-          ← Volver a eventos
-        </Link>
-      </section>
+            <Link
+              to="/eventos"
+              className="text-sm font-black text-emerald-700 hover:underline dark:text-emerald-300"
+            >
+              ← Volver a eventos
+            </Link>
+          </Panel>
+        </Shell>
+      </div>
     );
   }
 
@@ -115,204 +153,267 @@ export default function EventoDetailPage() {
     : [];
 
   return (
-    <section className="w-full min-h-screen px-3 lg:px-6 py-10 bg-gradient-to-b from-[#020617] via-[#040b1d] to-black text-white">
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="text-xs text-gray-400 hover:text-verdeEsmeralda mb-5"
-      >
-        ← Volver
-      </button>
+    <div className="min-h-screen bg-[#f4f5f5] text-neutral-950 transition-colors duration-300 dark:bg-neutral-950 dark:text-white">
+      <Shell className="py-8 lg:py-10">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="mb-5 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-black text-neutral-500 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 dark:border-white/10 dark:bg-neutral-900 dark:text-white/55 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300"
+        >
+          ← Volver
+        </button>
 
-      <div className="w-full bg-[#050816]/95 border border-emerald-500/10 rounded-[2rem] overflow-hidden shadow-2xl">
-        {flyer ? (
-          <div className="w-full bg-[#020617] flex items-center justify-center overflow-hidden">
-            <img
-              src={flyer}
-              alt={evento.titulo}
-              className="w-full max-h-[800px] object-contain"
-            />
-          </div>
-        ) : (
-          <div className="w-full h-[420px] flex items-center justify-center text-gray-500">
-            Sin flyer
-          </div>
-        )}
+        <Panel className="overflow-hidden">
+          <div className="grid gap-0 xl:grid-cols-[1.05fr_0.95fr]">
+            <div className="relative bg-neutral-100 dark:bg-white/5">
+              {flyer ? (
+                <div className="flex h-full min-h-[360px] items-center justify-center overflow-hidden lg:min-h-[560px]">
+                  <img
+                    src={flyer}
+                    alt={evento.titulo}
+                    className="h-full max-h-[820px] w-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="flex min-h-[420px] items-center justify-center text-sm text-neutral-400 dark:text-white/35">
+                  Sin flyer
+                </div>
+              )}
 
-        <div className="p-6 lg:p-10">
-          <p className="text-sm text-verdeEsmeralda font-semibold tracking-wide">
-            {evento.fecha || "Fecha por confirmar"}
-          </p>
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent xl:hidden" />
+            </div>
 
-          <h1 className="text-4xl lg:text-6xl font-black mt-3 tracking-tight">
-            {evento.titulo}
-          </h1>
+            <div className="relative overflow-hidden border-t border-neutral-200 bg-emerald-50 p-6 dark:border-white/10 dark:bg-emerald-400/10 sm:p-8 lg:p-10 xl:border-l xl:border-t-0">
+              <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-400/25 blur-3xl" />
+              <div className="absolute -left-24 -bottom-24 h-72 w-72 rounded-full bg-white/70 blur-3xl dark:bg-white/5" />
 
-          <p className="text-gray-400 mt-3 text-lg">
-            {evento.lugar || "Lugar por confirmar"}
-          </p>
+              <div className="relative">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-300">
+                  Evento Crisálida
+                </p>
 
-          <div className="mt-8">
-            <h2 className="text-2xl font-bold text-verdeEsmeralda mb-4">
-              Sobre el evento
-            </h2>
+                <p className="mt-5 text-sm font-black text-emerald-700 dark:text-emerald-300">
+                  {evento.fecha || "Fecha por confirmar"}
+                </p>
 
-            <p className="text-gray-300 whitespace-pre-line leading-[2] text-[17px]">
-              {evento.descripcion ||
-                "Este evento pertenece a la colectiva Crisálida."}
-            </p>
-          </div>
-        </div>
-      </div>
+                <h1 className="mt-3 text-4xl font-black leading-tight tracking-tight text-neutral-950 dark:text-white sm:text-5xl lg:text-6xl">
+                  {evento.titulo}
+                </h1>
 
-      {artistas.length > 0 && (
-        <div className="mt-14">
-          <h2 className="text-3xl font-black text-verdeEsmeralda mb-8">
-            Artistas invitados
-          </h2>
+                <p className="mt-4 text-base font-semibold text-neutral-600 dark:text-white/65">
+                  {evento.lugar || "Lugar por confirmar"}
+                </p>
 
-          <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-8">
-            {artistas.map((artista, index) => {
-              const imageUrl = getEventoImageUrl(artista.imagenUrl);
+                <div className="mt-8 rounded-[28px] border border-emerald-200 bg-white/70 p-5 dark:border-emerald-400/20 dark:bg-white/5">
+                  <h2 className="text-xl font-black text-emerald-700 dark:text-emerald-300">
+                    Sobre el evento
+                  </h2>
 
-              return (
-                <button
-                  key={`${artista.nombre}-${index}`}
-                  type="button"
-                  onClick={() => setSelectedArtist(artista)}
-                  className="bg-[#050816]/90 border border-gray-800 rounded-[2rem] p-6 text-center hover:border-verdeEsmeralda/60 hover:-translate-y-1 transition duration-300"
-                >
-                  {imageUrl ? (
-                    <img
-                      src={imageUrl}
-                      alt={artista.nombre}
-                      className="w-36 h-36 rounded-full object-cover mx-auto border border-emerald-500/20"
-                    />
-                  ) : (
-                    <div className="w-36 h-36 rounded-full mx-auto border border-gray-700 flex items-center justify-center text-gray-500 text-xs">
-                      Sin imagen
-                    </div>
-                  )}
-
-                  <h3 className="font-black text-xl text-white mt-5">
-                    {artista.nombre}
-                  </h3>
-
-                  <p className="text-sm text-verdeEsmeralda mt-2">
-                    {artista.especialidad || "Artista invitado"}
+                  <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-neutral-600 dark:text-white/65 sm:text-base">
+                    {evento.descripcion ||
+                      "Este evento pertenece a la colectiva Crisálida."}
                   </p>
+                </div>
 
-                  <p className="text-xs text-gray-400 mt-4">
-                    Ver perfil y obras →
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <a
+                    href="#artistas-invitados"
+                    className="rounded-full bg-emerald-600 px-6 py-3 text-sm font-black text-white transition hover:bg-emerald-700 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
+                  >
+                    Ver artistas invitados
+                  </a>
 
-      {selectedArtist && (
-        <div className="mt-16 bg-[#050816]/95 border border-emerald-500/10 rounded-[2rem] p-6 lg:p-10 shadow-2xl">
-          <button
-            type="button"
-            onClick={() => setSelectedArtist(null)}
-            className="text-xs text-gray-400 hover:text-verdeEsmeralda mb-6"
-          >
-            ← Cerrar perfil
-          </button>
-
-          <div className="grid lg:grid-cols-[260px_1fr] gap-10 items-start">
-            {getEventoImageUrl(selectedArtist.imagenUrl) ? (
-              <img
-                src={getEventoImageUrl(selectedArtist.imagenUrl) ?? ""}
-                alt={selectedArtist.nombre}
-                className="w-full max-w-[260px] rounded-[2rem] object-cover border border-emerald-500/10"
-              />
-            ) : (
-              <div className="w-[260px] h-[260px] rounded-[2rem] border border-gray-700 flex items-center justify-center text-gray-500 text-sm">
-                Sin imagen
+                  <Link
+                    to="/eventos"
+                    className="rounded-full border border-emerald-300 bg-white/60 px-6 py-3 text-sm font-black text-neutral-950 transition hover:bg-white dark:border-emerald-400/30 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                  >
+                    Más eventos
+                  </Link>
+                </div>
               </div>
-            )}
-
-            <div>
-              <h2 className="text-5xl font-black text-white">
-                {selectedArtist.nombre}
-              </h2>
-
-              <p className="text-verdeEsmeralda mt-3 text-lg">
-                {selectedArtist.especialidad || "Artista invitado"}
-              </p>
-
-              <p className="text-gray-300 mt-6 whitespace-pre-line leading-[2] text-[17px]">
-                {selectedArtist.descripcion ||
-                  "Participante del evento."}
-              </p>
             </div>
           </div>
+        </Panel>
 
-          <div className="mt-12">
-            <h3 className="text-3xl font-black text-verdeEsmeralda mb-8">
-              Obras de {selectedArtist.nombre}
-            </h3>
+        {artistas.length > 0 && (
+          <section id="artistas-invitados" className="mt-12">
+            <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-300">
+                  Participantes
+                </p>
 
-            {!selectedArtist.obras || selectedArtist.obras.length === 0 ? (
-              <p className="text-sm text-gray-400">
-                Este artista invitado aún no tiene obras registradas en este
-                evento.
-              </p>
-            ) : (
-              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
-                {selectedArtist.obras.map((obra, index) => {
-                  const obraImg = getEventoImageUrl(obra.imagenUrl);
+                <h2 className="mt-2 text-3xl font-black tracking-tight text-neutral-950 dark:text-white sm:text-4xl">
+                  Artistas invitados
+                </h2>
 
-                  return (
-                    <article
-                      key={`${obra.titulo}-${index}`}
-                      className="bg-[#0e1624] border border-gray-800 rounded-[2rem] overflow-hidden hover:border-verdeEsmeralda/30 transition"
-                    >
-                      {obraImg ? (
-                        <div className="w-full h-[420px] bg-[#020617] flex items-center justify-center overflow-hidden">
-                          <img
-                            src={obraImg}
-                            alt={obra.titulo}
-                            className="w-full h-full object-contain p-2"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-full h-[420px] flex items-center justify-center text-gray-500 text-sm">
-                          Sin imagen
-                        </div>
-                      )}
-
-                      <div className="p-5">
-                        <h4 className="font-black text-2xl text-white">
-                          {obra.titulo}
-                        </h4>
-
-                        <p className="text-sm text-verdeEsmeralda mt-2">
-                          {obra.tecnica || "Técnica no especificada"}
-                          {obra.anio ? ` · ${obra.anio}` : ""}
-                        </p>
-
-                        <p className="text-gray-400 mt-5 leading-relaxed text-[15px]">
-                          {obra.descripcion || "Sin descripción."}
-                        </p>
-
-                        {obra.precio && (
-                          <p className="text-xl font-black text-white mt-5">
-                            {obra.precio} Bs
-                          </p>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })}
+                <p className="mt-2 max-w-2xl text-sm text-neutral-500 dark:text-white/55">
+                  Conoce a los artistas que forman parte de este evento y sus
+                  obras registradas.
+                </p>
               </div>
-            )}
-          </div>
-        </div>
-      )}
-    </section>
+
+              <div className="w-fit rounded-full bg-emerald-100 px-5 py-2 text-sm font-black text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-300">
+                {artistas.length} artistas
+              </div>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+              {artistas.map((artista, index) => {
+                const imageUrl = getEventoImageUrl(artista.imagenUrl);
+
+                return (
+                  <button
+                    key={`${artista.nombre}-${index}`}
+                    type="button"
+                    onClick={() => setSelectedArtist(artista)}
+                    className="group overflow-hidden rounded-[32px] border border-neutral-200 bg-white p-6 text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-xl dark:border-white/10 dark:bg-neutral-900 dark:hover:border-emerald-400/40 dark:hover:bg-emerald-400/10"
+                  >
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={artista.nombre}
+                        className="mx-auto h-36 w-36 rounded-full border border-emerald-200 object-cover shadow-sm dark:border-emerald-400/20"
+                      />
+                    ) : (
+                      <div className="mx-auto flex h-36 w-36 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 text-xs text-neutral-400 dark:border-white/10 dark:bg-white/5 dark:text-white/35">
+                        Sin imagen
+                      </div>
+                    )}
+
+                    <h3 className="mt-5 text-xl font-black text-neutral-950 dark:text-white">
+                      {artista.nombre}
+                    </h3>
+
+                    <p className="mt-2 text-sm font-black text-emerald-700 dark:text-emerald-300">
+                      {artista.especialidad || "Artista invitado"}
+                    </p>
+
+                    <p className="mt-4 text-xs font-black text-neutral-400 transition group-hover:text-emerald-700 dark:text-white/40 dark:group-hover:text-emerald-300">
+                      Ver perfil y obras →
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {selectedArtist && (
+          <Panel className="mt-12 overflow-hidden">
+            <div className="relative border-b border-neutral-200 bg-emerald-50 p-6 dark:border-white/10 dark:bg-emerald-400/10 sm:p-8 lg:p-10">
+              <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-400/25 blur-3xl" />
+
+              <button
+                type="button"
+                onClick={() => setSelectedArtist(null)}
+                className="relative mb-6 rounded-full border border-emerald-300 bg-white/70 px-4 py-2 text-xs font-black text-neutral-700 transition hover:bg-white hover:text-emerald-700 dark:border-emerald-400/20 dark:bg-white/5 dark:text-white/65 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300"
+              >
+                ← Cerrar perfil
+              </button>
+
+              <div className="relative grid gap-8 lg:grid-cols-[260px_1fr] lg:items-start">
+                {getEventoImageUrl(selectedArtist.imagenUrl) ? (
+                  <img
+                    src={getEventoImageUrl(selectedArtist.imagenUrl) ?? ""}
+                    alt={selectedArtist.nombre}
+                    className="h-[260px] w-[260px] rounded-[34px] border border-emerald-200 object-cover shadow-sm dark:border-emerald-400/20"
+                  />
+                ) : (
+                  <div className="flex h-[260px] w-[260px] items-center justify-center rounded-[34px] border border-neutral-200 bg-white/70 text-sm text-neutral-400 dark:border-white/10 dark:bg-white/5 dark:text-white/35">
+                    Sin imagen
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-300">
+                    Artista invitado
+                  </p>
+
+                  <h2 className="mt-3 text-4xl font-black leading-tight text-neutral-950 dark:text-white sm:text-5xl">
+                    {selectedArtist.nombre}
+                  </h2>
+
+                  <p className="mt-3 text-lg font-black text-emerald-700 dark:text-emerald-300">
+                    {selectedArtist.especialidad || "Artista invitado"}
+                  </p>
+
+                  <p className="mt-6 whitespace-pre-line text-sm leading-relaxed text-neutral-600 dark:text-white/65 sm:text-base">
+                    {selectedArtist.descripcion || "Participante del evento."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 sm:p-8 lg:p-10">
+              <div className="mb-6">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-300">
+                  Obras
+                </p>
+
+                <h3 className="mt-2 text-3xl font-black text-neutral-950 dark:text-white">
+                  Obras de {selectedArtist.nombre}
+                </h3>
+              </div>
+
+              {!selectedArtist.obras || selectedArtist.obras.length === 0 ? (
+                <div className="rounded-[28px] border border-dashed border-neutral-300 bg-neutral-50 p-8 text-sm text-neutral-500 dark:border-white/10 dark:bg-white/5 dark:text-white/55">
+                  Este artista invitado aún no tiene obras registradas en este
+                  evento.
+                </div>
+              ) : (
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {selectedArtist.obras.map((obra, index) => {
+                    const obraImg = getEventoImageUrl(obra.imagenUrl);
+
+                    return (
+                      <article
+                        key={`${obra.titulo}-${index}`}
+                        className="overflow-hidden rounded-[32px] border border-neutral-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-xl dark:border-white/10 dark:bg-neutral-950 dark:hover:border-emerald-400/40"
+                      >
+                        {obraImg ? (
+                          <div className="flex h-[420px] w-full items-center justify-center overflow-hidden bg-neutral-100 dark:bg-white/5">
+                            <img
+                              src={obraImg}
+                              alt={obra.titulo}
+                              className="h-full w-full object-contain p-2"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex h-[420px] w-full items-center justify-center text-sm text-neutral-400 dark:text-white/35">
+                            Sin imagen
+                          </div>
+                        )}
+
+                        <div className="p-5">
+                          <h4 className="text-2xl font-black text-neutral-950 dark:text-white">
+                            {obra.titulo}
+                          </h4>
+
+                          <p className="mt-2 text-sm font-black text-emerald-700 dark:text-emerald-300">
+                            {obra.tecnica || "Técnica no especificada"}
+                            {obra.anio ? ` · ${obra.anio}` : ""}
+                          </p>
+
+                          <p className="mt-5 text-sm leading-relaxed text-neutral-500 dark:text-white/55">
+                            {obra.descripcion || "Sin descripción."}
+                          </p>
+
+                          {obra.precio && (
+                            <p className="mt-5 text-xl font-black text-neutral-950 dark:text-white">
+                              {obra.precio} Bs
+                            </p>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </Panel>
+        )}
+      </Shell>
+    </div>
   );
 }
