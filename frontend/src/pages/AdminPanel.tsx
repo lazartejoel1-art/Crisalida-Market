@@ -2636,12 +2636,126 @@ function EventosManager() {
   );
 }
 
+function AdminPremiumStyles() {
+  return (
+    <style>
+      {`
+        .admin-premium {
+          --admin-bg: #f4f5f5;
+          --admin-panel: #ffffff;
+          --admin-soft: #f8faf9;
+          --admin-soft-2: #ecfdf5;
+          --admin-border: rgba(15, 23, 42, 0.12);
+          --admin-text: #07110a;
+          --admin-muted: #64748b;
+          --admin-accent: #059669;
+          --admin-accent-soft: rgba(16, 185, 129, 0.14);
+        }
+
+        .dark .admin-premium {
+          --admin-bg: #050816;
+          --admin-panel: #0e1624;
+          --admin-soft: #0b1220;
+          --admin-soft-2: rgba(16, 185, 129, 0.12);
+          --admin-border: rgba(255, 255, 255, 0.10);
+          --admin-text: rgba(255, 255, 255, 0.92);
+          --admin-muted: rgba(255, 255, 255, 0.58);
+          --admin-accent: #34d399;
+          --admin-accent-soft: rgba(52, 211, 153, 0.13);
+        }
+
+        .admin-premium {
+          background: var(--admin-bg);
+          color: var(--admin-text);
+        }
+
+        .admin-premium [class*="bg-[#0e1624]"],
+        .admin-premium [class*="bg-[#0b1220]"],
+        .admin-premium [class*="bg-[#0d1117]"] {
+          background: var(--admin-panel) !important;
+          border-color: var(--admin-border) !important;
+          color: var(--admin-text) !important;
+          box-shadow: 0 14px 38px rgba(15, 23, 42, 0.06);
+        }
+
+        .dark .admin-premium [class*="bg-[#0e1624]"],
+        .dark .admin-premium [class*="bg-[#0b1220]"],
+        .dark .admin-premium [class*="bg-[#0d1117]"] {
+          box-shadow: none;
+        }
+
+        .admin-premium [class*="border-gray-800"],
+        .admin-premium [class*="border-white/10"] {
+          border-color: var(--admin-border) !important;
+        }
+
+        .admin-premium [class*="text-gray-100"],
+        .admin-premium [class*="text-gray-200"] {
+          color: var(--admin-text) !important;
+        }
+
+        .admin-premium [class*="text-gray-300"],
+        .admin-premium [class*="text-gray-400"],
+        .admin-premium [class*="text-gray-500"] {
+          color: var(--admin-muted) !important;
+        }
+
+        .admin-premium [class*="text-verdeEsmeralda"] {
+          color: var(--admin-accent) !important;
+        }
+
+        .admin-premium input,
+        .admin-premium textarea,
+        .admin-premium select {
+          background: var(--admin-soft) !important;
+          color: var(--admin-text) !important;
+          border-color: var(--admin-border) !important;
+          outline: none;
+        }
+
+        .admin-premium input:focus,
+        .admin-premium textarea:focus,
+        .admin-premium select:focus {
+          border-color: var(--admin-accent) !important;
+          box-shadow: 0 0 0 3px var(--admin-accent-soft);
+        }
+
+        .admin-premium input::placeholder,
+        .admin-premium textarea::placeholder {
+          color: var(--admin-muted) !important;
+        }
+
+        .admin-premium .admin-card {
+          background: var(--admin-panel);
+          border: 1px solid var(--admin-border);
+          color: var(--admin-text);
+          box-shadow: 0 14px 38px rgba(15, 23, 42, 0.06);
+        }
+
+        .dark .admin-premium .admin-card {
+          box-shadow: none;
+        }
+
+        .admin-premium .admin-nav-active {
+          background: var(--admin-accent);
+          color: white;
+        }
+
+        .dark .admin-premium .admin-nav-active {
+          color: #06110a;
+        }
+      `}
+    </style>
+  );
+}
+
 export default function AdminPanel() {
   const navigate = useNavigate();
 
   const [screen, setScreen] = useState<
     "dashboard" | "artists" | "obras" | "pedidos" | "reportes" | "eventos"
   >("dashboard");
+
   const [artists, setArtists] = useState<Artist[]>([]);
   const [works, setWorks] = useState<Work[]>([]);
   const [editingWorkFromDashboard, setEditingWorkFromDashboard] =
@@ -2685,15 +2799,15 @@ export default function AdminPanel() {
     }
   }, [loadAll]);
 
- useEffect(() => {
-  const timer = window.setTimeout(() => {
-    void refreshDashboard();
-  }, 0);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void refreshDashboard();
+    }, 0);
 
-  return () => {
-    window.clearTimeout(timer);
-  };
-}, [refreshDashboard]);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [refreshDashboard]);
 
   const stats = useMemo(() => {
     const artistsCount = artists.length;
@@ -2721,108 +2835,168 @@ export default function AdminPanel() {
     setScreen("obras");
   };
 
+  const navItems: Array<{
+    key: typeof screen;
+    label: string;
+    icon: string;
+  }> = [
+    { key: "dashboard", label: "Inicio", icon: "📌" },
+    { key: "artists", label: "Artistas", icon: "🎨" },
+    { key: "obras", label: "Obras", icon: "🖼" },
+    { key: "eventos", label: "Eventos", icon: "🗓" },
+    { key: "pedidos", label: "Pedidos", icon: "📦" },
+    { key: "reportes", label: "Reportes", icon: "📊" },
+  ];
+
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-negroSuave text-blancoPuro flex flex-col lg:flex-row">
-      <aside className="w-32 sm:w-56 shrink-0 bg-[#0d1117] border-r border-gray-800 p-3 sm:p-6 flex flex-col justify-between">
-        <div>
-          <h2 className="text-base sm:text-xl font-bold text-verdeEsmeralda mb-6 break-words">
-            Crisálida
-          </h2>
+    <div className="admin-premium min-h-screen w-full overflow-x-hidden flex flex-col lg:flex-row">
+      <AdminPremiumStyles />
 
-          <nav className="space-y-3 text-xs sm:text-sm">
+      <aside className="w-full lg:w-72 shrink-0 border-b lg:border-b-0 lg:border-r border-neutral-200 bg-white/90 backdrop-blur dark:border-white/10 dark:bg-neutral-950/90">
+        <div className="flex h-full flex-col justify-between p-4 sm:p-6">
+          <div>
+            <div className="relative overflow-hidden rounded-[30px] border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-400/20 dark:bg-emerald-400/10">
+              <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-emerald-400/25 blur-2xl" />
+
+              <div className="relative flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm dark:bg-neutral-950">
+                  <img
+                    src="/uploads/crisalida.png"
+                    alt="Crisálida"
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-black text-neutral-950 dark:text-white">
+                    Crisálida
+                  </h2>
+
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                    Admin panel
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <nav className="mt-5 grid grid-cols-2 gap-2 lg:block lg:space-y-2">
+              {navItems.map((item) => {
+                const active = screen === item.key;
+
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setScreen(item.key)}
+                    className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-black transition ${
+                      active
+                        ? "admin-nav-active shadow-sm"
+                        : "bg-neutral-50 text-neutral-700 hover:bg-emerald-50 hover:text-emerald-700 dark:bg-white/5 dark:text-white/70 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300"
+                    }`}
+                  >
+                    <span>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
             <button
-              onClick={() => setScreen("dashboard")}
-              className="block w-full text-left text-gray-300 hover:text-verdeEsmeralda"
+              type="button"
+              onClick={() => void refreshDashboard()}
+              className="mt-5 w-full rounded-full border border-neutral-200 bg-white px-4 py-3 text-xs font-black text-neutral-600 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-white/10 dark:bg-white/5 dark:text-white/55 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300"
             >
-              📌 Inicio
+              ↻ Actualizar dashboard
+            </button>
+          </div>
+
+          <div className="mt-6">
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem("crisalida_token");
+                navigate("/admin/login");
+              }}
+              className="w-full rounded-full border border-red-200 bg-red-50 px-4 py-3 text-xs font-black text-red-600 transition hover:bg-red-100 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300 dark:hover:bg-red-400/20"
+            >
+              Cerrar sesión
             </button>
 
-            <button
-              onClick={() => setScreen("artists")}
-              className="block w-full text-left text-gray-300 hover:text-verdeEsmeralda"
-            >
-              🎨 Artistas
-            </button>
-
-            <button
-              onClick={() => setScreen("obras")}
-              className="block w-full text-left text-gray-300 hover:text-verdeEsmeralda"
-            >
-              🖼 Obras
-            </button>
-
-            <button
-              onClick={() => setScreen("eventos")}
-              className="block w-full text-left text-gray-300 hover:text-verdeEsmeralda"
-            >
-              🗓 Eventos
-            </button>
-
-            <button
-              onClick={() => setScreen("pedidos")}
-              className="block w-full text-left text-gray-300 hover:text-verdeEsmeralda"
-            >
-              📦 Pedidos
-            </button>
-
-            <button
-              onClick={() => setScreen("reportes")}
-              className="block w-full text-left text-gray-300 hover:text-verdeEsmeralda"
-            >
-              📊 Reportes
-            </button>
-          </nav>
-
-          <button
-            onClick={() => void refreshDashboard()}
-            className="mt-6 text-xs text-gray-400 hover:text-gray-200"
-          >
-            ↻ Actualizar dashboard
-          </button>
+            <p className="mt-4 text-center text-[11px] text-neutral-400 dark:text-white/35">
+              © 2025 Colectiva Crisálida
+            </p>
+          </div>
         </div>
-
-        <button
-          onClick={() => {
-            localStorage.removeItem("crisalida_token");
-            navigate("/admin/login");
-          }}
-          className="text-xs text-red-400 hover:text-red-300"
-        >
-          Cerrar sesión
-        </button>
       </aside>
 
-      <main className="w-full flex-1 min-w-0 p-4 sm:p-6 lg:p-10 overflow-x-hidden">
-        {screen === "dashboard" && (
-          <DashboardHome
-            artistsCount={stats.artistsCount}
-            worksCount={stats.worksCount}
-            totalStock={stats.totalStock}
-            outOfStockCount={stats.outOfStockCount}
-            latestWorks={stats.latestWorks}
-            onGoArtists={() => setScreen("artists")}
-            onGoWorks={() => setScreen("obras")}
-            onGoOrders={() => setScreen("pedidos")}
-            onEditWork={onEditWorkFromDashboard}
-          />
-        )}
+      <main className="w-full flex-1 min-w-0 overflow-x-hidden p-4 sm:p-6 lg:p-10">
+        <div className="mb-6 relative overflow-hidden rounded-[34px] border border-emerald-200 bg-emerald-50 p-6 shadow-sm dark:border-emerald-400/20 dark:bg-emerald-400/10 sm:p-8">
+          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-400/25 blur-3xl" />
+          <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-white/70 blur-3xl dark:bg-white/5" />
 
-        {screen === "artists" && <ArtistsManager />}
+          <div className="relative flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+                Gestión Crisálida
+              </p>
 
-        {screen === "obras" && (
-          <ObrasManager
-            editingWork={editingWorkFromDashboard}
-            onClearEditingWork={() => setEditingWorkFromDashboard(null)}
-          />
-        )}
+              <h1 className="mt-3 text-3xl font-black tracking-tight text-neutral-950 dark:text-white sm:text-4xl">
+                Panel administrativo
+              </h1>
 
-        {screen === "eventos" && <EventosManager />}
+              <p className="mt-2 max-w-2xl text-sm text-neutral-600 dark:text-white/65">
+                Administra artistas, obras, eventos, pedidos y reportes desde un
+                espacio visual más limpio y organizado.
+              </p>
+            </div>
 
-        {screen === "pedidos" && <OrdersManager />}
+            <div className="w-fit rounded-full bg-white/70 px-5 py-2 text-sm font-black text-emerald-700 dark:bg-white/5 dark:text-emerald-300">
+              {screen === "dashboard"
+                ? "Inicio"
+                : screen === "artists"
+                  ? "Artistas"
+                  : screen === "obras"
+                    ? "Obras"
+                    : screen === "eventos"
+                      ? "Eventos"
+                      : screen === "pedidos"
+                        ? "Pedidos"
+                        : "Reportes"}
+            </div>
+          </div>
+        </div>
 
-        {screen === "reportes" && <ReportsPanel />}
+        <div className="admin-card rounded-[34px] p-4 sm:p-6 lg:p-7">
+          {screen === "dashboard" && (
+            <DashboardHome
+              artistsCount={stats.artistsCount}
+              worksCount={stats.worksCount}
+              totalStock={stats.totalStock}
+              outOfStockCount={stats.outOfStockCount}
+              latestWorks={stats.latestWorks}
+              onGoArtists={() => setScreen("artists")}
+              onGoWorks={() => setScreen("obras")}
+              onGoOrders={() => setScreen("pedidos")}
+              onEditWork={onEditWorkFromDashboard}
+            />
+          )}
+
+          {screen === "artists" && <ArtistsManager />}
+
+          {screen === "obras" && (
+            <ObrasManager
+              editingWork={editingWorkFromDashboard}
+              onClearEditingWork={() => setEditingWorkFromDashboard(null)}
+            />
+          )}
+
+          {screen === "eventos" && <EventosManager />}
+
+          {screen === "pedidos" && <OrdersManager />}
+
+          {screen === "reportes" && <ReportsPanel />}
+        </div>
       </main>
     </div>
   );
 }
-
