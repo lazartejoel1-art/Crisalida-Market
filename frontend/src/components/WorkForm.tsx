@@ -207,16 +207,6 @@ function inferirAreaDesdeTecnica(tecnica: string): AreaArtistica {
 
   if (t.includes("conceptual")) return "Arte conceptual";
 
-  if (
-    t.includes("mixta") ||
-    t.includes("mixto") ||
-    t.includes("tecnicas mixtas") ||
-    t.includes("técnicas mixtas") ||
-    t.includes("mixed media")
-  ) {
-    return "Técnicas mixtas";
-  }
-
   return "Técnicas mixtas";
 }
 
@@ -234,7 +224,7 @@ function resolveEstadoVenta(initialValues?: NewWork): EstadoVenta {
   return stock > 0 ? "DISPONIBLE" : "NO_DISPONIBLE";
 }
 
-function resolveAreaArtistica(initialValues?: NewWork): AreaArtistica {
+function resolveTecnica(initialValues?: NewWork): AreaArtistica {
   if (initialValues?.areaArtistica) return initialValues.areaArtistica;
 
   const descripcion = initialValues?.descripcion ?? "";
@@ -243,15 +233,21 @@ function resolveAreaArtistica(initialValues?: NewWork): AreaArtistica {
     extraerCampo(descripcion, "Área artística") ||
     extraerCampo(descripcion, "Area artistica");
 
-  const found = AREAS_ARTISTICAS.find(
+  const areaEncontrada = AREAS_ARTISTICAS.find(
     (item) => normalizarTexto(item) === normalizarTexto(area),
   );
 
-  if (found) return found;
+  if (areaEncontrada) return areaEncontrada;
 
   const tecnica =
     extraerCampo(descripcion, "Técnica") ||
     extraerCampo(descripcion, "Tecnica");
+
+  const tecnicaEncontrada = AREAS_ARTISTICAS.find(
+    (item) => normalizarTexto(item) === normalizarTexto(tecnica),
+  );
+
+  if (tecnicaEncontrada) return tecnicaEncontrada;
 
   if (tecnica) return inferirAreaDesdeTecnica(tecnica);
 
@@ -275,13 +271,8 @@ export default function WorkForm({
     limpiarDescripcion(initialValues?.descripcion ?? ""),
   );
 
-  const [areaArtistica, setAreaArtistica] = useState<AreaArtistica>(() =>
-    resolveAreaArtistica(initialValues),
-  );
-
-  const [tecnica, setTecnica] = useState(
-    extraerCampo(initialValues?.descripcion ?? "", "Técnica") ||
-      extraerCampo(initialValues?.descripcion ?? "", "Tecnica"),
+  const [tecnica, setTecnica] = useState<AreaArtistica>(() =>
+    resolveTecnica(initialValues),
   );
 
   const [dimensiones, setDimensiones] = useState(
@@ -311,11 +302,7 @@ export default function WorkForm({
       if (initialValues) {
         setTitulo(initialValues.titulo ?? "");
         setDescripcion(limpiarDescripcion(initialValues.descripcion ?? ""));
-        setAreaArtistica(resolveAreaArtistica(initialValues));
-        setTecnica(
-          extraerCampo(initialValues.descripcion ?? "", "Técnica") ||
-            extraerCampo(initialValues.descripcion ?? "", "Tecnica"),
-        );
+        setTecnica(resolveTecnica(initialValues));
         setDimensiones(
           extraerCampo(initialValues.descripcion ?? "", "Dimensiones"),
         );
@@ -330,8 +317,7 @@ export default function WorkForm({
       } else {
         setTitulo("");
         setDescripcion("");
-        setAreaArtistica("Pintura");
-        setTecnica("");
+        setTecnica("Pintura");
         setDimensiones("");
         setAnio("");
         setPrecio(0);
@@ -410,7 +396,6 @@ export default function WorkForm({
     try {
       const tituloLimpio = titulo.trim();
       const descripcionLimpia = descripcion.trim();
-      const tecnicaLimpia = tecnica.trim();
       const dimensionesLimpias = dimensiones.trim();
       const anioLimpio = anio.trim();
       const imagenUrlLimpia = imagenUrlInput.trim();
@@ -438,14 +423,10 @@ export default function WorkForm({
         throw new Error("Selecciona una imagen o pega una URL de imagen.");
       }
 
-      const tecnicaFinal = tecnicaLimpia
-        ? `${areaArtistica} - ${tecnicaLimpia}`
-        : areaArtistica;
-
       const descripcionFinal = [
         descripcionLimpia,
-        `Área artística: ${areaArtistica}`,
-        `Técnica: ${tecnicaFinal}`,
+        `Área artística: ${tecnica}`,
+        `Técnica: ${tecnica}`,
         dimensionesLimpias ? `Dimensiones: ${dimensionesLimpias}` : "",
         anioLimpio ? `Año: ${anioLimpio}` : "",
         estadoVenta === "NO_VENTA" ? "Estado de venta: No está a la venta" : "",
@@ -462,7 +443,7 @@ export default function WorkForm({
         stock: stockFinal,
         artistaId,
         estadoVenta,
-        areaArtistica,
+        areaArtistica: tecnica,
       });
 
       setMessage(
@@ -474,8 +455,7 @@ export default function WorkForm({
       if (mode === "create") {
         setTitulo("");
         setDescripcion("");
-        setAreaArtistica("Pintura");
-        setTecnica("");
+        setTecnica("Pintura");
         setDimensiones("");
         setAnio("");
         setPrecio(0);
@@ -539,8 +519,7 @@ export default function WorkForm({
           </h2>
 
           <p className="mt-2 text-sm text-neutral-600 dark:text-white/60">
-            Registra datos técnicos, área artística, disponibilidad, precio e
-            imagen de la obra.
+            Registra datos técnicos, disponibilidad, precio e imagen de la obra.
           </p>
         </div>
       </div>
@@ -577,6 +556,7 @@ export default function WorkForm({
             onChange={(event) => setArtistaId(Number(event.target.value))}
           >
             <option value={0}>Selecciona un artista</option>
+
             {artists.map((artist) => (
               <option key={artist.id} value={artist.id}>
                 {artist.nombre}
@@ -599,55 +579,23 @@ export default function WorkForm({
         />
       </div>
 
-      <div className="rounded-[26px] border border-neutral-200 bg-neutral-50 p-4 dark:border-white/10 dark:bg-white/5">
-        <div className="mb-4">
-          <p className="text-sm font-black text-neutral-950 dark:text-white">
-            Área artística
-          </p>
-
-          <p className="mt-1 text-xs text-neutral-500 dark:text-white/50">
-            Selecciona el área principal. Esto ayuda a ordenar la galería por
-            contenido.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
-          {AREAS_ARTISTICAS.map((area) => {
-            const active = areaArtistica === area;
-
-            return (
-              <button
-                key={area}
-                type="button"
-                onClick={() => setAreaArtistica(area)}
-                className={`min-h-[48px] rounded-2xl border px-3 py-2 text-left transition ${
-                  active
-                    ? "border-emerald-500 bg-emerald-600 text-white shadow-sm dark:bg-emerald-400 dark:text-black"
-                    : "border-neutral-200 bg-white text-neutral-700 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-white/10 dark:bg-neutral-900 dark:text-white/70 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300"
-                }`}
-              >
-                <span className="block text-[12px] font-black leading-tight">
-                  {area}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       <div className="grid gap-4 md:grid-cols-3">
         <div>
           <label className="mb-1 block text-sm font-black text-neutral-700 dark:text-white/75">
             Técnica específica
           </label>
 
-          <input
-            type="text"
-            className="w-full rounded-2xl border border-neutral-300 bg-neutral-50 px-4 py-3 text-sm text-neutral-950 outline-none transition placeholder:text-neutral-400 focus:border-emerald-500 focus:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/35 dark:focus:border-emerald-400"
+          <select
+            className="w-full rounded-2xl border border-neutral-300 bg-neutral-50 px-4 py-3 text-sm text-neutral-950 outline-none transition focus:border-emerald-500 focus:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-emerald-400"
             value={tecnica}
-            onChange={(event) => setTecnica(event.target.value)}
-            placeholder="Ej: Óleo sobre lienzo"
-          />
+            onChange={(event) => setTecnica(event.target.value as AreaArtistica)}
+          >
+            {AREAS_ARTISTICAS.map((area) => (
+              <option key={area} value={area}>
+                {area}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
