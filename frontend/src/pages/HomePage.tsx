@@ -238,29 +238,6 @@ function ProductCard({
   );
 }
 
-function WorksCarousel({
-  works,
-  onOpen,
-}: {
-  works: Work[];
-  onOpen: (id: number) => void;
-}) {
-  return (
-    <div className="-mx-4 sm:mx-0">
-      <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-5 sm:px-0">
-        {works.map((work) => (
-          <div
-            key={work.id}
-            className="min-w-[82%] snap-start sm:min-w-[330px] lg:min-w-[310px]"
-          >
-            <ProductCard work={work} onOpen={onOpen} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function EventosProSection() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loadingEventos, setLoadingEventos] = useState(true);
@@ -498,11 +475,6 @@ export default function HomePage() {
 
   const activeImage = active ? getWorkImage(active) : null;
 
-  const cascadeWorks = useMemo(() => {
-    if (!works.length) return [];
-    const rotated = [...works.slice(index), ...works.slice(0, index)];
-    return rotated.slice(0, 12);
-  }, [works, index]);
 
   const filteredWorks = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -859,33 +831,6 @@ export default function HomePage() {
           </div>
         </Shell>
 
-        <Shell className="pb-12">
-          <SectionTitle
-            eyebrow="Colección"
-            title="Obras en movimiento"
-            description="Desliza horizontalmente y explora las piezas destacadas de Crisálida Market."
-            action={
-              <Link
-                to="/museo"
-                className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 dark:bg-emerald-400 dark:text-black dark:hover:bg-emerald-300"
-              >
-                Ver todo →
-              </Link>
-            }
-          />
-
-          {loading ? (
-            <div className="rounded-[30px] border border-neutral-200 bg-white p-8 text-sm text-neutral-500 shadow-sm dark:border-white/10 dark:bg-neutral-900 dark:text-white/55">
-              Cargando galería...
-            </div>
-          ) : works.length === 0 ? (
-            <div className="rounded-[30px] border border-neutral-200 bg-white p-8 text-sm text-neutral-500 shadow-sm dark:border-white/10 dark:bg-neutral-900 dark:text-white/55">
-              No hay obras con imagen todavía. Sube obras desde Admin.
-            </div>
-          ) : (
-            <WorksCarousel works={cascadeWorks} onOpen={goToWork} />
-          )}
-        </Shell>
 
         <Shell className="pb-14">
           <SectionTitle
