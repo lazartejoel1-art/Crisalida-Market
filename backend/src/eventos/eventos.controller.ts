@@ -10,9 +10,6 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import * as fs from 'fs';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 
 import { EventosService } from './eventos.service';
@@ -26,28 +23,6 @@ type EventoBody = {
   activo?: string | boolean;
   artistasInvitados?: string;
 };
-
-type EventoFile = {
-  filename: string;
-};
-
-const uploadsPath = join(process.cwd(), 'uploads');
-
-if (!fs.existsSync(uploadsPath)) {
-  fs.mkdirSync(uploadsPath, { recursive: true });
-}
-
-const flyerStorage = diskStorage({
-  destination: uploadsPath,
-  filename: (_req, file, callback) => {
-    const fileExt = extname(file.originalname);
-    const fileName = `evento-${Date.now()}-${Math.round(
-      Math.random() * 1000000,
-    )}${fileExt}`;
-
-    callback(null, fileName);
-  },
-});
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -71,11 +46,15 @@ function uploadToCloudinary(
       },
       (error, result) => {
         if (error) {
-          return reject(new Error(error.message || 'Error al subir imagen'));
+          return reject(
+            new Error(error.message || 'Error al subir imagen a Cloudinary'),
+          );
         }
 
         if (!result) {
-          return reject(new Error('No se pudo subir la imagen'));
+          return reject(
+            new Error('Cloudinary no devolvió información de la imagen'),
+          );
         }
 
         resolve(result);
@@ -89,7 +68,9 @@ function uploadToCloudinary(
 function isArtistaInvitadoEvento(
   value: unknown,
 ): value is ArtistaInvitadoEvento {
-  if (typeof value !== 'object' || value === null) return false;
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
 
   const item = value as Record<string, unknown>;
 
@@ -97,7 +78,9 @@ function isArtistaInvitadoEvento(
 }
 
 function parseArtistasInvitados(value?: string): ArtistaInvitadoEvento[] {
-  if (!value) return [];
+  if (!value) {
+    return [];
+  }
 
   try {
     const parsed: unknown = JSON.parse(value);
@@ -112,24 +95,52 @@ function parseArtistasInvitados(value?: string): ArtistaInvitadoEvento[] {
   }
 }
 
+function parseActivo(value?: string | boolean): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    return value !== 'false';
+  }
+
+  return true;
+}
+
 @Controller('eventos')
 export class EventosController {
   constructor(private readonly eventosService: EventosService) {}
+
+  // ============================================================
+  // OBTENER TODOS LOS EVENTOS
+  // ============================================================
 
   @Get()
   findAll(): Promise<Evento[]> {
     return this.eventosService.findAll();
   }
 
+  // ============================================================
+  // OBTENER EVENTOS ACTIVOS
+  // ============================================================
+
   @Get('activos')
   findActivos(): Promise<Evento[]> {
     return this.eventosService.findActivos();
   }
 
+  // ============================================================
+  // OBTENER EVENTO POR ID
+  // ============================================================
+
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Evento> {
     return this.eventosService.findOne(Number(id));
   }
+
+  // ============================================================
+  // SUBIR IMÁGENES DE ARTISTAS INVITADOS
+  // ============================================================
 
   @Post('upload-image')
   @UseInterceptors(FileInterceptor('file'))
@@ -145,61 +156,93 @@ export class EventosController {
     };
   }
 
+  // ============================================================
+  // CREAR EVENTO
+  // ============================================================
+
   @Post()
-  @UseInterceptors(
-    FileInterceptor('flyer', {
-      storage: flyerStorage,
-    }),
-  )
-  create(
+  @UseInterceptors(FileInterceptor('flyer'))
+  async create(
     @Body() body: EventoBody,
-    @UploadedFile() file?: EventoFile,
+    @UploadedFile() file?: Express.Multer.File,
   ): Promise<Evento> {
-    const flyer = file?.filename ?? null;
+    let flyerUrl: string | undefined;
+
+    if (file) {
+      const result = await uploadToCloudinary(
+        file,
+        'crisalida-market/eventos/flyers',
+      );
+
+      flyerUrl = result.secure_url;
+    }
 
     const data: Partial<Evento> = {
       titulo: body.titulo ?? '',
       descripcion: body.descripcion ?? '',
       fecha: body.fecha ?? '',
       lugar: body.lugar ?? '',
-      activo: body.activo === 'false' ? false : true,
-      flyer: flyer ?? undefined,
-      flyerUrl: flyer ? `/uploads/${flyer}` : undefined,
+      activo: parseActivo(body.activo),
       artistasInvitados: parseArtistasInvitados(body.artistasInvitados),
     };
+
+    if (flyerUrl) {
+      /*
+       * Guardamos la URL completa de Cloudinary.
+       *
+       * Esto permite que tanto flyer como flyerUrl funcionen
+       * con el frontend existente.
+       */
+      data.flyer = flyerUrl;
+      data.flyerUrl = flyerUrl;
+    }
 
     return this.eventosService.create(data);
   }
 
+  // ============================================================
+  // ACTUALIZAR EVENTO
+  // ============================================================
+
   @Patch(':id')
-  @UseInterceptors(
-    FileInterceptor('flyer', {
-      storage: flyerStorage,
-    }),
-  )
-  update(
+  @UseInterceptors(FileInterceptor('flyer'))
+  async update(
     @Param('id') id: string,
     @Body() body: EventoBody,
-    @UploadedFile() file?: EventoFile,
+    @UploadedFile() file?: Express.Multer.File,
   ): Promise<Evento> {
-    const flyer = file?.filename ?? null;
-
     const data: Partial<Evento> = {
       titulo: body.titulo ?? '',
       descripcion: body.descripcion ?? '',
       fecha: body.fecha ?? '',
       lugar: body.lugar ?? '',
-      activo: body.activo === 'false' ? false : true,
+      activo: parseActivo(body.activo),
       artistasInvitados: parseArtistasInvitados(body.artistasInvitados),
     };
 
-    if (flyer) {
-      data.flyer = flyer;
-      data.flyerUrl = `/uploads/${flyer}`;
+    /*
+     * Si se seleccionó un flyer nuevo,
+     * lo subimos a Cloudinary.
+     *
+     * Si NO se seleccionó uno nuevo,
+     * conservamos el flyer anterior.
+     */
+    if (file) {
+      const result = await uploadToCloudinary(
+        file,
+        'crisalida-market/eventos/flyers',
+      );
+
+      data.flyer = result.secure_url;
+      data.flyerUrl = result.secure_url;
     }
 
     return this.eventosService.update(Number(id), data);
   }
+
+  // ============================================================
+  // ELIMINAR EVENTO
+  // ============================================================
 
   @Delete(':id')
   remove(@Param('id') id: string): Promise<{ message: string }> {
