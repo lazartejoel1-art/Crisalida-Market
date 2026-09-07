@@ -1276,8 +1276,9 @@ function ReportsPanel() {
     obras: Work[];
     artistas: Artist[];
   }> => {
-    const [resumenRes, obrasRes, artistasRes] = await Promise.all([
+    const [resumenRes, resumenGeneralRes, obrasRes, artistasRes] = await Promise.all([
       fetch(getReportUrl()),
+      fetch(`${API}/reportes`),
       fetch(`${API}/obras`),
       fetch(`${API}/artistas`),
     ]);
@@ -1291,6 +1292,18 @@ function ReportsPanel() {
     }
 
     const resumenData = (await resumenRes.json()) as ResumenReporte;
+
+    let resumenGeneralData: ResumenReporte = resumenData;
+
+    if (resumenGeneralRes.ok) {
+      try {
+        resumenGeneralData =
+          (await resumenGeneralRes.json()) as ResumenReporte;
+      } catch {
+        resumenGeneralData = resumenData;
+      }
+    }
+
     const obrasData = (await obrasRes.json()) as Work[];
     const obras = Array.isArray(obrasData) ? obrasData : [];
 
@@ -1327,7 +1340,10 @@ function ReportsPanel() {
 
     const resumenConImagenes: ResumenReporte = {
       ...resumenData,
-      pedidos: enrichPedidoItemsWithImages(resumenData.pedidos ?? [], obras),
+      pedidos: enrichPedidoItemsWithImages(
+        resumenGeneralData.pedidos ?? resumenData.pedidos ?? [],
+        obras,
+      ),
       pedidosRecientes: enrichPedidoItemsWithImages(
         resumenData.pedidosRecientes ?? [],
         obras,
@@ -1422,45 +1438,112 @@ function ReportsPanel() {
     };
   }, [analytics]);
 
-  const pedidosPeriodo = useMemo(
-    () => resumen.pedidosFiltrados ?? resumen.pedidos ?? [],
-    [resumen.pedidos, resumen.pedidosFiltrados],
-  );
+  const pedidosPeriodo = useMemo(() => {
+    const todosLosPedidos = Array.isArray(resumen.pedidos)
+      ? resumen.pedidos
+      : [];
+
+    const getLocalParts = (iso?: string) => {
+      if (!iso) return null;
+
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return null;
+
+      return {
+        year: date.getFullYear(),
+        month: date.getMonth() + 1,
+        day: date.getDate(),
+      };
+    };
+
+    if (tipoFiltro === "general") return todosLosPedidos;
+
+    if (tipoFiltro === "dia" && fecha) {
+      const [year, month, day] = fecha.split("-").map(Number);
+
+      return todosLosPedidos.filter((pedido) => {
+        const parts = getLocalParts(pedido.createdAt);
+        return (
+          parts?.year === year &&
+          parts?.month === month &&
+          parts?.day === day
+        );
+      });
+    }
+
+    if (tipoFiltro === "mes" && mes && anio) {
+      const targetMonth = Number(mes);
+      const targetYear = Number(anio);
+
+      return todosLosPedidos.filter((pedido) => {
+        const parts = getLocalParts(pedido.createdAt);
+        return parts?.year === targetYear && parts?.month === targetMonth;
+      });
+    }
+
+    if (tipoFiltro === "anio" && anio) {
+      const targetYear = Number(anio);
+
+      return todosLosPedidos.filter((pedido) => {
+        const parts = getLocalParts(pedido.createdAt);
+        return parts?.year === targetYear;
+      });
+    }
+
+    if (tipoFiltro === "rango" && (desde || hasta)) {
+      const from = desde ? new Date(`${desde}T00:00:00`) : null;
+      const to = hasta ? new Date(`${hasta}T23:59:59.999`) : null;
+
+      return todosLosPedidos.filter((pedido) => {
+        if (!pedido.createdAt) return false;
+
+        const date = new Date(pedido.createdAt);
+        if (Number.isNaN(date.getTime())) return false;
+        if (from && date < from) return false;
+        if (to && date > to) return false;
+        return true;
+      });
+    }
+
+    return todosLosPedidos;
+  }, [
+    anio,
+    desde,
+    fecha,
+    hasta,
+    mes,
+    resumen.pedidos,
+    tipoFiltro,
+  ]);
 
   const ingresosPeriodo = useMemo(
     () =>
-      Number(
-        resumen.totalIngresosFiltrados ??
-          resumen.totalIngresos ??
-          pedidosPeriodo.reduce(
-            (acc, pedido) => acc + Number(formatPrecio(pedido.total)),
-            0,
-          ),
+      pedidosPeriodo.reduce(
+        (acc, pedido) => acc + Number(formatPrecio(pedido.total)),
+        0,
       ),
-    [
-      pedidosPeriodo,
-      resumen.totalIngresos,
-      resumen.totalIngresosFiltrados,
-    ],
+    [pedidosPeriodo],
   );
 
   const totalPedidosPeriodo = useMemo(
-    () =>
-      resumen.totalPedidosFiltrados !== undefined
-        ? Number(resumen.totalPedidosFiltrados)
-        : pedidosPeriodo.length > 0
-          ? pedidosPeriodo.length
-          : Number(resumen.totalPedidos ?? 0),
-    [pedidosPeriodo.length, resumen.totalPedidos, resumen.totalPedidosFiltrados],
+    () => pedidosPeriodo.length,
+    [pedidosPeriodo.length],
   );
 
   const totalObrasVendidas = useMemo(
     () =>
-      (resumen.obrasVendidas ?? []).reduce(
-        (acc, obra) => acc + Number(obra.cantidadVendida ?? 0),
+      pedidosPeriodo.reduce(
+        (acc, pedido) =>
+          acc +
+          (Array.isArray(pedido.items)
+            ? pedido.items.reduce(
+                (itemAcc, item) => itemAcc + Number(item.cantidad ?? 0),
+                0,
+              )
+            : 0),
         0,
       ),
-    [resumen.obrasVendidas],
+    [pedidosPeriodo],
   );
 
   const pedidosCompletados = useMemo(
@@ -1478,21 +1561,36 @@ function ReportsPanel() {
     [ingresosPeriodo, totalPedidosPeriodo],
   );
 
+  const extractTecnicaFromDescripcion = useCallback(
+    (descripcion?: string | null): string => {
+      if (!descripcion) return "";
+
+      const match = descripcion.match(/t[ée]cnica\s*[:.]?\s*([^\n\r]+)/i);
+      if (!match?.[1]) return "";
+
+      return match[1].trim();
+    },
+    [],
+  );
+
   const getObraTecnica = useCallback(
     (obraId: number): string => {
       const obra = obrasCatalogo.find(
         (item) => Number(item.id) === Number(obraId),
       );
 
+      const tecnicaDescripcion = extractTecnicaFromDescripcion(obra?.descripcion);
+
       return (
         obra?.tecnica ||
         obra?.tecnicaEspecifica ||
         obra?.area ||
         obra?.categoria ||
+        tecnicaDescripcion ||
         "Sin técnica"
       );
     },
-    [obrasCatalogo],
+    [extractTecnicaFromDescripcion, obrasCatalogo],
   );
 
   const ventasPorTecnica = useMemo(() => {
@@ -1508,12 +1606,14 @@ function ReportsPanel() {
 
     const acumulado = new Map<string, number>();
 
-    (resumen.obrasVendidas ?? []).forEach((obra) => {
-      const tecnica = obra.tecnica || getObraTecnica(obra.obraId);
-      acumulado.set(
-        tecnica,
-        (acumulado.get(tecnica) ?? 0) + Number(obra.cantidadVendida ?? 0),
-      );
+    pedidosPeriodo.forEach((pedido) => {
+      (pedido.items ?? []).forEach((item) => {
+        const tecnica = getObraTecnica(item.obraId);
+        acumulado.set(
+          tecnica,
+          (acumulado.get(tecnica) ?? 0) + Number(item.cantidad ?? 0),
+        );
+      });
     });
 
     const extras = [...acumulado.keys()].filter(
@@ -1526,7 +1626,7 @@ function ReportsPanel() {
         cantidad: acumulado.get(tecnica) ?? 0,
       }))
       .filter((item) => item.cantidad > 0 || base.includes(item.tecnica));
-  }, [getObraTecnica, resumen.obrasVendidas]);
+  }, [getObraTecnica, pedidosPeriodo]);
 
   const maxTecnica = Math.max(
     1,
