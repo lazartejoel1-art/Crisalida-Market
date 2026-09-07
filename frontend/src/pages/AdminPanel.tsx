@@ -1240,6 +1240,7 @@ function ReportsPanel() {
   const [hasta, setHasta] = useState("");
   const [resumen, setResumen] = useState<ResumenReporte>(EMPTY_REPORT);
   const [obrasCatalogo, setObrasCatalogo] = useState<Work[]>([]);
+  const [artistasCatalogo, setArtistasCatalogo] = useState<Artist[]>([]);
 
   const buildQueryString = useCallback(() => {
     const params = new URLSearchParams();
@@ -1273,10 +1274,12 @@ function ReportsPanel() {
     analytics: AnalyticsSummary | null;
     analyticsAvailable: boolean;
     obras: Work[];
+    artistas: Artist[];
   }> => {
-    const [resumenRes, obrasRes] = await Promise.all([
+    const [resumenRes, obrasRes, artistasRes] = await Promise.all([
       fetch(getReportUrl()),
       fetch(`${API}/obras`),
+      fetch(`${API}/artistas`),
     ]);
 
     if (!resumenRes.ok) {
@@ -1290,6 +1293,17 @@ function ReportsPanel() {
     const resumenData = (await resumenRes.json()) as ResumenReporte;
     const obrasData = (await obrasRes.json()) as Work[];
     const obras = Array.isArray(obrasData) ? obrasData : [];
+
+    let artistas: Artist[] = [];
+
+    if (artistasRes.ok) {
+      try {
+        const artistasData = (await artistasRes.json()) as Artist[];
+        artistas = Array.isArray(artistasData) ? artistasData : [];
+      } catch {
+        artistas = [];
+      }
+    }
 
     const obrasVendidas = enrichObrasVendidasWithImages(
       resumenData.obrasVendidas,
@@ -1342,6 +1356,7 @@ function ReportsPanel() {
           analytics: null,
           analyticsAvailable: false,
           obras,
+          artistas,
         };
       }
 
@@ -1352,6 +1367,7 @@ function ReportsPanel() {
         analytics: analyticsData,
         analyticsAvailable: true,
         obras,
+        artistas,
       };
     } catch {
       return {
@@ -1359,6 +1375,7 @@ function ReportsPanel() {
         analytics: null,
         analyticsAvailable: false,
         obras,
+        artistas,
       };
     }
   }, [getReportUrl]);
@@ -1372,12 +1389,14 @@ function ReportsPanel() {
       setAnalytics(result.analytics);
       setAnalyticsAvailable(result.analyticsAvailable);
       setObrasCatalogo(result.obras);
+      setArtistasCatalogo(result.artistas);
     } catch (error) {
       console.error(error);
       setResumen(EMPTY_REPORT);
       setAnalytics(null);
       setAnalyticsAvailable(false);
       setObrasCatalogo([]);
+      setArtistasCatalogo([]);
     } finally {
       setLoading(false);
     }
@@ -1842,6 +1861,30 @@ function ReportsPanel() {
       const artistaDestacado = topArtistas[0];
       const obraDestacada = obrasTop[0];
 
+      const normalizeName = (value: unknown) =>
+        String(value ?? "")
+          .trim()
+          .toLocaleLowerCase("es");
+
+      const artistaDestacadoPerfil = artistaDestacado
+        ? artistasCatalogo.find(
+            (artista) =>
+              normalizeName(artista.nombre) ===
+              normalizeName(artistaDestacado.nombre),
+          )
+        : undefined;
+
+      const artistaDestacadoFoto = artistaDestacadoPerfil
+        ? getAdminImageUrl(
+            artistaDestacadoPerfil.fotoUrl,
+            artistaDestacadoPerfil.foto,
+          )
+        : null;
+
+      const obraDestacadaFoto = obraDestacada
+        ? getAdminImageUrl(obraDestacada.imagenUrl, obraDestacada.imagen)
+        : null;
+
       const funnelRows = funnelData
         .map((item) => {
           const percentage = Math.min(
@@ -1936,21 +1979,6 @@ function ReportsPanel() {
               })
               .join("")
           : `<div class="empty">Sin información de técnicas todavía.</div>`;
-
-      const clientesTop =
-        (resumen.clientes ?? [])
-          .slice()
-          .sort(
-            (a, b) =>
-              Number(b.totalComprado ?? 0) - Number(a.totalComprado ?? 0),
-          )
-          .slice(0, 5);
-
-      const clientePrincipal = clientesTop[0];
-
-      const metodoPrincipal =
-        [...metodosPago].sort((a, b) => b.cantidad - a.cantidad)[0]?.metodo ??
-        "Sin datos";
 
       const html = `
 <!DOCTYPE html>
@@ -2480,41 +2508,73 @@ function ReportsPanel() {
 
     .performance-grid {
       display: grid;
-      grid-template-columns: 180px repeat(3,1fr);
-      gap: 18px;
-      align-items: center;
+      grid-template-columns: 190px repeat(2,1fr);
+      gap: 24px;
+      align-items: stretch;
     }
 
     .performance-intro {
       padding: 22px;
-      border-radius: 8px;
-      background: #f5f8f6;
+      border-radius: 10px;
+      background: linear-gradient(145deg,#f5f8f6,#edf5f1);
       font-size: 20px;
       line-height: 1.2;
       font-weight: 900;
       color: #0a4339;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     .performance-card {
       text-align: center;
-      padding: 8px 10px;
+      padding: 14px 16px;
+      border: 1px solid #e3ece8;
+      border-radius: 12px;
+      background: linear-gradient(180deg,#ffffff,#f9fcfa);
     }
 
-    .performance-icon {
-      width: 58px;
-      height: 58px;
-      margin: 0 auto 8px;
+    .performance-photo {
+      width: 82px;
+      height: 82px;
+      margin: 0 auto 10px;
+      border-radius: 50%;
+      border: 3px solid #e8f6ee;
+      outline: 2px dashed #0b6b55;
+      outline-offset: 4px;
+      object-fit: cover;
+      display: block;
+      background: #eff9f3;
+    }
+
+    .performance-photo.artwork {
+      width: 106px;
+      height: 82px;
+      border-radius: 10px;
+      outline-style: solid;
+      object-fit: cover;
+    }
+
+    .performance-placeholder {
+      width: 82px;
+      height: 82px;
+      margin: 0 auto 10px;
       border-radius: 50%;
       border: 2px dashed #0b5c4b;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 27px;
+      font-size: 30px;
       background: #eff9f3;
     }
 
+    .performance-placeholder.artwork {
+      width: 106px;
+      border-radius: 10px;
+    }
+
     .performance-card h4 {
-      margin: 6px 0 7px;
+      margin: 8px 0 7px;
       font-size: 14px;
       color: #0a473b;
     }
@@ -2523,6 +2583,12 @@ function ReportsPanel() {
       margin: 2px 0;
       font-size: 11px;
       color: #3b5048;
+    }
+
+    .performance-name {
+      font-weight: 900;
+      color: #142a22 !important;
+      font-size: 12px !important;
     }
 
     .footer {
@@ -2647,8 +2713,13 @@ function ReportsPanel() {
       th, td { padding: 7px 6px; }
       .finance-bars { height: 130px; }
       .bar-pair { height: 88px; }
+      .performance-grid { grid-template-columns: 135px repeat(2,1fr); gap: 12px; }
       .performance-intro { font-size: 14px; padding: 13px; }
-      .performance-icon { width: 40px; height: 40px; font-size: 18px; }
+      .performance-card { padding: 9px 10px; }
+      .performance-photo,
+      .performance-placeholder { width: 52px; height: 52px; margin-bottom: 7px; }
+      .performance-photo.artwork,
+      .performance-placeholder.artwork { width: 70px; height: 52px; }
       .performance-card h4 { font-size: 10px; }
       .performance-card p { font-size: 8px; }
       body { padding-bottom: 18mm; }
@@ -2819,7 +2890,6 @@ function ReportsPanel() {
               <thead>
                 <tr>
                   <th>Concepto</th>
-                  <th>Proyectado</th>
                   <th class="real">Real</th>
                   <th>Variación</th>
                 </tr>
@@ -2827,19 +2897,16 @@ function ReportsPanel() {
               <tbody>
                 <tr>
                   <td>Ingresos Totales</td>
-                  <td>No configurado</td>
                   <td>${escapeHtml(formatPrecio(ingresosPeriodo))} Bs</td>
                   <td>—</td>
                 </tr>
                 <tr>
                   <td>Pedidos</td>
-                  <td>No configurado</td>
                   <td>${escapeHtml(totalPedidosPeriodo)}</td>
                   <td>—</td>
                 </tr>
                 <tr>
                   <td>Ticket Promedio</td>
-                  <td>No configurado</td>
                   <td>${escapeHtml(formatPrecio(ticketPromedio))} Bs</td>
                   <td>—</td>
                 </tr>
@@ -2899,9 +2966,19 @@ function ReportsPanel() {
           </div>
 
           <div class="performance-card">
-            <div class="performance-icon">🏆</div>
+            ${
+              artistaDestacadoFoto
+                ? `<img class="performance-photo" src="${escapeHtml(
+                    artistaDestacadoFoto,
+                  )}" alt="Perfil de ${escapeHtml(
+                    artistaDestacado?.nombre ?? "artista destacado",
+                  )}" />`
+                : `<div class="performance-placeholder">👤</div>`
+            }
             <h4>Artista Destacado</h4>
-            <p>${escapeHtml(artistaDestacado?.nombre ?? "Sin datos")}</p>
+            <p class="performance-name">${escapeHtml(
+              artistaDestacado?.nombre ?? "Sin datos",
+            )}</p>
             <p>Ventas: ${escapeHtml(artistaDestacado?.ventas ?? 0)} obras</p>
             <p>Ingresos: ${escapeHtml(
               formatPrecio(artistaDestacado?.ingreso ?? 0),
@@ -2909,24 +2986,24 @@ function ReportsPanel() {
           </div>
 
           <div class="performance-card">
-            <div class="performance-icon">🏷</div>
+            ${
+              obraDestacadaFoto
+                ? `<img class="performance-photo artwork" src="${escapeHtml(
+                    obraDestacadaFoto,
+                  )}" alt="${escapeHtml(
+                    obraDestacada?.titulo ?? "Obra más vendida",
+                  )}" />`
+                : `<div class="performance-placeholder artwork">🖼</div>`
+            }
             <h4>Obra Más Vendida</h4>
-            <p>${escapeHtml(obraDestacada?.titulo ?? "Sin datos")}</p>
+            <p class="performance-name">${escapeHtml(
+              obraDestacada?.titulo ?? "Sin datos",
+            )}</p>
             <p>Ventas: ${escapeHtml(obraDestacada?.cantidadVendida ?? 0)}</p>
             <p>Técnica: ${escapeHtml(
               obraDestacada
                 ? obraDestacada.tecnica || getObraTecnica(obraDestacada.obraId)
                 : "Sin datos",
-            )}</p>
-          </div>
-
-          <div class="performance-card">
-            <div class="performance-icon">👥</div>
-            <h4>Mayor Interacción</h4>
-            <p>Cliente: ${escapeHtml(clientePrincipal?.buyerName ?? "Sin datos")}</p>
-            <p>Método principal: ${escapeHtml(metodoPrincipal)}</p>
-            <p>Visitas: ${escapeHtml(
-              analyticsAvailable ? analyticsStats.totalVisitas : "No disponible",
             )}</p>
           </div>
         </div>
@@ -4967,3 +5044,4 @@ export default function AdminPanel() {
     </div>
   );
 }
+
