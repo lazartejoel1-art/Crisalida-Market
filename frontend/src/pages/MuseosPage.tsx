@@ -326,6 +326,21 @@ export default function MuseoPage() {
     return counts;
   }, [works]);
 
+  const visibleTechniques = useMemo(() => {
+    return AREAS_TECNICAS.filter((area) => {
+      if (area === "Todas") return true;
+      return (techniqueCounts[area] ?? 0) > 0;
+    });
+  }, [techniqueCounts]);
+
+  useEffect(() => {
+    const currentExists = visibleTechniques.includes(selectedTechnique);
+
+    if (!currentExists) {
+      setSelectedTechnique("Todas");
+    }
+  }, [visibleTechniques, selectedTechnique]);
+
   const filteredWorks = useMemo(() => {
     const q = normalizarTexto(query.trim());
 
@@ -375,8 +390,8 @@ export default function MuseoPage() {
               </h1>
 
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-neutral-600 dark:text-white/65 sm:text-base">
-                Explora la colección por área artística, técnica, artista o
-                título. Una vista limpia para recorrer las obras de Crisálida.
+                Explora la colección por área artística, artista o título. Una
+                vista limpia para recorrer las obras de Crisálida.
               </p>
             </div>
 
@@ -395,6 +410,7 @@ export default function MuseoPage() {
             <p className="text-sm font-black text-neutral-950 dark:text-white">
               Obras
             </p>
+
             <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
               {works.length} piezas registradas
             </p>
@@ -402,10 +418,11 @@ export default function MuseoPage() {
 
           <div className="rounded-[24px] border border-neutral-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-neutral-900">
             <p className="text-sm font-black text-neutral-950 dark:text-white">
-              Áreas
+              Áreas activas
             </p>
+
             <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
-              {AREAS_TECNICAS.length - 2} categorías artísticas
+              {Math.max(visibleTechniques.length - 1, 0)} con contenido
             </p>
           </div>
 
@@ -413,6 +430,7 @@ export default function MuseoPage() {
             <p className="text-sm font-black text-neutral-950 dark:text-white">
               Filtro actual
             </p>
+
             <p className="mt-1 line-clamp-1 text-sm text-neutral-500 dark:text-white/55">
               {selectedTechnique}
             </p>
@@ -422,6 +440,7 @@ export default function MuseoPage() {
             <p className="text-sm font-black text-neutral-950 dark:text-white">
               Resultado
             </p>
+
             <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
               {filteredWorks.length} obras visibles
             </p>
@@ -432,16 +451,16 @@ export default function MuseoPage() {
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-300">
-                Clasificación por técnica
+                Clasificación por área
               </p>
 
               <h2 className="mt-2 text-2xl font-black tracking-tight text-neutral-950 dark:text-white sm:text-3xl">
-                Explora por área artística
+                Explora por contenido
               </h2>
 
               <p className="mt-2 max-w-2xl text-sm text-neutral-500 dark:text-white/55">
-                Las obras se ordenan automáticamente según la técnica registrada
-                en su ficha.
+                Solo aparecen las áreas que tienen obras registradas. Las demás
+                se mostrarán automáticamente cuando exista contenido.
               </p>
             </div>
 
@@ -453,11 +472,10 @@ export default function MuseoPage() {
             />
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-9">
-            {AREAS_TECNICAS.map((technique) => {
+          <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+            {visibleTechniques.map((technique) => {
               const active = selectedTechnique === technique;
               const count = techniqueCounts[technique] ?? 0;
-              const hasWorks = count > 0 || technique === "Todas";
 
               return (
                 <button
@@ -467,9 +485,7 @@ export default function MuseoPage() {
                   className={`min-h-[48px] rounded-2xl border px-3 py-2 text-left transition ${
                     active
                       ? "border-emerald-500 bg-emerald-600 text-white shadow-sm dark:bg-emerald-400 dark:text-black"
-                      : hasWorks
-                        ? "border-neutral-200 bg-neutral-50 text-neutral-700 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300"
-                        : "border-neutral-200 bg-neutral-50 text-neutral-400 opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-white/35"
+                      : "border-neutral-200 bg-neutral-50 text-neutral-700 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300"
                   }`}
                 >
                   <span className="block truncate text-[12px] font-black leading-tight">
@@ -545,8 +561,6 @@ export default function MuseoPage() {
           >
             {filteredWorks.map((w) => {
               const imageUrl = getImageUrl(w.imagenUrl || w.imagen);
-              const tecnica = extraerTecnica(w.descripcion);
-              const area = clasificarAreaTecnica(w.descripcion);
 
               return (
                 <motion.button
@@ -565,19 +579,7 @@ export default function MuseoPage() {
                 >
                   <GalleryImage src={imageUrl} alt={w.titulo} />
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-
-                  <div className="absolute left-4 top-4 z-20 flex max-w-[85%] flex-wrap gap-2">
-                    <span className="rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-neutral-950 shadow-sm">
-                      {area}
-                    </span>
-
-                    {tecnica !== area && tecnica !== "Sin técnica" && (
-                      <span className="rounded-full bg-emerald-400/95 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-black shadow-sm">
-                        {tecnica}
-                      </span>
-                    )}
-                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
 
                   <div className="pointer-events-none absolute bottom-3 right-3 z-20 text-[10px] uppercase tracking-widest text-white/40">
                     Crisálida · Galería
@@ -592,7 +594,7 @@ export default function MuseoPage() {
                       {w.titulo}
                     </h3>
 
-                    <div className="mt-4 flex items-center justify-between gap-3">
+                    <div className="mt-4">
                       <span className="rounded-full bg-white px-4 py-2 text-xs font-black text-neutral-950 opacity-0 transition group-hover:opacity-100">
                         Ver obra →
                       </span>
