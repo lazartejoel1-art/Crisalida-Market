@@ -2,6 +2,23 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 export type EstadoVenta = "DISPONIBLE" | "NO_DISPONIBLE" | "NO_VENTA";
 
+export type AreaArtistica =
+  | "Dibujo"
+  | "Pintura"
+  | "Escultura"
+  | "Grabado"
+  | "Cerámica"
+  | "Fotografía"
+  | "Ilustración"
+  | "Collage"
+  | "Muralismo"
+  | "Arte digital"
+  | "Instalación"
+  | "Performance"
+  | "Videoarte"
+  | "Arte conceptual"
+  | "Técnicas mixtas";
+
 export type NewWork = {
   titulo: string;
   descripcion: string;
@@ -11,6 +28,7 @@ export type NewWork = {
   imagen?: File;
   imagenUrl?: string;
   estadoVenta?: EstadoVenta;
+  areaArtistica?: AreaArtistica;
 };
 
 type ArtistOption = {
@@ -29,6 +47,24 @@ interface WorkFormProps {
 const MAX_IMAGE_SIZE_MB = 50;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 
+const AREAS_ARTISTICAS: AreaArtistica[] = [
+  "Dibujo",
+  "Pintura",
+  "Escultura",
+  "Grabado",
+  "Cerámica",
+  "Fotografía",
+  "Ilustración",
+  "Collage",
+  "Muralismo",
+  "Arte digital",
+  "Instalación",
+  "Performance",
+  "Videoarte",
+  "Arte conceptual",
+  "Técnicas mixtas",
+];
+
 function getInitialArtistId(artists: ArtistOption[], initialValues?: NewWork) {
   return initialValues?.artistaId ?? artists[0]?.id ?? 0;
 }
@@ -41,20 +77,185 @@ function extraerCampo(texto: string, etiqueta: string): string {
 
 function limpiarDescripcion(texto: string): string {
   return texto
+    .replace(/Área artística\s*[:.]?\s*[^\n]+/gi, "")
+    .replace(/Area artistica\s*[:.]?\s*[^\n]+/gi, "")
     .replace(/Técnica\s*[:.]?\s*[^\n]+/gi, "")
     .replace(/Tecnica\s*[:.]?\s*[^\n]+/gi, "")
     .replace(/Dimensiones\s*[:.]?\s*[^\n]+/gi, "")
     .replace(/Año\s*[:.]?\s*[^\n]+/gi, "")
+    .replace(/Estado de venta\s*[:.]?\s*[^\n]+/gi, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function normalizarTexto(texto: string) {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function inferirAreaDesdeTecnica(tecnica: string): AreaArtistica {
+  const t = normalizarTexto(tecnica);
+
+  if (
+    t.includes("oleo") ||
+    t.includes("óleo") ||
+    t.includes("acrilico") ||
+    t.includes("acrílico") ||
+    t.includes("acuarela") ||
+    t.includes("pintura") ||
+    t.includes("lienzo") ||
+    t.includes("tela")
+  ) {
+    return "Pintura";
+  }
+
+  if (
+    t.includes("grafito") ||
+    t.includes("lapiz") ||
+    t.includes("lápiz") ||
+    t.includes("carboncillo") ||
+    t.includes("tinta") ||
+    t.includes("boligrafo") ||
+    t.includes("bolígrafo") ||
+    t.includes("dibujo") ||
+    t.includes("pastel")
+  ) {
+    return "Dibujo";
+  }
+
+  if (
+    t.includes("ceramica") ||
+    t.includes("cerámica") ||
+    t.includes("arcilla") ||
+    t.includes("barro") ||
+    t.includes("esmalt") ||
+    t.includes("rollito") ||
+    t.includes("modelado en ceramica") ||
+    t.includes("modelado en cerámica")
+  ) {
+    return "Cerámica";
+  }
+
+  if (
+    t.includes("escultura") ||
+    t.includes("modelado") ||
+    t.includes("tallado") ||
+    t.includes("yeso") ||
+    t.includes("madera") ||
+    t.includes("metal")
+  ) {
+    return "Escultura";
+  }
+
+  if (
+    t.includes("grabado") ||
+    t.includes("xilografia") ||
+    t.includes("xilografía") ||
+    t.includes("linoleo") ||
+    t.includes("linóleo") ||
+    t.includes("linograbado") ||
+    t.includes("aguafuerte") ||
+    t.includes("punta seca") ||
+    t.includes("serigrafia") ||
+    t.includes("serigrafía")
+  ) {
+    return "Grabado";
+  }
+
+  if (t.includes("fotografia") || t.includes("fotografía") || t.includes("foto")) {
+    return "Fotografía";
+  }
+
+  if (
+    t.includes("ilustracion") ||
+    t.includes("ilustración") ||
+    t.includes("comic") ||
+    t.includes("cómic")
+  ) {
+    return "Ilustración";
+  }
+
+  if (t.includes("collage")) return "Collage";
+  if (t.includes("mural")) return "Muralismo";
+
+  if (
+    t.includes("digital") ||
+    t.includes("vector") ||
+    t.includes("procreate") ||
+    t.includes("photoshop")
+  ) {
+    return "Arte digital";
+  }
+
+  if (t.includes("instalacion") || t.includes("instalación")) {
+    return "Instalación";
+  }
+
+  if (t.includes("performance") || t.includes("accion") || t.includes("acción")) {
+    return "Performance";
+  }
+
+  if (
+    t.includes("videoarte") ||
+    t.includes("video arte") ||
+    t.includes("audiovisual")
+  ) {
+    return "Videoarte";
+  }
+
+  if (t.includes("conceptual")) return "Arte conceptual";
+
+  if (
+    t.includes("mixta") ||
+    t.includes("mixto") ||
+    t.includes("tecnicas mixtas") ||
+    t.includes("técnicas mixtas") ||
+    t.includes("mixed media")
+  ) {
+    return "Técnicas mixtas";
+  }
+
+  return "Técnicas mixtas";
 }
 
 function resolveEstadoVenta(initialValues?: NewWork): EstadoVenta {
   if (initialValues?.estadoVenta) return initialValues.estadoVenta;
 
+  const descripcion = initialValues?.descripcion ?? "";
+
+  if (/No está a la venta/i.test(descripcion)) {
+    return "NO_VENTA";
+  }
+
   const stock = Number(initialValues?.stock ?? 1);
 
   return stock > 0 ? "DISPONIBLE" : "NO_DISPONIBLE";
+}
+
+function resolveAreaArtistica(initialValues?: NewWork): AreaArtistica {
+  if (initialValues?.areaArtistica) return initialValues.areaArtistica;
+
+  const descripcion = initialValues?.descripcion ?? "";
+
+  const area =
+    extraerCampo(descripcion, "Área artística") ||
+    extraerCampo(descripcion, "Area artistica");
+
+  const found = AREAS_ARTISTICAS.find(
+    (item) => normalizarTexto(item) === normalizarTexto(area),
+  );
+
+  if (found) return found;
+
+  const tecnica =
+    extraerCampo(descripcion, "Técnica") ||
+    extraerCampo(descripcion, "Tecnica");
+
+  if (tecnica) return inferirAreaDesdeTecnica(tecnica);
+
+  return "Pintura";
 }
 
 export default function WorkForm({
@@ -73,13 +274,20 @@ export default function WorkForm({
   const [descripcion, setDescripcion] = useState(
     limpiarDescripcion(initialValues?.descripcion ?? ""),
   );
+
+  const [areaArtistica, setAreaArtistica] = useState<AreaArtistica>(() =>
+    resolveAreaArtistica(initialValues),
+  );
+
   const [tecnica, setTecnica] = useState(
     extraerCampo(initialValues?.descripcion ?? "", "Técnica") ||
       extraerCampo(initialValues?.descripcion ?? "", "Tecnica"),
   );
+
   const [dimensiones, setDimensiones] = useState(
     extraerCampo(initialValues?.descripcion ?? "", "Dimensiones"),
   );
+
   const [anio, setAnio] = useState(
     extraerCampo(initialValues?.descripcion ?? "", "Año"),
   );
@@ -103,6 +311,7 @@ export default function WorkForm({
       if (initialValues) {
         setTitulo(initialValues.titulo ?? "");
         setDescripcion(limpiarDescripcion(initialValues.descripcion ?? ""));
+        setAreaArtistica(resolveAreaArtistica(initialValues));
         setTecnica(
           extraerCampo(initialValues.descripcion ?? "", "Técnica") ||
             extraerCampo(initialValues.descripcion ?? "", "Tecnica"),
@@ -121,6 +330,7 @@ export default function WorkForm({
       } else {
         setTitulo("");
         setDescripcion("");
+        setAreaArtistica("Pintura");
         setTecnica("");
         setDimensiones("");
         setAnio("");
@@ -228,9 +438,14 @@ export default function WorkForm({
         throw new Error("Selecciona una imagen o pega una URL de imagen.");
       }
 
+      const tecnicaFinal = tecnicaLimpia
+        ? `${areaArtistica} - ${tecnicaLimpia}`
+        : areaArtistica;
+
       const descripcionFinal = [
         descripcionLimpia,
-        tecnicaLimpia ? `Técnica: ${tecnicaLimpia}` : "",
+        `Área artística: ${areaArtistica}`,
+        `Técnica: ${tecnicaFinal}`,
         dimensionesLimpias ? `Dimensiones: ${dimensionesLimpias}` : "",
         anioLimpio ? `Año: ${anioLimpio}` : "",
         estadoVenta === "NO_VENTA" ? "Estado de venta: No está a la venta" : "",
@@ -247,6 +462,7 @@ export default function WorkForm({
         stock: stockFinal,
         artistaId,
         estadoVenta,
+        areaArtistica,
       });
 
       setMessage(
@@ -258,6 +474,7 @@ export default function WorkForm({
       if (mode === "create") {
         setTitulo("");
         setDescripcion("");
+        setAreaArtistica("Pintura");
         setTecnica("");
         setDimensiones("");
         setAnio("");
@@ -322,7 +539,8 @@ export default function WorkForm({
           </h2>
 
           <p className="mt-2 text-sm text-neutral-600 dark:text-white/60">
-            Registra datos técnicos, disponibilidad, precio e imagen de la obra.
+            Registra datos técnicos, área artística, disponibilidad, precio e
+            imagen de la obra.
           </p>
         </div>
       </div>
@@ -381,10 +599,46 @@ export default function WorkForm({
         />
       </div>
 
+      <div className="rounded-[26px] border border-neutral-200 bg-neutral-50 p-4 dark:border-white/10 dark:bg-white/5">
+        <div className="mb-4">
+          <p className="text-sm font-black text-neutral-950 dark:text-white">
+            Área artística
+          </p>
+
+          <p className="mt-1 text-xs text-neutral-500 dark:text-white/50">
+            Selecciona el área principal. Esto ayuda a ordenar la galería por
+            contenido.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
+          {AREAS_ARTISTICAS.map((area) => {
+            const active = areaArtistica === area;
+
+            return (
+              <button
+                key={area}
+                type="button"
+                onClick={() => setAreaArtistica(area)}
+                className={`min-h-[48px] rounded-2xl border px-3 py-2 text-left transition ${
+                  active
+                    ? "border-emerald-500 bg-emerald-600 text-white shadow-sm dark:bg-emerald-400 dark:text-black"
+                    : "border-neutral-200 bg-white text-neutral-700 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-white/10 dark:bg-neutral-900 dark:text-white/70 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300"
+                }`}
+              >
+                <span className="block text-[12px] font-black leading-tight">
+                  {area}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-3">
         <div>
           <label className="mb-1 block text-sm font-black text-neutral-700 dark:text-white/75">
-            Técnica
+            Técnica específica
           </label>
 
           <input
