@@ -405,48 +405,6 @@ export default function MuseoPage() {
           </div>
         </motion.div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-[24px] border border-neutral-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-neutral-900">
-            <p className="text-sm font-black text-neutral-950 dark:text-white">
-              Obras
-            </p>
-
-            <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
-              {works.length} piezas registradas
-            </p>
-          </div>
-
-          <div className="rounded-[24px] border border-neutral-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-neutral-900">
-            <p className="text-sm font-black text-neutral-950 dark:text-white">
-              Áreas activas
-            </p>
-
-            <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
-              {Math.max(visibleTechniques.length - 1, 0)} con contenido
-            </p>
-          </div>
-
-          <div className="rounded-[24px] border border-neutral-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-neutral-900">
-            <p className="text-sm font-black text-neutral-950 dark:text-white">
-              Filtro actual
-            </p>
-
-            <p className="mt-1 line-clamp-1 text-sm text-neutral-500 dark:text-white/55">
-              {selectedTechnique}
-            </p>
-          </div>
-
-          <div className="rounded-[24px] border border-neutral-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-neutral-900">
-            <p className="text-sm font-black text-neutral-950 dark:text-white">
-              Resultado
-            </p>
-
-            <p className="mt-1 text-sm text-neutral-500 dark:text-white/55">
-              {filteredWorks.length} obras visibles
-            </p>
-          </div>
-        </div>
-
         <div className="mt-5 rounded-[30px] border border-neutral-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-neutral-900 sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
