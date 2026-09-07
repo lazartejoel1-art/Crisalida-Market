@@ -1546,15 +1546,17 @@ function ReportsPanel() {
     [pedidosPeriodo],
   );
 
-  const pedidosCompletados = useMemo(
+  const pedidosValidosParaVenta = useMemo(
     () =>
       pedidosPeriodo.filter((pedido) =>
         ["pagado", "entregado"].includes(
-          String(pedido.estado ?? "").toLowerCase(),
+          String(pedido.estado ?? "").trim().toLowerCase(),
         ),
-      ).length,
+      ),
     [pedidosPeriodo],
   );
+
+  const pedidosCompletados = pedidosValidosParaVenta.length;
 
   const ticketPromedio = useMemo(
     () => (totalPedidosPeriodo > 0 ? ingresosPeriodo / totalPedidosPeriodo : 0),
@@ -1682,23 +1684,38 @@ function ReportsPanel() {
       { nombre: string; ventas: number; ingreso: number }
     >();
 
-    (resumen.obrasVendidas ?? []).forEach((obra) => {
-      const nombre = obra.artistaNombre || "Crisálida";
-      const current = map.get(nombre) ?? {
-        nombre,
-        ventas: 0,
-        ingreso: 0,
-      };
+    pedidosValidosParaVenta.forEach((pedido) => {
+      (pedido.items ?? []).forEach((item) => {
+        const obraCatalogo = obrasCatalogo.find(
+          (obra) => Number(obra.id) === Number(item.obraId),
+        );
 
-      current.ventas += Number(obra.cantidadVendida ?? 0);
-      current.ingreso += Number(obra.totalVendido ?? 0);
-      map.set(nombre, current);
+        const nombre =
+          item.artistaNombre || obraCatalogo?.artista?.nombre || "Crisálida";
+        const cantidad = Number(item.cantidad ?? 0);
+        const ingreso = Number(
+          formatPrecio(
+            item.subtotal ??
+              Number(formatPrecio(item.precio)) * Math.max(cantidad, 1),
+          ),
+        );
+
+        const current = map.get(nombre) ?? {
+          nombre,
+          ventas: 0,
+          ingreso: 0,
+        };
+
+        current.ventas += cantidad;
+        current.ingreso += ingreso;
+        map.set(nombre, current);
+      });
     });
 
     return [...map.values()]
       .sort((a, b) => b.ventas - a.ventas || b.ingreso - a.ingreso)
       .slice(0, 5);
-  }, [resumen.obrasVendidas]);
+  }, [obrasCatalogo, pedidosValidosParaVenta]);
 
   const monthlySales = useMemo(() => {
     const monthNames = [
@@ -1936,10 +1953,60 @@ function ReportsPanel() {
         ...funnelData.map((item) => item.value),
       );
 
-      const obrasTop = [...(resumen.obrasVendidas ?? [])]
+      const obrasVendidasDelPeriodo = (() => {
+        const map = new Map<number, ObraVendida>();
+
+        pedidosValidosParaVenta.forEach((pedido) => {
+          (pedido.items ?? []).forEach((item) => {
+            const obraCatalogo = obrasCatalogo.find(
+              (obra) => Number(obra.id) === Number(item.obraId),
+            );
+
+            const obraId = Number(item.obraId);
+            const cantidad = Number(item.cantidad ?? 0);
+            const totalVendido = Number(
+              formatPrecio(
+                item.subtotal ??
+                  Number(formatPrecio(item.precio)) * Math.max(cantidad, 1),
+              ),
+            );
+
+            const actual = map.get(obraId) ?? {
+              obraId,
+              titulo: item.titulo || obraCatalogo?.titulo || `Obra #${obraId}`,
+              artistaNombre:
+                item.artistaNombre ||
+                obraCatalogo?.artista?.nombre ||
+                "Crisálida",
+              cantidadVendida: 0,
+              totalVendido: 0,
+              imagen: item.imagen || obraCatalogo?.imagen || null,
+              imagenUrl: item.imagenUrl || obraCatalogo?.imagenUrl || null,
+              tecnica: getObraTecnica(obraId),
+            };
+
+            actual.cantidadVendida += cantidad;
+            actual.totalVendido += totalVendido;
+
+            if (!actual.imagenUrl && item.imagenUrl) {
+              actual.imagenUrl = item.imagenUrl;
+            }
+            if (!actual.imagen && item.imagen) {
+              actual.imagen = item.imagen;
+            }
+
+            map.set(obraId, actual);
+          });
+        });
+
+        return [...map.values()];
+      })();
+
+      const obrasTop = obrasVendidasDelPeriodo
         .sort(
           (a, b) =>
-            Number(b.cantidadVendida ?? 0) - Number(a.cantidadVendida ?? 0),
+            Number(b.cantidadVendida ?? 0) - Number(a.cantidadVendida ?? 0) ||
+            Number(b.totalVendido ?? 0) - Number(a.totalVendido ?? 0),
         )
         .slice(0, 5);
 
@@ -1967,7 +2034,7 @@ function ReportsPanel() {
           .toLocaleLowerCase("es");
 
       const obraDelArtistaDestacado = artistaDestacado
-        ? (resumen.obrasVendidas ?? []).find(
+        ? obrasVendidasDelPeriodo.find(
             (obra) =>
               normalizeName(obra.artistaNombre) ===
               normalizeName(artistaDestacado.nombre),
