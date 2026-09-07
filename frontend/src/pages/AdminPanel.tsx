@@ -1895,7 +1895,7 @@ function ReportsPanel() {
 
   return (
     <div className="space-y-5">
-      <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[#07110d] text-white shadow-2xl shadow-black/10">
+      <div className="min-w-0 overflow-hidden rounded-[28px] border border-white/10 bg-[#07110d] text-white shadow-2xl shadow-black/10">
         <div className="border-b border-white/10 px-5 py-5 sm:px-6 lg:px-7">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div>
@@ -2026,8 +2026,8 @@ function ReportsPanel() {
               ))}
             </div>
 
-            <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr_0.78fr]">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+            <div className="grid min-w-0 gap-5 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)_minmax(0,0.78fr)]">
+              <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5 lg:col-span-2 2xl:col-span-1">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
                     <h2 className="text-base font-black text-white">
@@ -2044,7 +2044,7 @@ function ReportsPanel() {
                 <div className="overflow-x-auto">
                   <svg
                     viewBox="0 0 700 215"
-                    className="min-w-[650px] w-full"
+                    className="h-auto w-full min-w-0"
                     role="img"
                     aria-label="Gráfico de ventas mensuales"
                   >
@@ -2105,7 +2105,7 @@ function ReportsPanel() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+              <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
                 <div className="mb-5">
                   <h2 className="text-base font-black text-white">
                     Ventas por técnica
@@ -2143,7 +2143,7 @@ function ReportsPanel() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+              <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
                 <h2 className="text-base font-black text-white">
                   Métodos de pago
                 </h2>
@@ -2192,8 +2192,8 @@ function ReportsPanel() {
               </div>
             </div>
 
-            <div className="grid gap-5 xl:grid-cols-[1fr_330px]">
-              <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035]">
+            <div className="grid min-w-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_330px]">
+              <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035]">
                 <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-5">
                   <div>
                     <h2 className="text-base font-black text-white">
@@ -2214,8 +2214,8 @@ function ReportsPanel() {
                     No hay ventas para este filtro.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-[920px] w-full">
+                  <div className="w-full overflow-x-auto">
+                    <table className="w-full min-w-[820px]">
                       <thead>
                         <tr className="border-b border-white/10 bg-black/10 text-left">
                           {[
