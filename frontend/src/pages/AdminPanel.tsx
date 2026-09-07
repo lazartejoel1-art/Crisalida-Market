@@ -1268,13 +1268,6 @@ function ReportsPanel() {
     return query ? `${API}/reportes?${query}` : `${API}/reportes`;
   }, [buildQueryString]);
 
-  const getPdfUrl = useCallback(() => {
-    const query = buildQueryString();
-    return query
-      ? `${API}/reportes/obras/pdf?${query}`
-      : `${API}/reportes/obras/pdf`;
-  }, [buildQueryString]);
-
   const loadReports = useCallback(async (): Promise<{
     resumen: ResumenReporte;
     analytics: AnalyticsSummary | null;
@@ -1768,11 +1761,1162 @@ function ReportsPanel() {
     setPdfError(null);
 
     try {
-      window.open(getPdfUrl(), "_blank", "noopener,noreferrer");
+      const popup = window.open("", "_blank");
+
+      if (!popup) {
+        setPdfError(
+          "El navegador bloqueó la ventana del reporte. Habilita las ventanas emergentes e inténtalo de nuevo.",
+        );
+        return;
+      }
+
+      const escapeHtml = (value: unknown): string =>
+        String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+
+      const fechaDocumento = new Date().toLocaleDateString("es-BO", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
+
+      const totalClientes = resumen.clientes?.length ?? 0;
+      const totalVisitas =
+        analyticsStats.totalVisitas > 0
+          ? analyticsStats.totalVisitas
+          : Math.max(totalClientes, totalPedidosPeriodo, totalObrasVendidas, 1);
+
+      const funnelData = [
+        {
+          label: analyticsAvailable ? "Visitas / interesados" : "Clientes registrados",
+          value: analyticsAvailable ? totalVisitas : totalClientes,
+        },
+        {
+          label: "Clientes",
+          value: totalClientes,
+        },
+        {
+          label: "Pedidos",
+          value: totalPedidosPeriodo,
+        },
+        {
+          label: "Obras vendidas",
+          value: totalObrasVendidas,
+        },
+      ];
+
+      const funnelBase = Math.max(
+        1,
+        funnelData[0]?.value ?? 1,
+        ...funnelData.map((item) => item.value),
+      );
+
+      const obrasTop = [...(resumen.obrasVendidas ?? [])]
+        .sort(
+          (a, b) =>
+            Number(b.cantidadVendida ?? 0) - Number(a.cantidadVendida ?? 0),
+        )
+        .slice(0, 5);
+
+      const tecnicasTop = [...ventasPorTecnica]
+        .filter((item) => item.cantidad > 0)
+        .sort((a, b) => b.cantidad - a.cantidad)
+        .slice(0, 5);
+
+      const maxObra = Math.max(
+        1,
+        ...obrasTop.map((obra) => Number(obra.cantidadVendida ?? 0)),
+      );
+
+      const maxTecnicaPdf = Math.max(
+        1,
+        ...tecnicasTop.map((item) => Number(item.cantidad ?? 0)),
+      );
+
+      const artistaDestacado = topArtistas[0];
+      const obraDestacada = obrasTop[0];
+
+      const funnelRows = funnelData
+        .map((item) => {
+          const percentage = Math.min(
+            100,
+            Math.round((Number(item.value ?? 0) / funnelBase) * 100),
+          );
+
+          return `
+            <div class="funnel-row">
+              <div class="funnel-label">${escapeHtml(item.label)}</div>
+              <div class="funnel-value">${escapeHtml(item.value)}</div>
+              <div class="funnel-track">
+                <div class="funnel-fill" style="width:${percentage}%"></div>
+                <span>${percentage}%</span>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+
+      const artistRows =
+        topArtistas.length > 0
+          ? topArtistas
+              .map((artista, index) => {
+                const maxArtist = Math.max(
+                  1,
+                  ...topArtistas.map((item) => Number(item.ventas ?? 0)),
+                );
+                const width = Math.max(
+                  8,
+                  Math.round((Number(artista.ventas ?? 0) / maxArtist) * 100),
+                );
+
+                return `
+                  <div class="mini-rank">
+                    <div class="rank-index">${index + 1}</div>
+                    <div class="rank-main">
+                      <div class="rank-title">${escapeHtml(artista.nombre)}</div>
+                      <div class="rank-bar"><span style="width:${width}%"></span></div>
+                    </div>
+                    <div class="rank-number">${escapeHtml(artista.ventas)}</div>
+                  </div>
+                `;
+              })
+              .join("")
+          : `<div class="empty">Sin datos de artistas para este período.</div>`;
+
+      const obraRows =
+        obrasTop.length > 0
+          ? obrasTop
+              .map((obra) => {
+                const width = Math.max(
+                  8,
+                  Math.round(
+                    (Number(obra.cantidadVendida ?? 0) / maxObra) * 100,
+                  ),
+                );
+
+                return `
+                  <div class="horizontal-item">
+                    <span class="horizontal-name">${escapeHtml(obra.titulo)}</span>
+                    <div class="horizontal-track">
+                      <span style="width:${width}%"></span>
+                    </div>
+                    <strong>${escapeHtml(obra.cantidadVendida)}</strong>
+                  </div>
+                `;
+              })
+              .join("")
+          : `<div class="empty">Sin obras vendidas para este período.</div>`;
+
+      const tecnicaRows =
+        tecnicasTop.length > 0
+          ? tecnicasTop
+              .map((item, index) => {
+                const width = Math.max(
+                  8,
+                  Math.round((Number(item.cantidad ?? 0) / maxTecnicaPdf) * 100),
+                );
+
+                return `
+                  <div class="tech-item">
+                    <div class="tech-head">
+                      <span><i class="dot dot-${(index % 5) + 1}"></i>${escapeHtml(
+                        item.tecnica,
+                      )}</span>
+                      <strong>${escapeHtml(item.cantidad)}</strong>
+                    </div>
+                    <div class="tech-track"><span style="width:${width}%"></span></div>
+                  </div>
+                `;
+              })
+              .join("")
+          : `<div class="empty">Sin información de técnicas todavía.</div>`;
+
+      const clientesTop =
+        (resumen.clientes ?? [])
+          .slice()
+          .sort(
+            (a, b) =>
+              Number(b.totalComprado ?? 0) - Number(a.totalComprado ?? 0),
+          )
+          .slice(0, 5);
+
+      const clientePrincipal = clientesTop[0];
+
+      const metodoPrincipal =
+        [...metodosPago].sort((a, b) => b.cantidad - a.cantidad)[0]?.metodo ??
+        "Sin datos";
+
+      const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Informe de Ventas - Crisálida</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #e7ecea;
+      color: #12201b;
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body { padding: 22px; }
+
+    .report-page {
+      width: 1120px;
+      max-width: 100%;
+      margin: 0 auto;
+      background: #ffffff;
+      box-shadow: 0 18px 50px rgba(0,0,0,.12);
+      overflow: hidden;
+    }
+
+    .hero {
+      min-height: 195px;
+      padding: 30px 38px 26px;
+      color: white;
+      background:
+        radial-gradient(circle at 78% 18%, rgba(55,224,137,.18), transparent 26%),
+        radial-gradient(circle at 18% 100%, rgba(51,183,131,.14), transparent 38%),
+        linear-gradient(120deg, #09141b 0%, #101b27 52%, #071117 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero:after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: .16;
+      background:
+        linear-gradient(140deg, transparent 0 45%, rgba(255,255,255,.08) 45% 46%, transparent 46% 100%),
+        linear-gradient(25deg, transparent 0 60%, rgba(255,255,255,.05) 60% 61%, transparent 61% 100%);
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1fr 285px;
+      gap: 30px;
+      align-items: center;
+    }
+
+    .hero-title {
+      margin: 0;
+      font-size: 50px;
+      line-height: .98;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+    }
+
+    .hero-title .green { color: #66e797; }
+    .hero-subtitle {
+      margin-top: 15px;
+      max-width: 710px;
+      font-size: 16px;
+      line-height: 1.45;
+      color: rgba(255,255,255,.82);
+    }
+
+    .hero-line {
+      height: 2px;
+      margin-top: 12px;
+      width: 69%;
+      background: linear-gradient(90deg,#6cf09e,rgba(108,240,158,.08));
+    }
+
+    .brand-box {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 18px;
+    }
+
+    .brand-values {
+      border-left: 3px solid #5fe693;
+      padding-left: 14px;
+      font-size: 12px;
+      line-height: 1.7;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: rgba(255,255,255,.8);
+    }
+
+    .brand-logo {
+      width: 122px;
+      height: 122px;
+      border-radius: 50%;
+      background: #020706;
+      border: 1px solid rgba(255,255,255,.14);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 28px rgba(0,0,0,.25);
+    }
+
+    .brand-logo .mark {
+      font-size: 43px;
+      line-height: 1;
+      color: #64e792;
+    }
+
+    .brand-logo strong {
+      margin-top: 7px;
+      font-size: 12px;
+      letter-spacing: 3px;
+    }
+
+    .content { padding: 18px; }
+
+    .section {
+      border: 1px solid #dce6e2;
+      border-radius: 11px;
+      margin-bottom: 14px;
+      padding: 18px 20px 18px;
+      position: relative;
+      background: #fff;
+    }
+
+    .section-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: -19px 0 15px -20px;
+      padding: 10px 18px;
+      border-radius: 10px 10px 10px 0;
+      background: linear-gradient(90deg,#063b35,#006e58);
+      color: white;
+      font-size: 17px;
+      font-weight: 900;
+      box-shadow: 0 4px 8px rgba(0,69,53,.12);
+    }
+
+    .section-title:after {
+      content: "»»";
+      color: #77e5ae;
+      letter-spacing: -2px;
+      font-size: 20px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+    }
+
+    .summary-side + .summary-side {
+      border-left: 1px solid #dfe8e4;
+      padding-left: 28px;
+    }
+
+    .info-row {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 7px;
+      margin: 7px 0;
+      font-size: 14px;
+    }
+
+    .info-row strong { color: #10231d; }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .metric-card {
+      border: 1px solid #dce6e2;
+      border-radius: 11px;
+      padding: 18px;
+      background: linear-gradient(180deg,#ffffff,#fbfdfc);
+    }
+
+    .metric-title {
+      font-size: 17px;
+      font-weight: 900;
+      color: #073f37;
+      margin-bottom: 18px;
+    }
+
+    .funnel-row {
+      display: grid;
+      grid-template-columns: 165px 55px 1fr;
+      align-items: center;
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .funnel-label {
+      font-size: 13px;
+      font-weight: 800;
+      color: #172923;
+    }
+
+    .funnel-value {
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .funnel-track {
+      height: 34px;
+      position: relative;
+      background: #eef8f2;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .funnel-fill {
+      height: 100%;
+      background: linear-gradient(90deg,#65d995,#84e2ad);
+    }
+
+    .funnel-track span {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 13px;
+      color: #0d2f24;
+    }
+
+    .sales-objective {
+      display: grid;
+      grid-template-columns: 1fr 145px;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .big-sales {
+      display: flex;
+      gap: 13px;
+      align-items: center;
+    }
+
+    .sales-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e6f8ee;
+      color: #087452;
+      font-size: 28px;
+      flex: 0 0 auto;
+    }
+
+    .big-number {
+      font-size: 37px;
+      line-height: 1;
+      font-weight: 900;
+      color: #0b1713;
+    }
+
+    .small-muted {
+      font-size: 12px;
+      color: #6b7f76;
+    }
+
+    .objective-box {
+      border-radius: 10px;
+      background: #e8f8ee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #13875d;
+      font-weight: 900;
+      padding: 14px;
+    }
+
+    .objective-box span {
+      display: block;
+      margin-top: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #72867d;
+    }
+
+    .sales-secondary {
+      margin-top: 20px;
+      border-top: 1px dashed #dfe8e4;
+      padding-top: 17px;
+      display: grid;
+      grid-template-columns: repeat(2,1fr);
+      gap: 14px;
+    }
+
+    .secondary-metric {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 5px;
+    }
+
+    .secondary-metric strong {
+      font-size: 20px;
+      color: #15261f;
+    }
+
+    .data-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .data-box {
+      border: 1px solid #edf1ef;
+      border-radius: 6px;
+      padding: 14px;
+      min-height: 230px;
+      background: #fbfcfc;
+    }
+
+    .data-box h3 {
+      text-align: center;
+      margin: 0 0 18px;
+      font-size: 16px;
+      color: #132720;
+    }
+
+    .mini-rank {
+      display: grid;
+      grid-template-columns: 28px 1fr 30px;
+      gap: 8px;
+      align-items: center;
+      margin: 11px 0;
+    }
+
+    .rank-index {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #0b4e42;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .rank-title {
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .rank-bar, .horizontal-track, .tech-track {
+      height: 7px;
+      border-radius: 20px;
+      background: #e5efe9;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+
+    .rank-bar span, .horizontal-track span, .tech-track span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg,#3fc97b,#78df98);
+      border-radius: inherit;
+    }
+
+    .rank-number {
+      text-align: right;
+      font-size: 11px;
+      font-weight: 900;
+      color: #0f6c4c;
+    }
+
+    .horizontal-item {
+      display: grid;
+      grid-template-columns: 105px 1fr 24px;
+      gap: 8px;
+      align-items: center;
+      margin: 13px 0;
+      font-size: 11px;
+    }
+
+    .horizontal-name {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-weight: 800;
+    }
+
+    .tech-item { margin: 12px 0; }
+    .tech-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 7px;
+      vertical-align: -1px;
+    }
+
+    .dot-1 { background:#0b4d38; }
+    .dot-2 { background:#17845b; }
+    .dot-3 { background:#68b968; }
+    .dot-4 { background:#54a4d9; }
+    .dot-5 { background:#95d66c; }
+
+    .financial-grid {
+      display: grid;
+      grid-template-columns: 1.08fr .92fr;
+      gap: 24px;
+      align-items: center;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      padding: 11px 10px;
+      background: #073f3a;
+      color: white;
+      text-align: left;
+      font-weight: 800;
+    }
+
+    th.real { color: #90ee76; }
+
+    td {
+      border: 1px solid #dce6e2;
+      padding: 12px 10px;
+      background: white;
+    }
+
+    tr:last-child td {
+      font-weight: 900;
+      background: #f2f6f4;
+    }
+
+    .finance-bars {
+      display: flex;
+      align-items: end;
+      justify-content: center;
+      gap: 30px;
+      height: 185px;
+      padding: 18px 10px 25px;
+      border-bottom: 1px solid #dce6e2;
+    }
+
+    .finance-group {
+      width: 100px;
+      text-align: center;
+    }
+
+    .bar-pair {
+      height: 130px;
+      display: flex;
+      align-items: end;
+      justify-content: center;
+      gap: 7px;
+    }
+
+    .bar {
+      width: 31px;
+      border-radius: 2px 2px 0 0;
+      min-height: 4px;
+    }
+
+    .bar.projected {
+      background: #b7e58c;
+      opacity: .45;
+      border: 1px dashed #82b95d;
+    }
+
+    .bar.real { background: #08725b; }
+
+    .finance-group label {
+      display: block;
+      margin-top: 8px;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .legend {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 11px;
+      color: #587067;
+    }
+
+    .legend i {
+      display: inline-block;
+      width: 11px;
+      height: 11px;
+      border-radius: 2px;
+      margin: 0 5px 0 14px;
+    }
+
+    .performance-grid {
+      display: grid;
+      grid-template-columns: 180px repeat(3,1fr);
+      gap: 18px;
+      align-items: center;
+    }
+
+    .performance-intro {
+      padding: 22px;
+      border-radius: 8px;
+      background: #f5f8f6;
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 900;
+      color: #0a4339;
+    }
+
+    .performance-card {
+      text-align: center;
+      padding: 8px 10px;
+    }
+
+    .performance-icon {
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 8px;
+      border-radius: 50%;
+      border: 2px dashed #0b5c4b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 27px;
+      background: #eff9f3;
+    }
+
+    .performance-card h4 {
+      margin: 6px 0 7px;
+      font-size: 14px;
+      color: #0a473b;
+    }
+
+    .performance-card p {
+      margin: 2px 0;
+      font-size: 11px;
+      color: #3b5048;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 30px;
+      color: rgba(255,255,255,.78);
+      background: #091821;
+      font-size: 11px;
+      letter-spacing: 2px;
+    }
+
+    .footer strong { color:white; }
+    .footer .thanks {
+      letter-spacing: 0;
+      font-size: 12px;
+    }
+
+    .footer .line {
+      display:inline-block;
+      width: 70px;
+      height: 3px;
+      margin-right: 18px;
+      background:#63e696;
+      vertical-align: middle;
+    }
+
+    .empty {
+      color: #7b8d86;
+      font-size: 12px;
+      padding: 20px 5px;
+      text-align: center;
+    }
+
+    .print-actions {
+      width: 1120px;
+      max-width: 100%;
+      margin: 0 auto 12px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .print-actions button {
+      border: 0;
+      border-radius: 9px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: 800;
+      background: #08745a;
+      color: white;
+    }
+
+    .print-actions button.secondary {
+      background: #17231f;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 7mm;
+    }
+
+    @media print {
+      html, body { background: white; }
+      body { padding: 0; }
+      .print-actions { display: none !important; }
+      .report-page {
+        width: 100%;
+        box-shadow: none;
+      }
+      .hero { min-height: 145px; padding: 20px 26px 18px; }
+      .hero-title { font-size: 36px; }
+      .hero-subtitle { font-size: 11px; }
+      .brand-logo { width: 86px; height: 86px; }
+      .brand-logo .mark { font-size: 32px; }
+      .brand-values { font-size: 8px; }
+      .content { padding: 11px; }
+      .section { padding: 13px 14px; margin-bottom: 9px; }
+      .section-title { margin: -14px 0 10px -14px; padding: 7px 12px; font-size: 12px; }
+      .metric-card { padding: 12px; }
+      .metric-title { font-size: 12px; margin-bottom: 10px; }
+      .funnel-row { margin: 7px 0; grid-template-columns: 112px 36px 1fr; gap: 7px; }
+      .funnel-label, .funnel-value { font-size: 9px; }
+      .funnel-track { height: 23px; }
+      .funnel-track span { font-size: 9px; }
+      .big-number { font-size: 27px; }
+      .sales-icon { width: 38px; height: 38px; font-size: 19px; }
+      .data-box { min-height: 165px; padding: 9px; }
+      .data-box h3 { font-size: 11px; margin-bottom: 8px; }
+      .mini-rank { margin: 6px 0; }
+      .rank-index { width: 18px; height: 18px; font-size: 8px; }
+      .rank-title, .rank-number { font-size: 8px; }
+      .horizontal-item, .tech-head { font-size: 8px; margin: 7px 0; }
+      table { font-size: 9px; }
+      th, td { padding: 7px 6px; }
+      .finance-bars { height: 130px; }
+      .bar-pair { height: 88px; }
+      .performance-intro { font-size: 14px; padding: 13px; }
+      .performance-icon { width: 40px; height: 40px; font-size: 18px; }
+      .performance-card h4 { font-size: 10px; }
+      .performance-card p { font-size: 8px; }
+      .footer { padding: 11px 18px; font-size: 8px; }
+
+      .section,
+      .metric-card,
+      .data-box,
+      .performance-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-actions">
+    <button class="secondary" onclick="window.close()">Cerrar</button>
+    <button onclick="window.print()">Guardar / Imprimir PDF</button>
+  </div>
+
+  <article class="report-page">
+    <header class="hero">
+      <div class="hero-inner">
+        <div>
+          <h1 class="hero-title">
+            Informe de <span class="green">Ventas</span><br/>
+            <span style="font-size:.72em;font-weight:500">reporte del período</span>
+          </h1>
+          <div class="hero-line"></div>
+          <div class="hero-subtitle">
+            Resumen del desempeño de ventas de Crisálida, incluyendo ventas totales,
+            obras destacadas, clientes, ingresos, técnicas y comportamiento comercial.
+          </div>
+        </div>
+
+        <div class="brand-box">
+          <div class="brand-values">ARTE<br/>COMUNIDAD<br/>CRECIMIENTO</div>
+          <div class="brand-logo">
+            <div class="mark">◖●</div>
+            <strong>CRISÁLIDA</strong>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="section">
+        <div class="section-title">Resumen del Evento</div>
+        <div class="summary-grid">
+          <div class="summary-side">
+            <div class="info-row">
+              <strong>Nombre del reporte:</strong>
+              <span>Reporte general de ventas Crisálida</span>
+            </div>
+            <div class="info-row">
+              <strong>Período:</strong>
+              <span>${escapeHtml(filtroLabel)}</span>
+            </div>
+            <div class="info-row">
+              <strong>Fecha de emisión:</strong>
+              <span>${escapeHtml(fechaDocumento)}</span>
+            </div>
+          </div>
+
+          <div class="summary-side">
+            <div class="info-row">
+              <strong>Objetivo:</strong>
+              <span>Analizar el desempeño comercial y la venta de obras.</span>
+            </div>
+            <div class="info-row">
+              <strong>Organizado por:</strong>
+              <span>Colectivo Crisálida</span>
+            </div>
+            <div class="info-row">
+              <strong>Descripción:</strong>
+              <span>Datos consolidados automáticamente desde el panel administrativo.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="two-col">
+        <section class="metric-card">
+          <div class="metric-title">Embudo de Ventas »»</div>
+          ${funnelRows}
+        </section>
+
+        <section class="metric-card">
+          <div class="metric-title">Ventas vs. Objetivo »»</div>
+
+          <div class="sales-objective">
+            <div class="big-sales">
+              <div class="sales-icon">▥</div>
+              <div>
+                <div class="small-muted">Ingresos Totales</div>
+                <div class="big-number">${escapeHtml(formatPrecio(ingresosPeriodo))} Bs</div>
+              </div>
+            </div>
+
+            <div class="objective-box">
+              Objetivo<br/>no configurado
+              <span>Se muestra el valor real</span>
+            </div>
+          </div>
+
+          <div class="sales-secondary">
+            <div class="secondary-metric">
+              <div class="sales-icon">◆</div>
+              <div>
+                <div class="small-muted">Obras vendidas</div>
+                <strong>${escapeHtml(totalObrasVendidas)}</strong>
+              </div>
+            </div>
+
+            <div class="secondary-metric">
+              <div class="sales-icon">◎</div>
+              <div>
+                <div class="small-muted">Ticket promedio</div>
+                <strong>${escapeHtml(formatPrecio(ticketPromedio))} Bs</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="section">
+        <div class="section-title">Datos Clave</div>
+
+        <div class="data-grid">
+          <div class="data-box">
+            <h3>Top 5 Artistas</h3>
+            ${artistRows}
+          </div>
+
+          <div class="data-box">
+            <h3>Top 5 Obras Vendidas</h3>
+            ${obraRows}
+          </div>
+
+          <div class="data-box">
+            <h3>Ventas por Técnica</h3>
+            ${tecnicaRows}
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">Resumen Financiero</div>
+
+        <div class="financial-grid">
+          <div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Concepto</th>
+                  <th>Proyectado</th>
+                  <th class="real">Real</th>
+                  <th>Variación</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Ingresos Totales</td>
+                  <td>No configurado</td>
+                  <td>${escapeHtml(formatPrecio(ingresosPeriodo))} Bs</td>
+                  <td>—</td>
+                </tr>
+                <tr>
+                  <td>Pedidos</td>
+                  <td>No configurado</td>
+                  <td>${escapeHtml(totalPedidosPeriodo)}</td>
+                  <td>—</td>
+                </tr>
+                <tr>
+                  <td>Ticket Promedio</td>
+                  <td>No configurado</td>
+                  <td>${escapeHtml(formatPrecio(ticketPromedio))} Bs</td>
+                  <td>—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <div class="finance-bars">
+              <div class="finance-group">
+                <div class="bar-pair">
+                  <div class="bar projected" style="height:92%"></div>
+                  <div class="bar real" style="height:100%"></div>
+                </div>
+                <label>Ingresos</label>
+              </div>
+
+              <div class="finance-group">
+                <div class="bar-pair">
+                  <div class="bar projected" style="height:58%"></div>
+                  <div class="bar real" style="height:${Math.max(
+                    12,
+                    Math.min(100, totalPedidosPeriodo * 8),
+                  )}%"></div>
+                </div>
+                <label>Pedidos</label>
+              </div>
+
+              <div class="finance-group">
+                <div class="bar-pair">
+                  <div class="bar projected" style="height:46%"></div>
+                  <div class="bar real" style="height:${Math.max(
+                    12,
+                    Math.min(100, totalObrasVendidas * 8),
+                  )}%"></div>
+                </div>
+                <label>Obras</label>
+              </div>
+            </div>
+
+            <div class="legend">
+              <i style="background:#b7e58c"></i>Referencia visual
+              <i style="background:#08725b"></i>Real
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">Mejores Desempeños</div>
+
+        <div class="performance-grid">
+          <div class="performance-intro">
+            ★<br/>
+            Destacados<br/>
+            del Período
+          </div>
+
+          <div class="performance-card">
+            <div class="performance-icon">🏆</div>
+            <h4>Artista Destacado</h4>
+            <p>${escapeHtml(artistaDestacado?.nombre ?? "Sin datos")}</p>
+            <p>Ventas: ${escapeHtml(artistaDestacado?.ventas ?? 0)} obras</p>
+            <p>Ingresos: ${escapeHtml(
+              formatPrecio(artistaDestacado?.ingreso ?? 0),
+            )} Bs</p>
+          </div>
+
+          <div class="performance-card">
+            <div class="performance-icon">🏷</div>
+            <h4>Obra Más Vendida</h4>
+            <p>${escapeHtml(obraDestacada?.titulo ?? "Sin datos")}</p>
+            <p>Ventas: ${escapeHtml(obraDestacada?.cantidadVendida ?? 0)}</p>
+            <p>Técnica: ${escapeHtml(
+              obraDestacada
+                ? obraDestacada.tecnica || getObraTecnica(obraDestacada.obraId)
+                : "Sin datos",
+            )}</p>
+          </div>
+
+          <div class="performance-card">
+            <div class="performance-icon">👥</div>
+            <h4>Mayor Interacción</h4>
+            <p>Cliente: ${escapeHtml(clientePrincipal?.buyerName ?? "Sin datos")}</p>
+            <p>Método principal: ${escapeHtml(metodoPrincipal)}</p>
+            <p>Visitas: ${escapeHtml(
+              analyticsAvailable ? analyticsStats.totalVisitas : "No disponible",
+            )}</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div><strong>CRISÁLIDA</strong> &nbsp; | &nbsp; ARTE QUE TRANSFORMA</div>
+      <div class="thanks"><span class="line"></span>Gracias por ser parte de este camino.</div>
+    </footer>
+  </article>
+
+  <script>
+    window.addEventListener("load", function () {
+      setTimeout(function () {
+        window.focus();
+      }, 250);
+    });
+  </script>
+</body>
+</html>
+      `;
+
+      popup.document.open();
+      popup.document.write(html);
+      popup.document.close();
     } catch (error) {
       console.error(error);
       setPdfError(
-        "No se pudo abrir el PDF. Verifica que el endpoint esté activo.",
+        "No se pudo generar el informe. Revisa la consola para ver el detalle.",
       );
     }
   };
