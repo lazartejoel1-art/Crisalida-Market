@@ -31,6 +31,10 @@ type Work = {
   precio: number | string;
   imagen?: string | null;
   imagenUrl?: string | null;
+  tecnica?: string | null;
+  tecnicaEspecifica?: string | null;
+  area?: string | null;
+  categoria?: string | null;
   stock: number;
   artista?: {
     id: number;
@@ -127,6 +131,7 @@ type ObraVendida = {
   totalVendido: number;
   imagen?: string | null;
   imagenUrl?: string | null;
+  tecnica?: string | null;
 };
 
 type ResumenReporte = {
@@ -1234,16 +1239,22 @@ function ReportsPanel() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [resumen, setResumen] = useState<ResumenReporte>(EMPTY_REPORT);
+  const [obrasCatalogo, setObrasCatalogo] = useState<Work[]>([]);
 
   const buildQueryString = useCallback(() => {
     const params = new URLSearchParams();
 
     if (tipoFiltro === "dia" && fecha) params.set("fecha", fecha);
+
     if (tipoFiltro === "mes" && mes && anio) {
       params.set("mes", mes);
       params.set("anio", anio);
     }
-    if (tipoFiltro === "anio" && anio) params.set("anio", anio);
+
+    if (tipoFiltro === "anio" && anio) {
+      params.set("anio", anio);
+    }
+
     if (tipoFiltro === "rango") {
       if (desde) params.set("desde", desde);
       if (hasta) params.set("hasta", hasta);
@@ -1268,15 +1279,44 @@ function ReportsPanel() {
     resumen: ResumenReporte;
     analytics: AnalyticsSummary | null;
     analyticsAvailable: boolean;
+    obras: Work[];
   }> => {
     const [resumenRes, obrasRes] = await Promise.all([
       fetch(getReportUrl()),
       fetch(`${API}/obras`),
     ]);
 
+    if (!resumenRes.ok) {
+      throw new Error(await parseResponseError(resumenRes));
+    }
+
+    if (!obrasRes.ok) {
+      throw new Error(await parseResponseError(obrasRes));
+    }
+
     const resumenData = (await resumenRes.json()) as ResumenReporte;
     const obrasData = (await obrasRes.json()) as Work[];
     const obras = Array.isArray(obrasData) ? obrasData : [];
+
+    const obrasVendidas = enrichObrasVendidasWithImages(
+      resumenData.obrasVendidas,
+      obras,
+    ).map((obraVendida) => {
+      const obraCatalogo = obras.find(
+        (obra) => Number(obra.id) === Number(obraVendida.obraId),
+      );
+
+      return {
+        ...obraVendida,
+        tecnica:
+          obraVendida.tecnica ||
+          obraCatalogo?.tecnica ||
+          obraCatalogo?.tecnicaEspecifica ||
+          obraCatalogo?.area ||
+          obraCatalogo?.categoria ||
+          null,
+      };
+    });
 
     const resumenConImagenes: ResumenReporte = {
       ...resumenData,
@@ -1289,10 +1329,7 @@ function ReportsPanel() {
         resumenData.pedidosFiltrados ?? [],
         obras,
       ),
-      obrasVendidas: enrichObrasVendidasWithImages(
-        resumenData.obrasVendidas,
-        obras,
-      ),
+      obrasVendidas,
       artistasMasVendidos: enrichObrasVendidasWithImages(
         resumenData.artistasMasVendidos,
         obras,
@@ -1311,6 +1348,7 @@ function ReportsPanel() {
           resumen: resumenConImagenes,
           analytics: null,
           analyticsAvailable: false,
+          obras,
         };
       }
 
@@ -1320,12 +1358,14 @@ function ReportsPanel() {
         resumen: resumenConImagenes,
         analytics: analyticsData,
         analyticsAvailable: true,
+        obras,
       };
     } catch {
       return {
         resumen: resumenConImagenes,
         analytics: null,
         analyticsAvailable: false,
+        obras,
       };
     }
   }, [getReportUrl]);
@@ -1338,11 +1378,13 @@ function ReportsPanel() {
       setResumen(result.resumen);
       setAnalytics(result.analytics);
       setAnalyticsAvailable(result.analyticsAvailable);
+      setObrasCatalogo(result.obras);
     } catch (error) {
       console.error(error);
       setResumen(EMPTY_REPORT);
       setAnalytics(null);
       setAnalyticsAvailable(false);
+      setObrasCatalogo([]);
     } finally {
       setLoading(false);
     }
@@ -1358,7 +1400,6 @@ function ReportsPanel() {
         totalVisitas: 0,
         ipsUnicas: 0,
         visitasHoy: 0,
-        last7Days: [] as Array<{ date: string; visits: number }>,
       };
     }
 
@@ -1366,9 +1407,362 @@ function ReportsPanel() {
       totalVisitas: analytics.totalVisits ?? analytics.totalVisitas ?? 0,
       ipsUnicas: analytics.uniqueIps ?? analytics.ipsUnicas ?? 0,
       visitasHoy: analytics.visitsToday ?? analytics.visitasHoy ?? 0,
-      last7Days: analytics.last7Days ?? analytics.ultimos7Dias ?? [],
     };
   }, [analytics]);
+
+  const pedidosPeriodo = useMemo(
+    () => resumen.pedidosFiltrados ?? resumen.pedidos ?? [],
+    [resumen.pedidos, resumen.pedidosFiltrados],
+  );
+
+  const ingresosPeriodo = useMemo(
+    () =>
+      Number(
+        resumen.totalIngresosFiltrados ??
+          resumen.totalIngresos ??
+          pedidosPeriodo.reduce(
+            (acc, pedido) => acc + Number(formatPrecio(pedido.total)),
+            0,
+          ),
+      ),
+    [
+      pedidosPeriodo,
+      resumen.totalIngresos,
+      resumen.totalIngresosFiltrados,
+    ],
+  );
+
+  const totalPedidosPeriodo = useMemo(
+    () =>
+      resumen.totalPedidosFiltrados !== undefined
+        ? Number(resumen.totalPedidosFiltrados)
+        : pedidosPeriodo.length > 0
+          ? pedidosPeriodo.length
+          : Number(resumen.totalPedidos ?? 0),
+    [pedidosPeriodo.length, resumen.totalPedidos, resumen.totalPedidosFiltrados],
+  );
+
+  const totalObrasVendidas = useMemo(
+    () =>
+      (resumen.obrasVendidas ?? []).reduce(
+        (acc, obra) => acc + Number(obra.cantidadVendida ?? 0),
+        0,
+      ),
+    [resumen.obrasVendidas],
+  );
+
+  const pedidosCompletados = useMemo(
+    () =>
+      pedidosPeriodo.filter((pedido) =>
+        ["pagado", "entregado"].includes(
+          String(pedido.estado ?? "").toLowerCase(),
+        ),
+      ).length,
+    [pedidosPeriodo],
+  );
+
+  const ticketPromedio = useMemo(
+    () => (totalPedidosPeriodo > 0 ? ingresosPeriodo / totalPedidosPeriodo : 0),
+    [ingresosPeriodo, totalPedidosPeriodo],
+  );
+
+  const getObraTecnica = useCallback(
+    (obraId: number): string => {
+      const obra = obrasCatalogo.find(
+        (item) => Number(item.id) === Number(obraId),
+      );
+
+      return (
+        obra?.tecnica ||
+        obra?.tecnicaEspecifica ||
+        obra?.area ||
+        obra?.categoria ||
+        "Sin técnica"
+      );
+    },
+    [obrasCatalogo],
+  );
+
+  const ventasPorTecnica = useMemo(() => {
+    const base = [
+      "Dibujo",
+      "Pintura",
+      "Escultura",
+      "Grabado",
+      "Cerámica",
+      "Fotografía",
+      "Ilustración",
+    ];
+
+    const acumulado = new Map<string, number>();
+
+    (resumen.obrasVendidas ?? []).forEach((obra) => {
+      const tecnica = obra.tecnica || getObraTecnica(obra.obraId);
+      acumulado.set(
+        tecnica,
+        (acumulado.get(tecnica) ?? 0) + Number(obra.cantidadVendida ?? 0),
+      );
+    });
+
+    const extras = [...acumulado.keys()].filter(
+      (tecnica) => !base.includes(tecnica),
+    );
+
+    return [...base, ...extras]
+      .map((tecnica) => ({
+        tecnica,
+        cantidad: acumulado.get(tecnica) ?? 0,
+      }))
+      .filter((item) => item.cantidad > 0 || base.includes(item.tecnica));
+  }, [getObraTecnica, resumen.obrasVendidas]);
+
+  const maxTecnica = Math.max(
+    1,
+    ...ventasPorTecnica.map((item) => item.cantidad),
+  );
+
+  const tecnicaMasVendida = useMemo(
+    () =>
+      [...ventasPorTecnica].sort((a, b) => b.cantidad - a.cantidad)[0] ?? {
+        tecnica: "Sin datos",
+        cantidad: 0,
+      },
+    [ventasPorTecnica],
+  );
+
+  const metodosPago = useMemo(() => {
+    const entries = Object.entries(resumen.porMetodo ?? {}).map(
+      ([metodo, cantidad]) => ({
+        metodo,
+        cantidad: Number(cantidad ?? 0),
+      }),
+    );
+
+    const total = entries.reduce((acc, item) => acc + item.cantidad, 0);
+
+    return entries.map((item) => ({
+      ...item,
+      porcentaje: total > 0 ? (item.cantidad / total) * 100 : 0,
+    }));
+  }, [resumen.porMetodo]);
+
+  const donutGradient = useMemo(() => {
+    if (metodosPago.length === 0) {
+      return "conic-gradient(rgba(148,163,184,.18) 0deg 360deg)";
+    }
+
+    const palette = ["#34d399", "#059669", "#6ee7b7", "#10b981", "#047857"];
+    let cursor = 0;
+
+    const slices = metodosPago.map((item, index) => {
+      const start = cursor;
+      const end = cursor + item.porcentaje * 3.6;
+      cursor = end;
+      return `${palette[index % palette.length]} ${start}deg ${end}deg`;
+    });
+
+    return `conic-gradient(${slices.join(", ")})`;
+  }, [metodosPago]);
+
+  const topArtistas = useMemo(() => {
+    const map = new Map<
+      string,
+      { nombre: string; ventas: number; ingreso: number }
+    >();
+
+    (resumen.obrasVendidas ?? []).forEach((obra) => {
+      const nombre = obra.artistaNombre || "Crisálida";
+      const current = map.get(nombre) ?? {
+        nombre,
+        ventas: 0,
+        ingreso: 0,
+      };
+
+      current.ventas += Number(obra.cantidadVendida ?? 0);
+      current.ingreso += Number(obra.totalVendido ?? 0);
+      map.set(nombre, current);
+    });
+
+    return [...map.values()]
+      .sort((a, b) => b.ventas - a.ventas || b.ingreso - a.ingreso)
+      .slice(0, 5);
+  }, [resumen.obrasVendidas]);
+
+  const monthlySales = useMemo(() => {
+    const monthNames = [
+      "Ene",
+      "Feb",
+      "Mar",
+      "Abr",
+      "May",
+      "Jun",
+      "Jul",
+      "Ago",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dic",
+    ];
+
+    const now = new Date();
+    const points: Array<{
+      key: string;
+      label: string;
+      total: number;
+    }> = [];
+
+    for (let offset = 11; offset >= 0; offset -= 1) {
+      const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      const year = date.getFullYear();
+      const month = date.getMonth();
+
+      points.push({
+        key: `${year}-${String(month + 1).padStart(2, "0")}`,
+        label: monthNames[month],
+        total: 0,
+      });
+    }
+
+    const pedidosBase =
+      resumen.pedidos && resumen.pedidos.length > 0
+        ? resumen.pedidos
+        : pedidosPeriodo;
+
+    pedidosBase.forEach((pedido) => {
+      if (!pedido.createdAt) return;
+
+      const date = new Date(pedido.createdAt);
+      if (Number.isNaN(date.getTime())) return;
+
+      const key = `${date.getFullYear()}-${String(
+        date.getMonth() + 1,
+      ).padStart(2, "0")}`;
+
+      const point = points.find((item) => item.key === key);
+      if (!point) return;
+
+      point.total += Number(formatPrecio(pedido.total));
+    });
+
+    return points;
+  }, [pedidosPeriodo, resumen.pedidos]);
+
+  const maxMonthly = Math.max(
+    1,
+    ...monthlySales.map((point) => point.total),
+  );
+
+  const linePoints = useMemo(() => {
+    const width = 700;
+    const height = 190;
+    const left = 16;
+    const right = 16;
+    const top = 14;
+    const bottom = 24;
+    const usableWidth = width - left - right;
+    const usableHeight = height - top - bottom;
+
+    return monthlySales.map((item, index) => {
+      const x =
+        left +
+        (monthlySales.length <= 1
+          ? 0
+          : (index / (monthlySales.length - 1)) * usableWidth);
+
+      const y =
+        top + usableHeight - (item.total / maxMonthly) * usableHeight;
+
+      return { ...item, x, y };
+    });
+  }, [maxMonthly, monthlySales]);
+
+  const linePath = useMemo(
+    () =>
+      linePoints
+        .map((point, index) =>
+          `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
+        )
+        .join(" "),
+    [linePoints],
+  );
+
+  const areaPath = useMemo(() => {
+    if (linePoints.length === 0) return "";
+
+    const first = linePoints[0];
+    const last = linePoints[linePoints.length - 1];
+
+    return `${linePath} L ${last.x.toFixed(2)} 176 L ${first.x.toFixed(
+      2,
+    )} 176 Z`;
+  }, [linePath, linePoints]);
+
+  const recentSales = useMemo(() => {
+    const rows: Array<{
+      key: string;
+      pedidoId: number;
+      titulo: string;
+      artista: string;
+      tecnica: string;
+      cliente: string;
+      monto: number;
+      estado: string;
+      fecha?: string;
+      imagen?: string | null;
+      imagenUrl?: string | null;
+    }> = [];
+
+    pedidosPeriodo.forEach((pedido) => {
+      const items = Array.isArray(pedido.items) ? pedido.items : [];
+
+      items.forEach((item, index) => {
+        const cantidad = Number(item.cantidad ?? 1);
+        const subtotal = Number(
+          formatPrecio(
+            item.subtotal ??
+              Number(formatPrecio(item.precio)) * cantidad,
+          ),
+        );
+
+        rows.push({
+          key: `${pedido.id}-${item.obraId}-${index}`,
+          pedidoId: pedido.id,
+          titulo: item.titulo || `Obra #${item.obraId}`,
+          artista: item.artistaNombre || "Crisálida",
+          tecnica: getObraTecnica(item.obraId),
+          cliente: pedido.buyerName,
+          monto: subtotal,
+          estado: pedido.estado || "pendiente",
+          fecha: pedido.createdAt,
+          imagen: item.imagen,
+          imagenUrl: item.imagenUrl,
+        });
+      });
+    });
+
+    return rows
+      .sort((a, b) => {
+        const dateA = a.fecha ? new Date(a.fecha).getTime() : 0;
+        const dateB = b.fecha ? new Date(b.fecha).getTime() : 0;
+        return dateB - dateA || b.pedidoId - a.pedidoId;
+      })
+      .slice(0, 8);
+  }, [getObraTecnica, pedidosPeriodo]);
+
+  const filtroLabel = useMemo(() => {
+    if (tipoFiltro === "general") return "Vista general";
+    if (tipoFiltro === "dia") return fecha || "Selecciona un día";
+    if (tipoFiltro === "mes") {
+      return mes && anio ? `${mes}/${anio}` : "Selecciona mes y año";
+    }
+    if (tipoFiltro === "anio") return anio || "Selecciona un año";
+    if (tipoFiltro === "rango") {
+      if (desde && hasta) return `${desde} — ${hasta}`;
+      return "Selecciona un rango";
+    }
+
+    return "Vista general";
+  }, [anio, desde, fecha, hasta, mes, tipoFiltro]);
 
   const openPdfInNewTab = () => {
     setPdfError(null);
@@ -1377,18 +1771,23 @@ function ReportsPanel() {
       window.open(getPdfUrl(), "_blank", "noopener,noreferrer");
     } catch (error) {
       console.error(error);
-      setPdfError("No se pudo abrir el PDF. Verifica que el endpoint esté activo.");
+      setPdfError(
+        "No se pudo abrir el PDF. Verifica que el endpoint esté activo.",
+      );
     }
   };
 
   const renderFiltroCampos = () => {
+    const baseClass =
+      "h-11 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-emerald-400";
+
     if (tipoFiltro === "dia") {
       return (
         <input
           type="date"
           value={fecha}
           onChange={(event) => setFecha(event.target.value)}
-          className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+          className={baseClass}
         />
       );
     }
@@ -1399,7 +1798,7 @@ function ReportsPanel() {
           <select
             value={mes}
             onChange={(event) => setMes(event.target.value)}
-            className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+            className={baseClass}
           >
             <option value="">Mes</option>
             <option value="1">Enero</option>
@@ -1421,7 +1820,7 @@ function ReportsPanel() {
             value={anio}
             onChange={(event) => setAnio(event.target.value)}
             placeholder="Año"
-            className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white w-28"
+            className={`${baseClass} w-28`}
           />
         </>
       );
@@ -1434,7 +1833,7 @@ function ReportsPanel() {
           value={anio}
           onChange={(event) => setAnio(event.target.value)}
           placeholder="Año"
-          className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white w-28"
+          className={`${baseClass} w-28`}
         />
       );
     }
@@ -1446,13 +1845,13 @@ function ReportsPanel() {
             type="date"
             value={desde}
             onChange={(event) => setDesde(event.target.value)}
-            className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+            className={baseClass}
           />
           <input
             type="date"
             value={hasta}
             onChange={(event) => setHasta(event.target.value)}
-            className="px-3 py-2 rounded-lg bg-[#0b1220] border border-gray-800 text-sm text-white"
+            className={baseClass}
           />
         </>
       );
@@ -1461,370 +1860,672 @@ function ReportsPanel() {
     return null;
   };
 
+  const kpis = [
+    {
+      label: "Ventas totales",
+      value: `${formatPrecio(ingresosPeriodo)} Bs`,
+      helper: `${totalPedidosPeriodo} pedidos en el período`,
+      icon: "🛒",
+    },
+    {
+      label: "Ingresos hoy",
+      value: `${formatPrecio(resumen.totalIngresosHoy)} Bs`,
+      helper: `${resumen.totalPedidosHoy} pedidos hoy`,
+      icon: "▥",
+    },
+    {
+      label: "Obras vendidas",
+      value: String(totalObrasVendidas),
+      helper: "Unidades vendidas",
+      icon: "▣",
+    },
+    {
+      label: "Pedidos completados",
+      value: String(pedidosCompletados),
+      helper: "Pagados o entregados",
+      icon: "◇",
+    },
+    {
+      label: "Ticket promedio",
+      value: `${formatPrecio(ticketPromedio)} Bs`,
+      helper: "Promedio por pedido",
+      icon: "◈",
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-verdeEsmeralda">
-              Reportes 📊
-            </h1>
-            <p className="text-sm text-gray-300">
-              Reportes filtrados por día, mes, año o rango de fechas.
-            </p>
-          </div>
+    <div className="space-y-5">
+      <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[#07110d] text-white shadow-2xl shadow-black/10">
+        <div className="border-b border-white/10 px-5 py-5 sm:px-6 lg:px-7">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-emerald-300/80">
+                Panel administrativo · Crisálida
+              </p>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={openPdfInNewTab}
-              className="text-xs px-3 py-2 rounded-lg bg-verdeEsmeralda text-black font-semibold hover:opacity-90 transition"
-              title="Abre el reporte en PDF en otra pestaña"
-            >
-              📄 Exportar PDF
-            </button>
+              <h1 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl">
+                Reporte general de ventas
+              </h1>
 
-            <button
-              onClick={() => void refresh()}
-              className="text-xs px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15 transition"
-            >
-              ↻ Actualizar
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-4 flex flex-col gap-3">
-          <h2 className="text-sm font-bold text-gray-100">Filtro del reporte</h2>
-
-          <div className="flex flex-wrap gap-2">
-            {(["general", "dia", "mes", "anio", "rango"] as const).map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setTipoFiltro(filter)}
-                className={`px-3 py-2 rounded-lg text-xs font-semibold ${
-                  tipoFiltro === filter
-                    ? "bg-verdeEsmeralda text-black"
-                    : "bg-white/10 text-white border border-white/10"
-                }`}
-              >
-                {filter === "general"
-                  ? "General"
-                  : filter === "dia"
-                    ? "Día"
-                    : filter === "mes"
-                      ? "Mes"
-                      : filter === "anio"
-                        ? "Año"
-                        : "Rango"}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap gap-2">{renderFiltroCampos()}</div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => void refresh()}
-              className="px-4 py-2 rounded-lg bg-verdeEsmeralda text-black text-sm font-semibold hover:opacity-90"
-            >
-              Aplicar filtro
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {pdfError && (
-        <div className="text-sm text-red-400 bg-[#0e1624] border border-red-900/40 rounded-xl p-3">
-          {pdfError}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="text-sm text-gray-400">Cargando reportes...</div>
-      ) : (
-        <>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-4">
-              <p className="text-xs text-gray-400">Pedidos del período</p>
-              <p className="text-2xl font-extrabold text-gray-100">
-                {resumen.totalPedidosFiltrados ?? 0}
+              <p className="mt-1 text-sm text-white/50">
+                Una mirada al impacto del arte en cifras.
               </p>
             </div>
 
-            <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-4">
-              <p className="text-xs text-gray-400">Ingresos del período</p>
-              <p className="text-2xl font-extrabold text-gray-100">
-                {formatPrecio(resumen.totalIngresosFiltrados ?? 0)} Bs
-              </p>
-            </div>
+            <div className="flex flex-col gap-3 lg:items-end">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/70">
+                  📅 {filtroLabel}
+                </div>
 
-            <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-4">
-              <p className="text-xs text-gray-400">Pedidos hoy</p>
-              <p className="text-2xl font-extrabold text-gray-100">
-                {resumen.totalPedidosHoy}
-              </p>
-            </div>
+                <button
+                  type="button"
+                  onClick={openPdfInNewTab}
+                  className="rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-4 py-2 text-xs font-black text-emerald-300 transition hover:bg-emerald-400/20"
+                >
+                  ⇩ Exportar reporte
+                </button>
 
-            <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-4">
-              <p className="text-xs text-gray-400">Ingresos hoy</p>
-              <p className="text-2xl font-extrabold text-gray-100">
-                {formatPrecio(resumen.totalIngresosHoy)} Bs
-              </p>
-            </div>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-4">
-            <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-5">
-              <h2 className="text-lg font-bold text-gray-100 mb-3">
-                Pedidos por método de pago
-              </h2>
-
-              <div className="space-y-2">
-                {Object.keys(resumen.porMetodo ?? {}).length === 0 ? (
-                  <p className="text-sm text-gray-400">Aún no hay pedidos.</p>
-                ) : (
-                  Object.entries(resumen.porMetodo ?? {}).map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="text-gray-300">{key}</span>
-                      <span className="font-bold text-gray-100">{value}</span>
-                    </div>
-                  ))
-                )}
+                <button
+                  type="button"
+                  onClick={() => void refresh()}
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-black text-white/70 transition hover:bg-white/10 hover:text-white"
+                >
+                  ↻ Actualizar
+                </button>
               </div>
             </div>
-
-            <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-5">
-              <h2 className="text-lg font-bold text-gray-100 mb-3">
-                Visitas a la web
-              </h2>
-
-              {!analyticsAvailable ? (
-                <div className="text-sm text-gray-400">
-                  Analytics no disponible aún. Falta el endpoint:
-                  <span className="text-gray-200"> /analytics/summary</span>
-                </div>
-              ) : (
-                <div className="grid sm:grid-cols-3 gap-3">
-                  <div className="bg-[#0b1220] border border-gray-800 rounded-xl p-4">
-                    <p className="text-xs text-gray-400">Total visitas</p>
-                    <p className="text-2xl font-extrabold text-gray-100">
-                      {analyticsStats.totalVisitas}
-                    </p>
-                  </div>
-
-                  <div className="bg-[#0b1220] border border-gray-800 rounded-xl p-4">
-                    <p className="text-xs text-gray-400">IPs únicas</p>
-                    <p className="text-2xl font-extrabold text-gray-100">
-                      {analyticsStats.ipsUnicas}
-                    </p>
-                  </div>
-
-                  <div className="bg-[#0b1220] border border-gray-800 rounded-xl p-4">
-                    <p className="text-xs text-gray-400">Visitas hoy</p>
-                    <p className="text-2xl font-extrabold text-gray-100">
-                      {analyticsStats.visitasHoy}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
 
-          <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-5">
-            <h2 className="text-lg font-bold text-gray-100 mb-3">
-              Clientes del período
-            </h2>
-
-            {!resumen.clientes || resumen.clientes.length === 0 ? (
-              <p className="text-sm text-gray-400">
-                No hay clientes para este filtro.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {resumen.clientes.slice(0, 10).map((cliente, index) => (
-                  <div
-                    key={`${cliente.buyerEmail}-${index}`}
-                    className="bg-[#0b1220] border border-gray-800 rounded-xl p-4"
+          <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/15 p-3">
+            <div className="flex flex-wrap gap-2">
+              {(["general", "dia", "mes", "anio", "rango"] as const).map(
+                (filter) => (
+                  <button
+                    key={filter}
+                    type="button"
+                    onClick={() => setTipoFiltro(filter)}
+                    className={`rounded-xl px-3 py-2 text-xs font-black transition ${
+                      tipoFiltro === filter
+                        ? "bg-emerald-400 text-[#04100a]"
+                        : "border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+                    }`}
                   >
-                    <p className="text-sm font-bold text-gray-100">
-                      {cliente.buyerName}
-                    </p>
-                    <p className="text-xs text-gray-400">{cliente.buyerEmail}</p>
-                    <p className="text-xs text-gray-500">
-                      Teléfono: {cliente.buyerPhone || "No registrado"}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Pedidos: {cliente.cantidadPedidos}
-                    </p>
-                    <p className="text-sm font-semibold text-verdeEsmeralda mt-1">
-                      {formatPrecio(cliente.totalComprado)} Bs
-                    </p>
-                  </div>
-                ))}
+                    {filter === "general"
+                      ? "General"
+                      : filter === "dia"
+                        ? "Día"
+                        : filter === "mes"
+                          ? "Mes"
+                          : filter === "anio"
+                            ? "Año"
+                            : "Rango"}
+                  </button>
+                ),
+              )}
+            </div>
+
+            {tipoFiltro !== "general" && (
+              <div className="flex flex-wrap items-center gap-2">
+                {renderFiltroCampos()}
+
+                <button
+                  type="button"
+                  onClick={() => void refresh()}
+                  className="h-11 rounded-xl bg-emerald-400 px-4 text-xs font-black text-[#04100a] transition hover:bg-emerald-300"
+                >
+                  Aplicar filtro
+                </button>
               </div>
             )}
           </div>
+        </div>
 
-          <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-5">
-            <h2 className="text-lg font-bold text-gray-100 mb-3">
-              Obras vendidas
-            </h2>
+        {pdfError && (
+          <div className="mx-5 mt-5 rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200 sm:mx-6 lg:mx-7">
+            {pdfError}
+          </div>
+        )}
 
-            {!resumen.obrasVendidas || resumen.obrasVendidas.length === 0 ? (
-              <p className="text-sm text-gray-400">
-                No hay obras vendidas para este filtro.
+        {loading ? (
+          <div className="flex min-h-[420px] items-center justify-center px-6 py-12">
+            <div className="text-center">
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-white/10 border-t-emerald-400" />
+              <p className="mt-4 text-sm font-semibold text-white/50">
+                Cargando reporte de ventas...
               </p>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-4">
-                {resumen.obrasVendidas.slice(0, 12).map((obra) => {
-                  const imageUrl = getAdminImageUrl(obra.imagenUrl, obra.imagen);
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-5 p-4 sm:p-5 lg:p-6">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              {kpis.map((kpi) => (
+                <div
+                  key={kpi.label}
+                  className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold text-white/50">
+                        {kpi.label}
+                      </p>
+                      <p className="mt-2 text-xl font-black tracking-tight text-white">
+                        {kpi.value}
+                      </p>
+                    </div>
 
-                  return (
-                    <div
-                      key={`${obra.obraId}-${obra.titulo}`}
-                      className="bg-[#0b1220] border border-gray-800 rounded-xl p-4 flex gap-3"
-                    >
-                      {imageUrl ? (
-                        <img
-                          src={imageUrl}
-                          alt={obra.titulo}
-                          className="w-20 h-20 rounded-lg object-cover"
-                          loading="lazy"
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-400/10 text-lg text-emerald-300">
+                      {kpi.icon}
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-[11px] font-semibold text-emerald-300/70">
+                    {kpi.helper}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr_0.78fr]">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-black text-white">
+                      Ventas mensuales
+                    </h2>
+                    <p className="text-xs text-white/35">Últimos 12 meses</p>
+                  </div>
+
+                  <span className="rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-white/40">
+                    Ingresos
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <svg
+                    viewBox="0 0 700 215"
+                    className="min-w-[650px] w-full"
+                    role="img"
+                    aria-label="Gráfico de ventas mensuales"
+                  >
+                    <defs>
+                      <linearGradient id="salesArea" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#34d399" stopOpacity="0.28" />
+                        <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+
+                    {[24, 62, 100, 138, 176].map((y) => (
+                      <line
+                        key={y}
+                        x1="16"
+                        x2="684"
+                        y1={y}
+                        y2={y}
+                        stroke="rgba(255,255,255,.07)"
+                        strokeWidth="1"
+                      />
+                    ))}
+
+                    {areaPath && <path d={areaPath} fill="url(#salesArea)" />}
+
+                    {linePath && (
+                      <path
+                        d={linePath}
+                        fill="none"
+                        stroke="#34d399"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    )}
+
+                    {linePoints.map((point) => (
+                      <g key={point.key}>
+                        <circle
+                          cx={point.x}
+                          cy={point.y}
+                          r="4"
+                          fill="#07110d"
+                          stroke="#6ee7b7"
+                          strokeWidth="2"
                         />
-                      ) : (
-                        <div className="w-20 h-20 rounded-lg bg-[#111827] border border-gray-700 flex items-center justify-center text-[10px] text-gray-500">
-                          Sin imagen
-                        </div>
-                      )}
+                        <text
+                          x={point.x}
+                          y="205"
+                          textAnchor="middle"
+                          fill="rgba(255,255,255,.42)"
+                          fontSize="10"
+                        >
+                          {point.label}
+                        </text>
+                      </g>
+                    ))}
+                  </svg>
+                </div>
+              </div>
 
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-gray-100">
-                          {obra.titulo}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+                <div className="mb-5">
+                  <h2 className="text-base font-black text-white">
+                    Ventas por técnica
+                  </h2>
+                  <p className="text-xs text-white/35">
+                    Obras vendidas por área artística
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {ventasPorTecnica.slice(0, 9).map((item) => (
+                    <div key={item.tecnica}>
+                      <div className="mb-1.5 flex items-center justify-between gap-3">
+                        <span className="truncate text-xs font-semibold text-white/60">
+                          {item.tecnica}
+                        </span>
+                        <span className="text-xs font-black text-white">
+                          {item.cantidad}
+                        </span>
+                      </div>
+
+                      <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-300"
+                          style={{
+                            width: `${Math.max(
+                              item.cantidad > 0 ? 7 : 0,
+                              (item.cantidad / maxTecnica) * 100,
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+                <h2 className="text-base font-black text-white">
+                  Métodos de pago
+                </h2>
+                <p className="text-xs text-white/35">Distribución de pedidos</p>
+
+                <div className="mt-5 flex justify-center">
+                  <div
+                    className="relative h-36 w-36 rounded-full"
+                    style={{ background: donutGradient }}
+                  >
+                    <div className="absolute inset-[22px] flex items-center justify-center rounded-full bg-[#0a1510]">
+                      <div className="text-center">
+                        <p className="text-2xl font-black text-white">
+                          {metodosPago.reduce(
+                            (acc, item) => acc + item.cantidad,
+                            0,
+                          )}
                         </p>
-                        <p className="text-xs text-verdeEsmeralda">
-                          {obra.artistaNombre}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Cantidad vendida: {obra.cantidadVendida}
-                        </p>
-                        <p className="text-sm font-semibold text-gray-100 mt-1">
-                          {formatPrecio(obra.totalVendido)} Bs
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/35">
+                          pedidos
                         </p>
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                </div>
+
+                <div className="mt-5 space-y-2">
+                  {metodosPago.length === 0 ? (
+                    <p className="text-xs text-white/35">Sin datos todavía.</p>
+                  ) : (
+                    metodosPago.map((item) => (
+                      <div
+                        key={item.metodo}
+                        className="flex items-center justify-between gap-2 text-xs"
+                      >
+                        <span className="truncate text-white/55">
+                          {item.metodo}
+                        </span>
+                        <span className="font-black text-white">
+                          {item.porcentaje.toFixed(0)}%
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-4">
-            <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-5">
-              <h2 className="text-lg font-bold text-gray-100 mb-3">
-                Artistas con mayor venta
-              </h2>
-
-              {!resumen.artistasMasVendidos ||
-              resumen.artistasMasVendidos.length === 0 ? (
-                <p className="text-sm text-gray-400">Sin datos.</p>
-              ) : (
-                <div className="space-y-2">
-                  {resumen.artistasMasVendidos.map((obra, index) => (
-                    <div
-                      key={`${obra.obraId}-${index}`}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="text-gray-300">
-                        {obra.artistaNombre} · {obra.titulo}
-                      </span>
-                      <span className="font-bold text-gray-100">
-                        {obra.cantidadVendida}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
-            <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-5">
-              <h2 className="text-lg font-bold text-gray-100 mb-3">
-                Artistas con menor venta
-              </h2>
+            <div className="grid gap-5 xl:grid-cols-[1fr_330px]">
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035]">
+                <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-5">
+                  <div>
+                    <h2 className="text-base font-black text-white">
+                      Últimas ventas
+                    </h2>
+                    <p className="text-xs text-white/35">
+                      Actividad reciente del período
+                    </p>
+                  </div>
 
-              {!resumen.artistasMenosVendidos ||
-              resumen.artistasMenosVendidos.length === 0 ? (
-                <p className="text-sm text-gray-400">Sin datos.</p>
-              ) : (
-                <div className="space-y-2">
-                  {resumen.artistasMenosVendidos.map((obra, index) => (
-                    <div
-                      key={`${obra.obraId}-${index}`}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="text-gray-300">
-                        {obra.artistaNombre} · {obra.titulo}
-                      </span>
-                      <span className="font-bold text-gray-100">
-                        {obra.cantidadVendida}
-                      </span>
-                    </div>
-                  ))}
+                  <span className="text-[11px] font-black text-emerald-300">
+                    {recentSales.length} movimientos
+                  </span>
                 </div>
-              )}
-            </div>
-          </div>
 
-          <div className="bg-[#0e1624] border border-gray-800 rounded-xl p-5">
-            <h2 className="text-lg font-bold text-gray-100 mb-3">
-              Pedidos del período
-            </h2>
+                {recentSales.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-white/35">
+                    No hay ventas para este filtro.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-[920px] w-full">
+                      <thead>
+                        <tr className="border-b border-white/10 bg-black/10 text-left">
+                          {[
+                            "Obra",
+                            "Artista",
+                            "Técnica",
+                            "Cliente",
+                            "Monto",
+                            "Estado",
+                            "Fecha",
+                          ].map((head) => (
+                            <th
+                              key={head}
+                              className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-white/35"
+                            >
+                              {head}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
 
-            {!resumen.pedidosFiltrados || resumen.pedidosFiltrados.length === 0 ? (
-              <p className="text-sm text-gray-400">
-                No hay pedidos para este filtro.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {resumen.pedidosFiltrados.slice(0, 12).map((pedido) => (
-                  <div
-                    key={pedido.id}
-                    className="bg-[#0b1220] border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-                  >
+                      <tbody>
+                        {recentSales.map((sale) => {
+                          const imageUrl = getAdminImageUrl(
+                            sale.imagenUrl,
+                            sale.imagen,
+                          );
+
+                          return (
+                            <tr
+                              key={sale.key}
+                              className="border-b border-white/[0.06] last:border-b-0"
+                            >
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                  {imageUrl ? (
+                                    <img
+                                      src={imageUrl}
+                                      alt={sale.titulo}
+                                      className="h-10 w-10 rounded-lg object-cover"
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[9px] text-white/25">
+                                      Sin img
+                                    </div>
+                                  )}
+
+                                  <span className="max-w-[180px] truncate text-xs font-bold text-white/80">
+                                    {sale.titulo}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td className="px-4 py-3 text-xs text-white/55">
+                                {sale.artista}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-white/55">
+                                {sale.tecnica}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-white/55">
+                                {sale.cliente}
+                              </td>
+                              <td className="px-4 py-3 text-xs font-black text-white">
+                                {formatPrecio(sale.monto)} Bs
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black capitalize ${getEstadoBadgeClass(
+                                    sale.estado,
+                                  )}`}
+                                >
+                                  {sale.estado}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-xs text-white/40">
+                                {formatFecha(sale.fecha)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-5">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-base font-black text-white">
+                      Top artistas
+                    </h2>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300/70">
+                      ventas
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {topArtistas.length === 0 ? (
+                      <p className="text-xs text-white/35">Sin datos todavía.</p>
+                    ) : (
+                      topArtistas.map((artista, index) => (
+                        <div
+                          key={artista.nombre}
+                          className="flex items-center justify-between gap-3"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5 text-[10px] font-black text-white/45">
+                              {index + 1}
+                            </span>
+
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-bold text-white/75">
+                                {artista.nombre}
+                              </p>
+                              <p className="text-[10px] text-white/30">
+                                {formatPrecio(artista.ingreso)} Bs
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className="text-xs font-black text-emerald-300">
+                            {artista.ventas}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/35">
+                    Técnica más vendida
+                  </p>
+
+                  <div className="mt-4 flex items-end justify-between gap-3">
                     <div>
-                      <p className="text-sm font-bold text-gray-100">
-                        Pedido #{pedido.id} — {pedido.buyerName}
+                      <p className="text-xl font-black text-white">
+                        {tecnicaMasVendida.tecnica}
                       </p>
-                      <p className="text-xs text-gray-400">
-                        {pedido.buyerEmail} · {pedido.buyerPhone || "Sin teléfono"}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Pago: {pedido.metodoPago} · Estado:{" "}
-                        {pedido.estado || "pendiente"}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Fecha: {formatFecha(pedido.createdAt)}
+                      <p className="mt-1 text-xs text-white/40">
+                        {tecnicaMasVendida.cantidad} obras vendidas
                       </p>
                     </div>
 
-                    <div className="text-right">
-                      <p className="text-xs text-gray-400">Total</p>
-                      <p className="text-lg font-extrabold text-gray-100">
-                        {formatPrecio(pedido.total)} Bs
-                      </p>
+                    <div className="rounded-xl bg-emerald-400/10 px-3 py-2 text-lg">
+                      🎨
                     </div>
                   </div>
-                ))}
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/35">
+                    Actividad digital
+                  </p>
+
+                  {!analyticsAvailable ? (
+                    <p className="mt-3 text-xs leading-relaxed text-white/35">
+                      Analytics no disponible. El reporte de ventas sigue
+                      funcionando normalmente.
+                    </p>
+                  ) : (
+                    <div className="mt-4 grid grid-cols-3 gap-2">
+                      <div>
+                        <p className="text-lg font-black text-white">
+                          {analyticsStats.totalVisitas}
+                        </p>
+                        <p className="text-[9px] uppercase tracking-wide text-white/30">
+                          visitas
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-lg font-black text-white">
+                          {analyticsStats.ipsUnicas}
+                        </p>
+                        <p className="text-[9px] uppercase tracking-wide text-white/30">
+                          únicas
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-lg font-black text-emerald-300">
+                          {analyticsStats.visitasHoy}
+                        </p>
+                        <p className="text-[9px] uppercase tracking-wide text-white/30">
+                          hoy
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
+            </div>
+
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-black text-white">
+                      Clientes del período
+                    </h2>
+                    <p className="text-xs text-white/35">
+                      Principales compradores
+                    </p>
+                  </div>
+
+                  <span className="text-[11px] font-black text-emerald-300">
+                    {resumen.clientes?.length ?? 0}
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  {!resumen.clientes || resumen.clientes.length === 0 ? (
+                    <p className="text-xs text-white/35">
+                      No hay clientes para este filtro.
+                    </p>
+                  ) : (
+                    resumen.clientes.slice(0, 6).map((cliente, index) => (
+                      <div
+                        key={`${cliente.buyerEmail}-${index}`}
+                        className="flex items-center justify-between gap-4 rounded-xl border border-white/[0.07] bg-black/10 px-3 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-bold text-white/75">
+                            {cliente.buyerName}
+                          </p>
+                          <p className="truncate text-[10px] text-white/30">
+                            {cliente.buyerEmail}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 text-right">
+                          <p className="text-xs font-black text-white">
+                            {formatPrecio(cliente.totalComprado)} Bs
+                          </p>
+                          <p className="text-[10px] text-white/30">
+                            {cliente.cantidadPedidos} pedidos
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+                <div>
+                  <h2 className="text-base font-black text-white">
+                    Obras con mayor movimiento
+                  </h2>
+                  <p className="text-xs text-white/35">
+                    Rendimiento de las obras vendidas
+                  </p>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {(resumen.obrasVendidas ?? []).slice(0, 6).map((obra) => {
+                    const imageUrl = getAdminImageUrl(
+                      obra.imagenUrl,
+                      obra.imagen,
+                    );
+
+                    return (
+                      <div
+                        key={`${obra.obraId}-${obra.titulo}`}
+                        className="flex gap-3 rounded-xl border border-white/[0.07] bg-black/10 p-3"
+                      >
+                        {imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={obra.titulo}
+                            className="h-14 w-14 rounded-lg object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[9px] text-white/25">
+                            Sin img
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-bold text-white/75">
+                            {obra.titulo}
+                          </p>
+                          <p className="truncate text-[10px] text-emerald-300/70">
+                            {obra.artistaNombre}
+                          </p>
+                          <div className="mt-2 flex items-end justify-between gap-2">
+                            <span className="text-[10px] text-white/30">
+                              {obra.cantidadVendida} vendidas
+                            </span>
+                            <span className="text-[10px] font-black text-white">
+                              {formatPrecio(obra.totalVendido)} Bs
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }
-
 
 function EventosManager() {
   const [eventos, setEventos] = useState<Evento[]>([]);
