@@ -1866,11 +1866,35 @@ function ReportsPanel() {
           .trim()
           .toLocaleLowerCase("es");
 
+      const obraDelArtistaDestacado = artistaDestacado
+        ? (resumen.obrasVendidas ?? []).find(
+            (obra) =>
+              normalizeName(obra.artistaNombre) ===
+              normalizeName(artistaDestacado.nombre),
+          )
+        : undefined;
+
+      const obraCatalogoDelArtista = obraDelArtistaDestacado
+        ? obrasCatalogo.find(
+            (obra) =>
+              Number(obra.id) === Number(obraDelArtistaDestacado.obraId),
+          )
+        : undefined;
+
       const artistaDestacadoPerfil = artistaDestacado
         ? artistasCatalogo.find(
             (artista) =>
+              (obraCatalogoDelArtista?.artista?.id &&
+                Number(artista.id) ===
+                  Number(obraCatalogoDelArtista.artista.id)) ||
               normalizeName(artista.nombre) ===
-              normalizeName(artistaDestacado.nombre),
+                normalizeName(artistaDestacado.nombre) ||
+              normalizeName(artista.nombre).includes(
+                normalizeName(artistaDestacado.nombre),
+              ) ||
+              normalizeName(artistaDestacado.nombre).includes(
+                normalizeName(artista.nombre),
+              ),
           )
         : undefined;
 
@@ -2973,7 +2997,7 @@ function ReportsPanel() {
                   )}" alt="Perfil de ${escapeHtml(
                     artistaDestacado?.nombre ?? "artista destacado",
                   )}" />`
-                : `<div class="performance-placeholder">👤</div>`
+                : `<div class="performance-placeholder" title="Este artista no tiene foto registrada en su perfil">👤</div>`
             }
             <h4>Artista Destacado</h4>
             <p class="performance-name">${escapeHtml(
@@ -5044,4 +5068,3 @@ export default function AdminPanel() {
     </div>
   );
 }
-
